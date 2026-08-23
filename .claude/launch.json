@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pi-web-idd-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "dev", "-H", "127.0.0.1", "-p", "30142"],
+      "port": 30142,
+      "url": "http://localhost:30142/idd"
+    }
+  ]
+}
