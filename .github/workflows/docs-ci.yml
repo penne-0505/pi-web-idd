@@ -1,0 +1,87 @@
+name: Docs CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Run documentation validators
+        env:
+          # PR では base との diff に対して intent-delta presence を検査する。
+          # (未初期化 template では starter/ の存在により自動 skip される)
+          DD_DELTA_BASE: ${{ github.event.pull_request.base.sha || '' }}
+        run: ./scripts/check-docs.sh
+
+  # 出荷物の妥当性は、未初期化の repository ではなく展開後の姿でしか判定できない。
+  # starter/ を展開した複製で同じ validator を通し、利用者の初期状態を直接検証する。
+  # 展開済みの導入先 repository では starter/ が無いため、後続 step は自動 skip される。
+  starter-expansion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect starter
+        id: starter
+        run: echo "present=$([ -d starter ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Deno
+        if: steps.starter.outputs.present == 'true'
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Expand starter/ into a scratch copy
+        if: steps.starter.outputs.present == 'true'
+        run: |
+          set -euo pipefail
+          rsync -a --exclude '.git' ./ ../expanded/
+          cd ../expanded
+          find starter -mindepth 1 -maxdepth 1 -exec mv -f {} . \;
+          rmdir starter
+          test ! -e starter
+          test -f TODO.md
+          test -f .claude/settings.json
+
+      - name: Validate the expanded project
+        if: steps.starter.outputs.present == 'true'
+        working-directory: ../expanded
+        run: |
+          set -euo pipefail
+          # scope.ts は git repository を前提にした検査を含むため、複製を repo 化する
+          git init -q .
+          git config user.email ci@example.invalid
+          git config user.name ci
+          git add -A
+          git commit -qm "expanded starter"
+          ./scripts/check-docs.sh
+
+      # walk 型 validator は _docs が空だと実文書を一度も検査せずに green になる
+      # (v2.3.1 / v2.3.2 の両バグの共通根本原因)。現行 schema の実文書一式を生成し、
+      # 全 validator を実際に発火させる。
+      - name: Exercise validators against generated current-schema documents
+        if: steps.starter.outputs.present == 'true'
+        working-directory: ../expanded
+        run: |
+          set -euo pipefail
+          deno run --allow-read --allow-write scripts/generate-doc-probe.ts
+          git add -A
+          git commit -qm "doc probe"
+          ./scripts/check-docs.sh
