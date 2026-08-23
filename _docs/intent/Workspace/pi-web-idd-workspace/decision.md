@@ -80,6 +80,15 @@ related_prs: []
 - **Change freedom**: 承認 UI（button の見た目、confirm dialog の有無）は自由。「1 button 押下 = 1 承認、batch 化しない」だけが不変。
 - **Anchors**: これから作成する `components/IDDLaneButtons.tsx`、`app/api/idd/lifecycle/route.ts`（msync CLI を shell 経由で叩く endpoint）
 
+### DEC-007: worker pool は role-aware な pi session registry として lib/idd/worker-pool.ts に実装
+
+- **What**: DEC-004 で宣言した「pi session = persistent worker」を実体化する薄い registry を `lib/idd/worker-pool.ts` に置く。pool の unit は `WorkerDescriptor { id, role, status, model, currentTask?, updatedAt }` で、id は pi 側 AgentSession の session id と 1:1 に対応する。pool state はプロセス内 in-memory Map で保持し、Next.js の hot-reload を跨ぐため `globalThis.__iddWorkerPool` に置く（pi-web の `globalThis.__piSessions` パターンと同型）。role は `planner` / `executor` の 2 種を初期集合とし、model は role ごとに設定する（planner=Kimi 想定、executor=v4 Flash 想定、ただし model 名は runtime で切替可能）。
+- **Why**: DEC-004 は方針の宣言であり、実装上は「どの session が誰の role で、いま何をしていて、次のタスクをどこに渡すか」の状態管理が必要になる。この責務を pi-web の `AgentSessionWrapper` に混ぜると upstream の内部変更に振り回されるので、addon layer として lib/idd/ 側に閉じ込める（DEC-002 の additive 境界と整合）。pool を registry として最小化し、実際の session 起動・prompt 送信は既存の `lib/rpc-manager.ts` の API に委譲する。
+- **Change freedom**: role の集合、model 割当、task 配布ポリシー（round-robin / priority / manual）、task queue の有無、`WorkerDescriptor` の追加フィールドは自由。「pool は AgentSession の id を鍵にして role/status を addon で持つ」「globalThis に置いて hot-reload を跨ぐ」「rpc-manager を書き換えず上に載る」の 3 点だけが不変。
+- **Why not**（pi-web の AgentSessionWrapper を継承して role 情報を持たせる）: 上流変更で prop / method の signature が動くたびに拡張側が壊れる。INV-001 も破る。
+- **Revisit when**: role が 3 種以上に増える、task queue が単純な list より複雑な要件（priority, dependency graph）を持つ、または worker の物理配置が multi-machine に広がった時点で pool の設計を見直す。
+- **Anchors**: `lib/idd/worker-pool.ts`（本 DEC の実装本体）、`lib/rpc-manager.ts`（pi-web 側、無改変）、`app/api/idd/workers/route.ts`（pool の read 用 GET endpoint）
+
 ## Consequences / Impact
 
 - **upstream cherry-pick 経路**（DEC-001）: `.git/config` に `upstream-frozen` remote を保持、`git fetch upstream-frozen` で最新取得 → `git cherry-pick <sha>` で選択的取り込み。
