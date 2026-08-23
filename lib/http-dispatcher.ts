@@ -25,9 +25,7 @@ function parseHttpIdleTimeoutMs(value: unknown): number | undefined {
   return Math.floor(value);
 }
 
-// Undici can emit an internal Client error while terminating a response body.
-// The body stream still rejects; this prevents the EventEmitter error from
-// terminating the Next.js process first.
+// intent: DEC-239 — undici の内部 error emit を no-op で握り潰し、Next.js プロセスの巻き添え落ちを防ぐ
 function withUndiciErrorListener<T extends undici.Dispatcher>(dispatcher: T): T {
   if (dispatcher instanceof EventEmitter) {
     EventEmitter.prototype.on.call(dispatcher, "error", ignoreUndiciDispatcherError);
@@ -76,8 +74,7 @@ export function configureHttpDispatcher(
   );
   undici.setGlobalDispatcher(dispatcher);
 
-  // Keep fetch and the dispatcher on the same undici implementation. Preserve
-  // an intentional fetch override installed after this module was loaded.
+  // intent: DEC-239 — 事後に差し替えられた fetch は上書きせず、未差し替え時のみ undici fetch を install する
   if (globalThis.fetch === originalGlobalFetch) {
     undici.install?.();
   }

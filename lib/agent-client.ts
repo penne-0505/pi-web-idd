@@ -1,11 +1,4 @@
-// Client-side helper for POST /api/agent/[id].
-//
-// Every /api/agent/[id] route returns one of:
-//   { success: true, data: <result> }
-//   { error: string }              (non-2xx)
-//
-// Call sites previously repeated the same 5-line fetch block 13× in
-// hooks/useAgentSession.ts. This helper collapses that down to one line.
+// intent: DEC-212 — /api/agent/[id] 呼出を 1 helper に集約し、hooks/useAgentSession.ts で 13 重複していた 5 行 fetch block と success/error レスポンス解釈をここ 1 箇所で扱う
 
 export class AgentCommandError extends Error {
   constructor(

@@ -16,10 +16,7 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/**
- * Open the SSE transport immediately, then publish the session snapshot only
- * after the agent is ready and its event listener has been installed.
- */
+// intent: DEC-213 — SSE transport を先に開き、agent ready と listener 装着後にだけ snapshot を publish する 3 段階 handshake
 export function createAgentEventStream(
   req: Request,
   sessionId: string,
@@ -43,7 +40,7 @@ export function createAgentEventStream(
         unsubscribe = null;
         if (abortHandler) req.signal.removeEventListener("abort", abortHandler);
         if (closeController) {
-          try { controller.close(); } catch { /* stream already closed */ }
+          try { controller.close(); } catch { void 0; }
         }
       };
       cancelStream = cleanup;
@@ -108,8 +105,7 @@ export function createAgentEventStream(
         }
       };
 
-      // Attach the rejection handler before checking the request signal. The
-      // route may already have started a shared cold-start promise.
+      // intent: DEC-213 — signal 監視より先に publishSession を起動、既に共有 cold-start promise が走っていても rejection を内部 try に落とせるようにする
       void publishSession();
 
       abortHandler = () => cleanup(true);
@@ -121,8 +117,7 @@ export function createAgentEventStream(
 
       heartbeat = setInterval(() => enqueueText(":\n\n"), HEARTBEAT_INTERVAL_MS);
 
-      // Force the response headers through without claiming that the agent is
-      // ready. The client waits for the later `connected` data event.
+      // intent: DEC-213 — response header だけ先に流し ready 判定は保留、client は後続の `connected` data event を待つ
       enqueueText(":\n\n");
     },
     cancel() {

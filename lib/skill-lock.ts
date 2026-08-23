@@ -65,7 +65,7 @@ function normalizeSource(source: string, sourceType?: string): string {
   if (sourceType !== "github") return source.replace(/\/$/, "");
   return source
     .replace(/^git\+/, "")
-    .replace(/^https?:\/\/github\.com\//, "")
+    .replace(/^https?:[/]{2}github\.com[/]/, "")
     .replace(/^git@github\.com:/, "")
     .replace(/\.git$/, "")
     .replace(/\/$/, "");

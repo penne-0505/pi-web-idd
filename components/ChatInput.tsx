@@ -28,9 +28,9 @@ import { useI18n } from "@/hooks/useI18n";
 import type { ToolPreset } from "@/lib/tool-presets";
 
 export interface AttachedImage {
-  data: string;   // base64, no prefix
+  data: string;
   mimeType: string;
-  previewUrl: string; // object URL for display
+  previewUrl: string;
 }
 
 interface ModelOption {
@@ -51,7 +51,6 @@ interface Props {
   modelNames?: Record<string, string>;
   modelList?: { id: string; name: string; provider: string }[];
   modelError?: string | null;
-  /** Diagnostics from resolving `enabledModels`, e.g. a pattern that matched nothing. */
   modelScopeWarnings?: string[];
   onModelChange?: (provider: string, modelId: string) => void;
   modelSwitching?: boolean;
@@ -78,7 +77,6 @@ interface Props {
   onSoundToggle?: () => void;
   onAudioUnlock?: () => void;
   draftKey?: string;
-  /** Session working directory — enables the @ file autocomplete menu */
   cwd?: string | null;
 }
 
@@ -197,8 +195,7 @@ function getSlashDescription(command: SlashCommandPaletteItem, t: (key: string) 
   return command.source === "builtin" ? t(command.description) : command.description ?? "";
 }
 
-// Skill slash commands are named "skill:<skillName>"; look the skill up in the
-// dormancy map fetched from /api/skills. Unknown skills are treated as active.
+// intent: DEC-381 — スキル休眠情報は /api/skills 経由で取得、辞書に無いスキルはアクティブ扱いで安全側に倒す
 function isDormantSkillCommand(command: SlashCommandPaletteItem, dormancy: Record<string, boolean>): boolean {
   if (command.source !== "skill" || !command.name.startsWith("skill:")) return false;
   return dormancy[command.name.slice("skill:".length)] === true;
@@ -270,7 +267,7 @@ export function getUserMessageDraftImages(message: UserMessage): ChatDraftImage[
   return message.content.flatMap((block) => {
     if (block.type !== "image") return [];
 
-    // Support both the current nested image format and older flat pi-ai entries.
+    // intent: DEC-380 — 現行のネスト画像形式と旧 pi-ai のフラット形式の両方から画像を復元する
     const flat = block as unknown as { data?: unknown; mimeType?: unknown };
     const data = block.source?.type === "base64" ? block.source.data : flat.data;
     const mimeType = block.source?.type === "base64" ? block.source.media_type : flat.mimeType;
@@ -369,7 +366,7 @@ export function ModelErrorBanner({ error }: { error?: string | null }) {
   return <ModelNoticeBanner tone="error" title="Model error" body={error} />;
 }
 
-/** Surfaces `enabledModels` patterns that matched nothing, so a typo is visible (#307). */
+// intent: DEC-382 — `enabledModels` で 0 件マッチのパターンをタイポ検知のために UI に可視化する (#307)
 export function ModelScopeWarningBanner({ warnings }: { warnings?: string[] }) {
   if (!warnings || warnings.length === 0) return null;
   return (
@@ -493,8 +490,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       if (!text.trim()) return;
       const ta = textareaRef.current;
       const current = ta ? ta.value : value;
-      // Mirrors the TUI's queue restore: queued text first, then whatever
-      // the user already typed, separated by a blank line.
+      // intent: DEC-383 — TUI のキュー復元と同じ順序 (queued テキスト → 既存入力を空行で連結) を維持する
       const combined = [text, current].filter((t) => t.trim()).join("\n\n");
       valueRef.current = combined;
       setValue(combined);
@@ -542,9 +538,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     restoreSubmission(text: string, images?: ChatDraftImage[], targetDraftKey?: string) {
       if (!text.trim() && !images?.length) return;
 
-      // clearInput is queued before the submission handler runs. Compose with
-      // that queued state so a fast rejection cannot observe stale DOM text and
-      // then get overwritten by the clear.
+      // intent: DEC-384 — 先行キューされた clearInput と衝突しないよう queued 状態を合成し、素早い reject でも stale テキストを取りこぼさない
       const currentDraftKey = draftKeyRef.current;
       const destinationDraftKey = targetDraftKey ?? currentDraftKey;
       const targetsCurrentComposer = destinationDraftKey === currentDraftKey;
@@ -559,9 +553,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
           ? attachedImagesRef.current.map(imageToDraftImage)
           : (storedDraft?.images ?? []),
       );
-      // The first optimistic message switches ChatWindow out of its empty-state
-      // layout and remounts this component. Persist synchronously so recovery is
-      // not lost if this instance is the one being unmounted.
+      // intent: DEC-384 — 楽観送信で ChatWindow が empty-state から抜けて再マウントされるため、同期的に永続化してリカバリを失わない
       if (destinationDraftKey) setDraft(destinationDraftKey, restoredDraft);
       if (!targetsCurrentComposer) return;
       const restoredImages = images?.length
@@ -573,8 +565,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             ...attachedImagesRef.current,
           ].slice(0, MAX_ATTACHED_IMAGES)
         : attachedImagesRef.current;
-      // Session promotion can rekey this composer before React flushes the
-      // functional updates below, so update the imperative snapshot first.
+      // intent: DEC-384 — セッション昇格による rekey が React flush より先に走るので imperative snapshot を先に更新する
       valueRef.current = restoredDraft.value;
       attachedImagesRef.current = restoredImages;
       setValue((current) => {
@@ -650,7 +641,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
               const reader = new FileReader();
               reader.onload = () => {
                 const result = reader.result as string;
-                // result is "data:<mime>;base64,<data>"
                 const base64 = result.split(",")[1];
                 resolve({ data: base64, mimeType: file.type, previewUrl: URL.createObjectURL(file) });
               };
@@ -797,9 +787,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const hasInputText = Boolean(value.trim());
   const canQueueStreamingMessage = hasInputText || attachedImages.length > 0;
 
-  // ── @ file autocomplete ──────────────────────────────────────────────────
-  // Recomputed from the text before the caret on every change/caret move.
-  // Disabled entirely when there is no cwd (new session without a directory).
+  // intent: DEC-385 — cwd 未設定 (ディレクトリの無い新規セッション) では @ 補完を完全に無効化する
   const updateAtQuery = useCallback((text: string, cursor: number | null) => {
     if (!cwd) {
       setAtQuery(null);
@@ -816,11 +804,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       : []
   ), [atQueryText, fileIndex, cwd]);
 
-  // When the client index is truncated (repo larger than the index cap),
-  // local filtering cannot see deep files, so queries are also ranked
-  // server-side against the full listing. Local matches render immediately
-  // and are replaced when the (debounced) server result for the current
-  // query arrives; stale responses are ignored via the query/cwd tag.
+  // intent: DEC-386 — インデックス切り詰め時はサーバー検索で全リストを走査、ローカル一致は即時プロビジョナル表示し debounced 結果で差し替える
   const needsServerSearch = Boolean(atQueryText && fileIndex?.truncated && fileIndex.cwd === cwd);
   useEffect(() => {
     if (!needsServerSearch || !cwd || !atQueryText) return;
@@ -834,7 +818,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         })
         .then((data) => setAtServerResult({ cwd: fetchCwd, query, matches: data.matches ?? [] }))
         .catch(() => {
-          // Keep showing local matches; the next keystroke retries.
+          // intent: DEC-387 — 失敗時はローカル一致の表示を維持し、次のキーストロークで再試行させる
         });
     }, 150);
     return () => clearTimeout(timer);
@@ -846,8 +830,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     && atServerResult.query === atQueryText;
   const atMatches: FileIndexEntry[] = serverResultInUse ? atServerResult.matches : atLocalMatches;
 
-  // Open/reset the menu whenever the @token appears or changes (mirrors the
-  // slash menu: Escape closes it, the next keystroke re-opens it).
+  // intent: DEC-388 — @トークンの出現/変化ごとにメニューを開き直す (Escape で閉じても次入力で再開、スラッシュ menu と同挙動)
   const atTokenKey = atQuery === null ? null : `${atQuery.start}:${atQuery.quoted ? 1 : 0}:${atQuery.query}`;
   useEffect(() => {
     if (atTokenKey === null) {
@@ -859,8 +842,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     setAtActiveIndex(0);
   }, [atTokenKey]);
 
-  // Fetch the file index when the menu opens. The server caches per cwd for
-  // ~10s, so re-opening refreshes cheaply; while typing nothing refetches.
+  // intent: DEC-389 — メニュー open 時のみ file-index を取得。サーバー側の cwd 単位 ~10 秒キャッシュに乗せて再 open を安価に保ち、入力中は refetch しない
   const atTokenActive = atQuery !== null;
   useEffect(() => {
     if (!atTokenActive || !cwd) return;
@@ -880,7 +862,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         fileIndexMetaRef.current = { cwd: fetchCwd, fetchedAt: Date.now() };
       })
       .catch(() => {
-        // Leave any previous index in place; next open retries.
+        // intent: DEC-387 — 直前のインデックスは残したまま、次回 open で再試行させる
         fileIndexMetaRef.current = null;
       })
       .finally(() => {
@@ -895,9 +877,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     const cursor = ta?.selectionStart ?? value.length;
     const before = value.slice(0, atQuery.start);
     let after = value.slice(cursor);
-    // Completing inside a quoted token (@"my dir/… with the caret before the
-    // closing quote): the replacement carries its own closing quote, so drop
-    // the old one right after the caret (mirrors the TUI's applyCompletion).
+    // intent: DEC-390 — 引用符付きトークン補完では挿入側が閉じ引用符を持つため、既存の閉じ引用符を除去 (TUI applyCompletion 準拠)
     if (atQuery.quoted && after.startsWith('"')) {
       after = after.slice(1);
     }
@@ -905,9 +885,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     const newValue = before + insert.text + after;
     const newPos = before.length + insert.cursorOffset;
     setValue(newValue);
-    // setValue alone does not fire onChange — re-derive the token here. Files
-    // end with a space (token closes, menu hides); directories end with "/"
-    // before the caret (token stays open for drill-down into the directory).
+    // intent: DEC-390 — setValue は onChange を発火しないので @トークンを手動で再導出する (ファイルは末尾スペースで閉じ、ディレクトリは "/" で継続してドリルダウン可能に)
     setAtQuery(extractAtQuery(newValue.slice(0, newPos)));
     requestAnimationFrame(() => {
       const el = textareaRef.current;
@@ -1111,8 +1089,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         }
       }
 
-      // @ file menu — skip while composing so IME candidate navigation
-      // (arrows/Enter/Tab) is never intercepted.
+      // intent: DEC-391 — IME 変換中は矢印/Enter/Tab を候補選択に譲るためメニュー操作を傍受しない
       if (atMenuOpen && atQuery !== null && !isComposing) {
         if (e.key === "ArrowDown") {
           e.preventDefault();
@@ -1145,7 +1122,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         return;
       }
 
-      // Esc stops the agent when no slash/@/history menu or IME composition is active.
       if (e.key === "Escape" && !isComposing && isStreaming && onAbort) {
         e.preventDefault();
         onAbort();
@@ -1155,7 +1131,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       if (sendShortcut) {
         e.preventDefault();
         if (isStreaming && (onSteer || onFollowUp)) {
-          // Default Enter sends as steer if available, else followup
           sendQueued(onSteer ? "steer" : "followup");
         } else {
           handleSend();
@@ -1198,9 +1173,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     }
   }, [slashQuery, onLoadSlashCommands]);
 
-  // Lazy-load skill dormancy (disable-model-invocation) each time the slash
-  // palette opens, so toggles made in the skills panel are reflected on the
-  // next open. Failures degrade silently to the unannotated palette.
+  // intent: DEC-381 — スラッシュパレット open のたびに skill dormancy を再取得し、skills パネル側のトグル変更を次回 open で反映する (失敗時は注釈無しで穏当に劣化)
   useEffect(() => {
     if (!slashMenuOpen || !cwd) return;
     const requestCwd = cwd;
@@ -1284,7 +1257,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     };
   }, [slashMenuOpen, slashQuery]);
 
-  // Build model options: prefer modelList (has provider info), fallback to modelNames
+  // intent: DEC-392 — provider 情報を持つ modelList を優先、無い場合のみ modelNames にフォールバックする
   const modelOptions: ModelOption[] = (() => {
     if (modelList && modelList.length > 0) {
       return modelList.map((m) => ({ provider: m.provider, modelId: m.id, name: m.name })).sort(compareModelOptions);
@@ -1298,7 +1271,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const filteredModelOptions = filterModelOptions(modelOptions, modelFilter);
   const showModelFilter = modelOptions.length > MODEL_FILTER_THRESHOLD;
 
-  // Group options by provider, preserving insertion order
   const modelsByProvider: { provider: string; options: ModelOption[] }[] = [];
   for (const opt of filteredModelOptions) {
     const group = modelsByProvider.find((g) => g.provider === opt.provider);
@@ -1324,7 +1296,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   })();
   const toolPresetLabel = Object.entries(TOOL_PRESET_MAP).find(([, v]) => v === (toolPreset ?? "default"))?.[0] ?? "default";
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
@@ -1363,10 +1334,9 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         flexShrink: 0,
         background: "transparent",
         padding: "0 16px 8px",
-        paddingRight: isMobile ? 16 : 52, // desktop: 16px base + 36px for ChatMinimap alignment
+        paddingRight: isMobile ? 16 : 52, // intent: DEC-392 — デスクトップは 16px + ChatMinimap 分の 36px で視覚的に整列させる
       }}
     >
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -1382,7 +1352,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       <div style={{ maxWidth: 820, margin: "0 auto" }}>
         <ModelErrorBanner error={modelError} />
         <ModelScopeWarningBanner warnings={modelScopeWarnings} />
-        {/* Queued steering / follow-up messages (delivered by pi on upcoming turns) */}
         {((queuedMessages?.steering.length ?? 0) + (queuedMessages?.followUp.length ?? 0)) > 0 && (
           <div style={{
             marginBottom: 8,
@@ -1450,7 +1419,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             ))}
           </div>
         )}
-        {/* Retry banner */}
         {retryInfo && (
           <div style={{
             marginBottom: 8, padding: "5px 10px",
@@ -1498,7 +1466,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             {compactError}
           </div>
         )}
-        {/* Image previews */}
         {attachedImages.length > 0 && (
           <div style={{ display: "flex", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
             {attachedImages.map((img, i) => (
@@ -1528,7 +1495,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
           </div>
         )}
 
-        {/* Main input */}
         <div style={{ position: "relative", minWidth: 0 }}>
           {historyMenuOpen && inputHistory.length > 0 && (
             <div
@@ -1771,8 +1737,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
           {atMenuOpen && atQuery !== null && (() => {
             const indexLoading = fileIndexLoading && (!fileIndex || fileIndex.cwd !== cwd);
              const matchCountLabel = atMatches.length === 1 ? t("chat.match") : t("chat.matches", { count: atMatches.length });
-            // With a truncated index, local results are provisional — the
-            // debounced server search over the full listing replaces them.
+            // intent: DEC-386 — 切り詰めインデックスではローカル一致はプロビジョナル、debounced サーバー検索で差し替える
             const truncatedHint = fileIndex?.truncated && !serverResultInUse
                ? (atQuery.query ? t("chat.searchingAll") : t("chat.indexTruncated"))
               : "";
@@ -2012,14 +1977,12 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
           </div>
         </div>
 
-        {/* Bash mode status label */}
         {bashMode && (
           <div className="text-xs px-2 py-1" style={{ color: bashExcluded ? "var(--text-muted)" : "var(--accent)", marginTop: 4 }}>
              {t("chat.shell")} · {bashExcluded ? t("chat.outputLocal") : t("chat.outputModel")}
           </div>
         )}
 
-        {/* Bottom bar: left | center (context) | right */}
         <div style={{
           marginTop: 8,
           display: isMobile ? "grid" : "flex",
@@ -2028,7 +1991,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
           gap: 6,
         }}>
 
-          {/* LEFT: attach + model selector (idle) or steer/followup toggle (streaming) */}
           <div style={{ flex: isMobile ? "1 1 auto" : "0 0 auto", minWidth: 0, display: "flex", alignItems: "center", gap: 2 }}>
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -2058,7 +2020,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
                 <polyline points="21 15 16 10 5 21" />
               </svg>
             </button>
-            {/* Model selector — visible always, disabled while the session or switch is busy */}
             {(modelOptions.length > 0 || currentName || modelError) && onModelChange && (
                 <div ref={dropdownRef} style={{ position: "relative", flex: isMobile ? "1 1 auto" : undefined, minWidth: 0 }}>
                   <button
@@ -2122,8 +2083,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
                     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
                     const bottom = viewportHeight - modelDropdownRect.top + 6;
                     const maxH = Math.max(120, Math.min(modelDropdownRect.top - 8, viewportHeight * 0.6));
-                    // On mobile, pin to a small left margin and cap width to the
-                    // viewport so long model names never push the panel off-screen.
+                    // intent: DEC-392 — モバイルは左マージン固定＋ビューポート幅上限で、長いモデル名でもパネルを画面外に押し出さない
                     const panelPos: React.CSSProperties = isMobile
                       ? { left: 8, right: 8, maxWidth: "calc(100vw - 16px)" }
                       : { left: modelDropdownRect.left, width: "max-content", minWidth: modelDropdownRect.width };
@@ -2225,10 +2185,8 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             )}
           </div>
 
-          {/* spacer */}
           {!isMobile && <div style={{ flex: 1 }} />}
 
-          {/* RIGHT: thinking + tools preset + compact + sound (idle) | Stop + sound (streaming) */}
           <div ref={controlsMenuRef} style={{
             flex: "0 0 auto",
             display: "flex",

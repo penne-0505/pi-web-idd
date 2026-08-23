@@ -27,10 +27,7 @@ export function parseUnifiedPatch(text: string): SplitDiffFile[] | null {
   let pendingOldPath: string | undefined;
   let oldLineNo = 0;
   let newLineNo = 0;
-  // Lines still expected in the current hunk body, from the @@ header counts.
-  // While either is positive we are inside a hunk, where a line starting with
-  // "--- "/"+++ " is a removed/added content line (e.g. "-- x"/"++ x"), not a
-  // file header — checking for headers there splits one file into bogus extras.
+  // intent: DEC-237 — @@ header の残り line 数を持ち、hunk 内では file header 誤検出を回避
   let hunkOldRemaining = 0;
   let hunkNewRemaining = 0;
   let removed: PendingChangeLine[] = [];
@@ -60,7 +57,7 @@ export function parseUnifiedPatch(text: string): SplitDiffFile[] | null {
   for (const line of text.split(/\r?\n/)) {
     const insideHunk = hunkOldRemaining > 0 || hunkNewRemaining > 0;
 
-    // File headers only appear between hunks, never inside a hunk body.
+    // intent: DEC-237 — file header は hunk 間だけを走査し、hunk 内 --- / +++ は content として扱う
     if (!insideHunk) {
       if (line.startsWith("--- ")) {
         flushChanges();

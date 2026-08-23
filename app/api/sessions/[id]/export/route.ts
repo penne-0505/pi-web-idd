@@ -58,7 +58,7 @@ async function getPiCliPath(): Promise<string | null> {
       candidates.add(join(dirname(fileURLToPath(indexUrl)), "cli.js"));
     }
   } catch {
-    // Next.js production bundles can strip import.meta.resolve.
+    // intent: DEC-542 — Next.js の production bundle は import.meta.resolve を strip することがある
   }
 
   candidates.add(
@@ -78,52 +78,9 @@ async function getPiCliPath(): Promise<string | null> {
   return null;
 }
 
-/**
- * Patch the exported HTML to fix recursive functions that overflow
- * the call stack on deep linear session trees (e.g., 5000+ entries).
- *
- * ## Root Cause
- * pi-coding-agent's template.js uses recursive helpers to render and
- * navigate the session tree in the exported HTML:
- *
- *   1. sortChildren(node) — recursively sorts children of every node.
- *      Calls itself via node.children.forEach(sortChildren).
- *      On a 5527-entry linear chain (no branches), this recurses 5527
- *      levels deep → stack overflow.
- *
- *   2. mapNodes(node) — recursively indexes tree nodes the first time
- *      a tree item is clicked. Same depth -> same overflow.
- *
- *   3. markActive(node) — recursively marks nodes on the active path.
- *      Calls itself via markActive(child) for each child.
- *      Same depth → same overflow.
- *
- * Both functions are inlined in the HTML by pi-coding-agent at export
- * time. We cannot modify template.js directly (it's in node_modules
- * and would be overwritten on npm install). Instead, we patch the
- * generated HTML string before returning it to the client.
- *
- * ## Fix
- * Replace each recursive function with an iterative equivalent:
- *
- *   sortChildren  → explicit stack (DFS pre-order, push children in
- *                   reverse to maintain order)
- *   mapNodes      → explicit stack (DFS pre-order)
- *   markActive    → two-stack post-order (stack1 for traversal,
- *                   stack2 for processing children before parent)
- *
- * ## Line Ending Normalization
- * This file (route.ts) uses CRLF (Windows), while template.js uses LF
- * (Unix). The template strings in the backtick literals inherit the
- * file's CRLF line endings. At runtime, readFileSync() also returns
- * CRLF on Windows. We normalize everything to LF before matching.
- *
- * The helper `n(s)` strips \r\n → \n on both the HTML and the
- * replacement strings, ensuring cross-platform matching.
- */
+// intent: DEC-542 — pi-coding-agent の再帰実装をスタックオーバーフロー対策で iterative に置換
 function patchExportHtml(html: string): string {
-  // Normalize line endings: route.ts is CRLF, template.js is LF.
-  // Without this, the replace() below would fail on Windows.
+  // intent: DEC-542 — CRLF (route.ts) と LF (template.js) を混ぜて match するので LF に正規化
   const n = (s: string) => s.replace(/\r\n/g, "\n");
   html = n(html);
 
@@ -190,7 +147,6 @@ function patchExportHtml(html: string): string {
           return has;
         }`,
     `        function markActive(root) {
-          // Post-order traversal using two stacks
           const stack1 = [root];
           const stack2 = [];
           while (stack1.length) {

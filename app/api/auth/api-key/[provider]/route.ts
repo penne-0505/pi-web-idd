@@ -7,7 +7,6 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ provider: string }> };
 
-// GET /api/auth/api-key/[provider] — returns auth status (never returns the actual key)
 export async function GET(_req: Request, { params }: Params) {
   const { provider } = await params;
   const modelRuntime = await ModelRuntime.create();
@@ -17,7 +16,6 @@ export async function GET(_req: Request, { params }: Params) {
   return NextResponse.json({ provider, displayName, configured: status.configured, source: status.source, models });
 }
 
-// POST /api/auth/api-key/[provider]  body: { apiKey: string }
 export async function POST(req: Request, { params }: Params) {
   const { provider } = await params;
   try {
@@ -47,9 +45,7 @@ export async function POST(req: Request, { params }: Params) {
         throw new Error(`${provider} requires additional authentication settings`);
       },
     });
-    // ModelRuntime.login() persists the credential and then performs an
-    // unbounded network catalog refresh. Store the returned credential
-    // directly so a slow catalog cannot leave the save request hanging.
+    // intent: DEC-533 — credential を直接 store し、後続の unbounded catalog refresh を保存 request から切り離す
     await storeProviderCredential(provider, credential);
     invalidateModelsCache();
     return NextResponse.json({ success: true });
@@ -58,7 +54,6 @@ export async function POST(req: Request, { params }: Params) {
   }
 }
 
-// DELETE /api/auth/api-key/[provider] — removes stored API key
 export async function DELETE(_req: Request, { params }: Params) {
   const { provider } = await params;
   try {

@@ -16,25 +16,12 @@ const THINKING_LEVEL_SUFFIXES = new Set<ThinkingLevel>([
   "max",
 ]);
 
-/**
- * Model scoping shared by the UI selector and AgentSession startup.
- *
- * The `enabledModels` setting uses the same syntax as pi's `--models` flag:
- * globs matched with minimatch against `provider/modelId` or a bare `modelId`,
- * fuzzy matching for non-glob patterns, plus an optional `:thinkingLevel` suffix
- * (`anthropic/*:high`). Exact string comparison silently drops every model
- * behind a pattern like `my-gateway/*` (#307), so delegate to pi's own resolver
- * instead of reimplementing the matching rules here.
- */
+// intent: DEC-179 — enabledModels の解決は pi 側 resolver に委譲し、glob/fuzzy/:level を独自実装しない (#307 の再発防止)
 
 export interface ModelScopeResult {
-  /** Models the UI should offer, in resolver order (all available when unscoped). */
   visible: readonly Model<Api>[];
-  /** SDK-native scope retained for AgentSession model cycling and extensions. */
   scopedModels: readonly ScopedModel[];
-  /** `provider/modelId` → thinking level pinned with a `:level` pattern suffix. */
   thinkingLevelPins: Record<string, string>;
-  /** Resolver diagnostics, e.g. a pattern that matched no model. */
   warnings: string[];
 }
 
@@ -98,13 +85,7 @@ function assertNoAmbiguousExactPatterns(
   }
 }
 
-/**
- * Resolve the visible model list for `patterns`.
- *
- * Falls back to every available model when no patterns are configured or when
- * the patterns resolve to nothing, so a stale or typo'd setting can never leave
- * the UI without any selectable model.
- */
+// intent: DEC-180 — 空 / 解決失敗時は available 全体にフォールバックし、typo や stale 設定で UI から選択肢を消さない
 export async function resolveVisibleModels(
   modelRuntime: ModelRuntime,
   patterns: string[] | undefined,
@@ -135,9 +116,7 @@ export async function resolveVisibleModels(
     };
   }
 
-  // `anthropic/*:high` pins a thinking level on every model the glob matched.
-  // pi applies the pin of the model a new session starts with; report them all
-  // so the client can look up whichever model it pre-selects.
+  // intent: DEC-181 — `:level` サフィックスの thinking pin は matched 全 model について報告し、client の pre-select 側から引ける状態にする
   const thinkingLevelPins: Record<string, string> = {};
   for (const scoped of scopedModels) {
     if (scoped.thinkingLevel) {
@@ -152,14 +131,7 @@ export async function resolveVisibleModels(
   };
 }
 
-/**
- * Select the model and thinking level used to create a new AgentSession.
- *
- * This mirrors pi's startup rule: prefer an explicit selection, otherwise use
- * the saved default when it is in scope, then the first resolver-ordered model.
- * A scoped-model thinking pin is applied unless the caller supplied an explicit
- * thinking level.
- */
+// intent: DEC-182 — 初期 model 選択は requested → scope 内 default → resolver 先頭の順で確定させ、pi の起動則と一致させる
 export function selectInitialModelScope(
   scope: ModelScopeResult,
   options: InitialModelScopeOptions = {},

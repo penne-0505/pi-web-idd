@@ -41,7 +41,7 @@ export function parseFrontmatter(markdown: string): FrontmatterResult {
       return { data: parsed as Record<string, unknown>, rest: block.rest };
     }
   } catch {
-    // The remark plugin still hides a syntactically fenced malformed block.
+    // intent: DEC-252 — YAML parse 失敗は throw せず data:null で返す、fence された malformed block は remark 側が既に隠す
   }
 
   return { data: null, rest: block.rest };

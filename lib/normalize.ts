@@ -42,8 +42,7 @@ function normalizeAssistantToolCalls(
   msg: AgentMessage,
   options: { includeStreamingRawInput?: boolean } = {},
 ): AgentMessage {
-  // Non-assistant roles (user, toolResult, bashExecution, custom) are returned
-  // unchanged — only assistant messages go through tool-call field normalization.
+  // intent: DEC-241 — tool-call field 正規化は assistant role にのみ適用、他 role は素通し
   if (msg.role !== "assistant") return msg;
   const content = (msg as AssistantMessage).content;
   if (!Array.isArray(content)) return msg;

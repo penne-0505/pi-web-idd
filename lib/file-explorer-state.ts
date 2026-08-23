@@ -31,6 +31,6 @@ export function saveExplorerOpen(
   try {
     storage.setItem(EXPLORER_OPEN_STORAGE_KEY, String(open));
   } catch {
-    // Persistence is best-effort; privacy mode and storage quotas must not break the explorer.
+    // intent: DEC-211 — 保存失敗 (privacy mode / storage quota) で explorer 全体を壊さない best-effort
   }
 }

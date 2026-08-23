@@ -12,7 +12,6 @@ import type {
 } from "@/lib/api-types";
 
 function shortenPath(p: string): string {
-  // Match common home dir patterns: /Users/xxx, /home/xxx
   return p.replace(/^\/(?:Users|home)\/[^/]+/, "~");
 }
 
@@ -129,7 +128,6 @@ function SkillDetail({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Path + tag + toggle, with a stable status row below. */}
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
           <span
@@ -222,7 +220,7 @@ function SkillDetail({
                 whiteSpace: "nowrap",
               }}
             >
-              {skill.install.skillsShUrl.replace(/^https?:\/\//, "")} ↗
+              {skill.install.skillsShUrl.replace(/^https?:\/{2}/, "")} ↗
             </span>
           </a>
         </div>
@@ -454,7 +452,6 @@ function AddSkillPanel({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* ── Header area ── */}
       <div
         style={{
           display: "flex",
@@ -467,7 +464,6 @@ function AddSkillPanel({
            {t("i18n.addSkill")}
         </div>
 
-        {/* Search row */}
         <div style={{ display: "flex", gap: 8 }}>
           <input
             ref={inputRef}
@@ -507,7 +503,6 @@ function AddSkillPanel({
           </button>
         </div>
 
-        {/* Scope + install path row */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div
             style={{
@@ -557,7 +552,6 @@ function AddSkillPanel({
           </span>
         </div>
 
-        {/* Errors */}
         {searchError && (
           <div style={{ fontSize: 12, color: "#f87171" }}>{searchError}</div>
         )}
@@ -570,7 +564,6 @@ function AddSkillPanel({
         )}
       </div>
 
-      {/* ── Results list ── */}
       {results.length > 0 ? (
         <div style={{ flex: 1, overflowY: "auto" }}>
           {results.map((r) => {
@@ -578,7 +571,6 @@ function AddSkillPanel({
               installedPackages[scope].has(r.package) ||
               newlyInstalledPkgs.has(`${scope}:${r.package}`);
             const isInstalling = installing === r.package;
-            // split "owner/repo@skill" for cleaner display
             const atIdx = r.package.indexOf("@");
             const repopart = atIdx > -1 ? r.package.slice(0, atIdx) : r.package;
             const skillpart = atIdx > -1 ? r.package.slice(atIdx + 1) : null;
@@ -594,7 +586,6 @@ function AddSkillPanel({
                 }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  {/* skill name prominent */}
                   <div
                     style={{
                       fontSize: 13,
@@ -605,7 +596,6 @@ function AddSkillPanel({
                   >
                     {skillpart ?? repopart}
                   </div>
-                  {/* repo + installs + link row */}
                   <div
                     style={{
                       display: "flex",
@@ -927,7 +917,6 @@ export function SkillsConfig({
           overflow: "hidden",
         }}
       >
-        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -989,9 +978,7 @@ export function SkillsConfig({
           </div>
         )}
 
-        {/* Body */}
         <div style={{ flex: 1, display: "flex", flexDirection: isMobile ? "column" : "row", overflow: "hidden" }}>
-          {/* Left: skill list */}
           <div
             style={{
               width: isMobile ? "100%" : 210,
@@ -1220,7 +1207,6 @@ export function SkillsConfig({
                 })()
               )}
             </div>
-            {/* Add skill button */}
             <div
               style={{
                 padding: "8px 6px",
@@ -1267,7 +1253,6 @@ export function SkillsConfig({
             </div>
           </div>
 
-          {/* Right: detail or add panel */}
           <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
             {addMode ? (
               <AddSkillPanel
@@ -1329,7 +1314,6 @@ export function SkillsConfig({
           </div>
         </div>
 
-        {/* Footer */}
         <div
           style={{
             display: "flex",

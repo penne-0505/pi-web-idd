@@ -1,28 +1,17 @@
-// Pure helpers for the chat input's @ file autocomplete. Mirrors the pi TUI's
-// behavior: @ triggers at line start or after whitespace, entries are ranked
-// with the TUI's scoreEntry ladder, and completions insert "@relative/path ".
+// intent: DEC-204 — pi TUI の @ file autocomplete 挙動を chat input で鏡写しにする
 
 export interface AtQueryMatch {
-  /** Index of the "@" character in the text */
   start: number;
-  /** Text typed after the "@" (quotes stripped); may be empty */
   query: string;
-  /** True when the token uses the @"..." quoted form */
   quoted: boolean;
 }
 
 export interface FileIndexEntry {
-  /** Path relative to the session cwd, "/"-separated, no trailing slash */
   path: string;
   isDir: boolean;
 }
 
-/**
- * Detect an @ file token immediately before the cursor. The @ must be at the
- * start of the text or preceded by whitespace (same rule as the TUI), so
- * emails like foo@bar never trigger. Supports the in-progress quoted form
- * @"my dir/fi so drill-down into space-containing paths keeps working.
- */
+// intent: DEC-205 — @ trigger を行頭 or whitespace 直後に限定し email 誤検出を避け、quoted form (@"...") で space 含みパスの drill-down を維持する
 export function extractAtQuery(textBeforeCursor: string): AtQueryMatch | null {
   const quoted = /(?:^|\s)@"([^"\n]*)$/.exec(textBeforeCursor);
   if (quoted) {
@@ -51,11 +40,7 @@ function pathDepth(p: string): number {
   return depth;
 }
 
-/**
- * Build the entry list from the server's flat file list, deriving directory
- * entries from file paths (the index API only returns files). Base order is
- * shallow-first then alphabetical, which is what an empty @ query shows.
- */
+// intent: DEC-206 — index API が返す flat file list から directory entry を派生し、shallow-first alphabetical を empty @ query の既定順にする
 export function buildEntriesFromFiles(files: string[]): FileIndexEntry[] {
   const dirs = new Set<string>();
   for (const f of files) {
@@ -84,16 +69,7 @@ function isSubsequence(needle: string, haystack: string): boolean {
   return i === needle.length;
 }
 
-/**
- * TUI scoreEntry ladder (exact 100 / prefix 80 / substring 50 / path substring
- * 30, directories +10) plus a low-weight subsequence fallback so genuinely
- * fuzzy queries like "chinp" still find components/ChatInput.tsx.
- *
- * Queries containing "/" are ranked against the full relative path instead of
- * the basename — this is what makes drill-down work: after inserting "@src/",
- * the query "src/" prefix-matches every entry inside src/ (and excludes the
- * src directory itself, since "src" does not start with "src/").
- */
+// intent: DEC-207 — TUI scoreEntry ladder (exact/prefix/substring/path-substring + dir bonus) に subsequence fallback を足し、"/" 入り query は relative path 全体で採点することで "@src/" 挿入後の drill-down を成立させる
 function scoreEntry(entry: FileIndexEntry, lowerQuery: string): number {
   const lowerPath = entry.path.toLowerCase();
   let score = 0;
@@ -138,22 +114,11 @@ export function filterFileEntries(
 }
 
 export interface AtInsertion {
-  /** Text that replaces the @token */
   text: string;
-  /** Caret position relative to the start of `text` after insertion */
   cursorOffset: number;
 }
 
-/**
- * Replacement for the @token when a suggestion is confirmed. Mirrors the
- * TUI's buildCompletionValue/applyCompletion:
- * - Files close the token: "@path " (quoted when the path contains spaces),
- *   caret after the trailing space.
- * - Directories keep the menu open for drill-down: "@dir/" with no trailing
- *   space. Quoted directories are inserted CLOSED (@"my dir/") with the caret
- *   placed before the closing quote, so both further typing and manual
- *   completion keep the token well-formed.
- */
+// intent: DEC-208 — 候補確定時の @token 挿入形は file/directory/quoted で切り替え、directory は menu を閉じずに drill-down を維持する
 export function buildAtInsertText(entryPath: string, isDir: boolean, forceQuotes = false): AtInsertion {
   const p = isDir ? `${entryPath}/` : entryPath;
   const needsQuotes = forceQuotes || p.includes(" ");
@@ -165,17 +130,12 @@ export function buildAtInsertText(entryPath: string, isDir: boolean, forceQuotes
   return { text, cursorOffset: text.length };
 }
 
-/**
- * Closed @mention for one-shot inserts (e.g. the file explorer's @ button).
- * Unlike buildAtInsertText there is no drill-down: directories are closed
- * too, with a trailing "/" and a trailing space.
- */
+// intent: DEC-208 — one-shot mention は drill-down を伴わないため directory も trailing "/" 付きで closed 挿入
 export function buildAtMentionText(entryPath: string, isDir: boolean): string {
   const p = isDir ? `${entryPath}/` : entryPath;
   return p.includes(" ") ? `@"${p}" ` : `@${p} `;
 }
 
-/** Closed file @mention scoped to one logical line or an inclusive line range. */
 export function buildFileLineMentionText(entryPath: string, startLine: number, endLine: number): string {
   const firstLine = Math.max(1, Math.min(startLine, endLine));
   const lastLine = Math.max(1, Math.max(startLine, endLine));

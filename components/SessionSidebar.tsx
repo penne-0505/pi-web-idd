@@ -98,8 +98,7 @@ interface Props {
   onExplorerRefresh?: () => void;
   onAtMention?: (relativePath: string, isDir: boolean) => void;
   onAtMentions?: (relativePaths: string[]) => void;
-  /** Fired when a session that is not currently selected finishes running.
-   *  Lets the app play a cross-workspace completion tone. */
+  // intent: DEC-320 — 未選択セッションの完走を親に伝え、ワークスペース跨ぎの完了音を鳴らせるようにする
   onBackgroundTaskDone?: () => void;
   onRunningSessionIdsChange?: (ids: Set<string>) => void;
 }
@@ -111,16 +110,15 @@ interface WorktreeEntry {
 }
 
 interface WorktreeState {
-  /** The cwd this data was fetched for — guards against stale responses */
+  // intent: DEC-321 — 取得元 cwd を保持して古い応答での上書きを防ぐ
   forCwd: string;
   projectRoot: string;
-  /** Stable server-computed identity; never derive OS path semantics here. */
+  // intent: DEC-321 — server 側で計算した安定 identity のみ用いる（ブラウザで OS パス意味論を触らない）
   projectKey: string;
   isGit: boolean;
-  /** False when forCwd is a repo subdirectory — the switcher is hidden there
-   *  because subdir sessions keep their own project identity */
+  // intent: DEC-321 — subdir セッションは独自 identity を持つので switcher を隠す
   isTopLevel: boolean;
-  /** Canonical path of the checkout containing forCwd, resolved server-side. */
+  // intent: DEC-321 — checkout の正準パスは server 側で解決したものを使う
   currentWorktreePath: string | null;
   worktrees: WorktreeEntry[];
 }
@@ -158,7 +156,7 @@ function saveUnreadSessionIds(ids: Set<string>): void {
     if (ids.size === 0) window.localStorage.removeItem(UNREAD_SESSIONS_STORAGE_KEY);
     else window.localStorage.setItem(UNREAD_SESSIONS_STORAGE_KEY, JSON.stringify([...ids]));
   } catch {
-    // ignore storage quota / privacy-mode errors
+    // intent: DEC-323 — 空 catch は意図的 no-op（localStorage 失敗を UI に露出させない）
   }
 }
 
@@ -176,18 +174,12 @@ function formatRelativeTime(dateStr: string): string {
   return date.toLocaleDateString();
 }
 
-/** Substitute the home dir prefix with ~ (no path truncation — see PathLabel) */
+// intent: DEC-324 — home 前置きは ~ に置換するが truncate はせず、切り詰めは PathLabel に一任する
 function displayCwd(cwd: string, homeDir?: string): string {
   return (homeDir && cwd.startsWith(homeDir)) ? "~" + cwd.slice(homeDir.length) : cwd;
 }
 
-/**
- * Path label that ellipsizes on the LEFT, keeping the (most relevant) trailing
- * segments visible: "…orkspace/pi-web". Shows as much of the path as fits
- * instead of a fixed number of segments. The rtl container moves the ellipsis
- * to the left edge; the inner plaintext bidi isolation keeps the path itself
- * rendered strictly left-to-right (no punctuation reordering).
- */
+// intent: DEC-324 — path の末尾側（識別に効く部分）を必ず見せるため RTL で左端に ellipsis を出し、内側は plaintext bidi で LTR 表示を維持する
 function PathLabel({ text, style }: { text: string; style?: CSSProperties }) {
   return (
     <span
@@ -266,18 +258,17 @@ function buildSessionTree(sessions: SessionInfo[]): SessionTreeNode[] {
     byId.set(s.id, { session: s, children: [] });
   }
 
-  // Build a map of parentSessionId chains so we can resolve missing ancestors
+  // intent: DEC-322 — 中間祖先が欠落しても表示ツリーが壊れないよう、parentSessionId 鎖を辿って byId に存在する最近祖先へ吊り直す
   const parentOf = new Map<string, string>();
   for (const s of sessions) {
     if (s.parentSessionId) parentOf.set(s.id, s.parentSessionId);
   }
 
-  // Walk up the parentSessionId chain to find the nearest ancestor that exists in byId
   function resolveAncestor(id: string): string | null {
     let cur = parentOf.get(id);
     const visited = new Set<string>();
     while (cur) {
-      if (visited.has(cur)) return null; // cycle guard
+      if (visited.has(cur)) return null; // intent: DEC-322 — 破損データの循環参照で無限ループさせない
       visited.add(cur);
       if (byId.has(cur)) return cur;
       cur = parentOf.get(cur);
@@ -295,7 +286,6 @@ function buildSessionTree(sessions: SessionInfo[]): SessionTreeNode[] {
     }
   }
 
-  // Sort each level by modified desc
   const sort = (nodes: SessionTreeNode[]) => {
     nodes.sort((a, b) => b.session.modified.localeCompare(a.session.modified));
     nodes.forEach((n) => sort(n.children));
@@ -408,7 +398,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const [customPathValidating, setCustomPathValidating] = useState(false);
   const [validatedProject, setValidatedProject] = useState<ValidatedProject | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  // Worktree switcher state
   const [worktreeState, setWorktreeState] = useState<WorktreeState | null>(null);
   const [wtDropdownOpen, setWtDropdownOpen] = useState(false);
   const [wtNewOpen, setWtNewOpen] = useState(false);
@@ -429,8 +418,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const [runningSessionIds, setRunningSessionIds] = useState<Set<string>>(() => new Set());
   const [unreadSessionIds, setUnreadSessionIds] = useState<Set<string>>(() => loadUnreadSessionIds());
   const previousRunningSessionIdsRef = useRef<Set<string>>(new Set());
-  // Once polling has delivered a snapshot it is the source of truth for
-  // running state; late /api/sessions responses must not overwrite it.
+  // intent: DEC-325 — 軽量 poll が一度でも running snapshot を返したら以後の権威とし、遅延した /api/sessions 応答で上書きしない
   const runningPollAuthoritativeRef = useRef(false);
   const sessionRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const explorerRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -445,12 +433,11 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as { sessions: SessionInfo[]; runningSessionIds?: string[] };
       setAllSessions(data.sessions);
-      // Treat the fetched running set as an initial fallback only. Once the
-      // lightweight poll is live, a slow session-list fetch cannot overwrite it.
+      // intent: DEC-325 — 軽量 poll が権威になる前のみ初期 fallback として反映する
       if (!runningPollAuthoritativeRef.current) {
         setRunningSessionIds(new Set(data.runningSessionIds ?? []));
       }
-      // Drop unread markers for sessions that no longer exist (e.g. deleted).
+      // intent: DEC-325 — 削除済みセッションの unread マーカーが残り続けないよう存在確認で剪定する
       const existingIds = new Set(data.sessions.map((s) => s.id));
       setUnreadSessionIds((prev) => {
         if (prev.size === 0) return prev;
@@ -477,14 +464,12 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     loadSessions(isFirst, !isFirst);
   }, [loadSessions, refreshKey]);
 
-  // Browser storage is unavailable during server rendering. Restore the panel
-  // preference after hydration so a collapsed explorer stays collapsed on reload.
+  // intent: DEC-326 — SSR で localStorage が使えないため、hydration 後にパネル状態を復元する（初回描画は open のまま）
   useEffect(() => {
     setExplorerOpen(loadExplorerOpen());
   }, []);
 
-  // Persist unread markers so they survive a browser refresh before the user
-  // has actually opened the completed session.
+  // intent: DEC-326 — 未読マーカーはユーザーが該当セッションを開くまでリロード越しに保持したい
   useEffect(() => {
     saveUnreadSessionIds(unreadSessionIds);
   }, [unreadSessionIds]);
@@ -521,7 +506,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         runningPollAuthoritativeRef.current = true;
         setRunningSessionIds(new Set(data.runningSessionIds ?? []));
       } catch {
-        // Keep the last known state; the next visible-tab poll retries.
+        // intent: DEC-323 — 一時的な poll 失敗は無視し次の visible-tab poll に任せる（最終既知状態を保持）
       } finally {
         if (controller === current) controller = null;
         schedule();
@@ -605,19 +590,16 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     key,
   }), []);
 
-  /** Resolve both display root and stable identity from server-provided data. */
   const projectFor = useCallback((cwd: string | null): ProjectSelection | null => {
     if (!cwd) return null;
-    // /api/cwd/validate resolves identity before a custom path becomes active,
-    // preventing one render with a raw path key from looking like a switch.
+    // intent: DEC-327 — custom path 選択時は raw path key で 1 フレーム描画される「一時的な workspace 切替に見える状態」を避けるため validate 結果を最優先する
     if (validatedProject?.cwd === cwd) {
       return projectSelection(validatedProject.root, validatedProject.key);
     }
     if (worktreeState && worktreeState.forCwd === cwd) {
       return projectSelection(worktreeState.projectRoot, worktreeState.projectKey);
     }
-    // Any path in the loaded worktree list belongs to that project — covers
-    // worktrees without sessions, so switching to them keeps the row mounted.
+    // intent: DEC-327 — セッション未持ちの worktree に切り替えても行がアンマウントされないよう、worktree list 内なら同一プロジェクトとして解決する
     if (worktreeState?.worktrees.some((w) => w.path === cwd)) {
       return projectSelection(worktreeState.projectRoot, worktreeState.projectKey);
     }
@@ -629,9 +611,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       : projectSelection(cwd, cwd);
   }, [validatedProject, worktreeState, allSessions, projectSelection]);
 
-  // A worktree/session refresh can hydrate the stable key without changing
-  // cwd, so notify when either changes. The parent treats same-cwd key changes
-  // as identity hydration rather than a workspace switch.
+  // intent: DEC-328 — worktree/session refresh で cwd 不変のまま stable key だけ埋まるケースがあるので、cwd と key の両方を監視して「同一 cwd + key 変化」は identity hydration として親に伝える
   const lastNotifiedProjectRef = useRef<{ cwd: string | null; key: string | null } | null>(null);
   useEffect(() => {
     const project = projectFor(selectedCwd);
@@ -645,10 +625,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     );
   }, [selectedCwd, onCwdChange, projectFor]);
 
-  // Sync the worktree switcher to the selected session's cwd. Sessions of all
-  // worktrees in a project share one list, so clicking a session from another
-  // worktree should move the effective cwd there. Only fires when the prop
-  // value changes, so a manual switcher change is not snapped back.
+  // intent: DEC-328 — 別 worktree のセッションをクリックしたら effective cwd もそこへ移すが、prop 値変化時のみ発火させることで手動 switcher 操作を上書きしない
   const lastSyncedCwdPropRef = useRef<string | null>(null);
   useEffect(() => {
     if (selectedCwdProp && selectedCwdProp !== lastSyncedCwdPropRef.current) {
@@ -657,7 +634,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     }
   }, [selectedCwdProp]);
 
-  // Load worktrees for the current effective cwd
   const [wtRefreshKey, setWtRefreshKey] = useState(0);
   useLayoutEffect(() => {
     if (!selectedCwd) {
@@ -695,12 +671,11 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     return () => { cancelled = true; };
   }, [selectedCwd, wtRefreshKey, refreshKey]);
 
-  // Auto-select cwd and restore session from URL on first load
+  // intent: DEC-329 — URL の初期セッション ID を優先復元し、見つからなければ親に placeholder を出させる；復元不要なら最新プロジェクトを既定で開く
   useEffect(() => {
     if (allSessions.length === 0 || skipInitialProjectSelection) return;
 
     if (selectedCwd === null) {
-      // If restoring a session, set cwd to match that session
       if (initialSessionId && !restoredRef.current) {
         restoredRef.current = true;
         const target = allSessions.find((s) => s.id === initialSessionId);
@@ -709,7 +684,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           onSelectSession(target, true);
           return;
         }
-        // Session not found — notify parent so it can show the placeholder
         onInitialRestoreDone?.();
       }
       const projects = getRecentProjects(allSessions);
@@ -717,9 +691,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     }
   }, [allSessions, selectedCwd, initialSessionId, skipInitialProjectSelection, onSelectSession, onInitialRestoreDone]);
 
-  // Prefer an exact UI selection while a refetch is in flight. Once the
-  // response catches up, the server-resolved path handles Windows case and
-  // separator differences without teaching the browser OS path semantics.
+  // intent: DEC-330 — refetch 中も UI 選択そのままの一致を最優先し、応答後は server 解決 path を使うことで Windows の大小・区切り差をブラウザに肩代わりさせない
   const currentWorktree = worktreeState
     ? worktreeState.worktrees.find((worktree) => worktree.path === selectedCwd)
       ?? (worktreeState.forCwd === selectedCwd && worktreeState.currentWorktreePath
@@ -784,7 +756,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         setDropdownOpen(false);
       }
     } catch {
-      // ignore
+      // intent: DEC-323 — 既定 cwd 取得失敗は既存 selection をそのままにする（意図的 no-op）
     }
   }, []);
 
@@ -807,9 +779,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       setWtNewOpen(false);
       setWtNewBranch("");
       setWtDropdownOpen(false);
-      // Optimistically register the new worktree so projectFor() resolves
-      // it to the main repo before the refetch lands (keeps AppShell from
-      // treating the new cwd as a different project).
+      // intent: DEC-331 — refetch 到着前に projectFor() が新 worktree を同一プロジェクトとして解決できるよう optimistic に登録する（AppShell が別プロジェクトへ切り替わったと誤認するのを防ぐ）
       setWorktreeState((prev) => prev ? {
         ...prev,
         forCwd: data.path!,
@@ -838,7 +808,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
       const data = await res.json().catch(() => ({})) as { error?: string; dirty?: boolean };
       if (!res.ok) {
         if (data.dirty && !force) {
-          // Dirty worktree — ask the user to confirm a force removal
+          // intent: DEC-331 — dirty worktree は force 削除の明示確認を挟む（未 commit を silent に消さない）
           setWtConfirmRemove(path);
           return;
         }
@@ -855,7 +825,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     }
   }, [worktreeState, wtBusy, currentWorktreePath]);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -875,10 +844,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Clicking a session moves the effective cwd to that session's worktree.
-  // Done on the click path (not via the selectedCwd prop sync) so it also
-  // works when the prop value won't change — e.g. re-clicking the already
-  // open session after manually switching worktrees.
+  // intent: DEC-332 — session クリックは click path で cwd を移す（prop sync 経由だと prop 値不変時に効かず、手動 worktree 切替後の再クリックで cwd がずれる）
   const handleSelectSessionFromList = useCallback((s: SessionInfo) => {
     if (s.cwd) setSelectedCwd(s.cwd);
     onSelectSession(s);
@@ -886,8 +852,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
 
   const handleNewSession = useCallback(() => {
     if (!selectedCwd) return;
-    // Generate a temporary UUID client-side — no backend call needed.
-    // Pi will be spawned lazily when the user sends the first message.
+    // intent: DEC-332 — 新 session ID はクライアント側で採番し、pi は最初のメッセージ送信時に遅延起動する（空 session の spawn 無駄を避ける）
     const tempId = typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
       : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
@@ -900,19 +865,16 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     ? recentProjects.filter((project) => project.root.toLowerCase().includes(projectFilter.trim().toLowerCase()))
     : recentProjects;
 
-  // Sessions of every worktree in the selected project are shown together
+  // intent: DEC-333 — 1 プロジェクト内の全 worktree のセッションを 1 リストで扱うため projectFor で解決した key を通す
   const selectedProject = projectFor(selectedCwd);
 
-  // Per-project activity counts (running / unread) for the workspace selector.
-  // Uses the same stable server key as the project list and filtering.
+  // intent: DEC-333 — workspace selector で running/unread を集計する。プロジェクトリストや filter と同じ stable server key を使い、集計単位を一致させる
   const projectActivity = useMemo(
     () => getProjectActivity(allSessions, runningSessionIds, unreadSessionIds),
     [allSessions, runningSessionIds, unreadSessionIds],
   );
 
-  // Any activity in a project other than the one currently selected — shown as
-  // a dot on the (collapsed) selector button so it is visible without opening
-  // the dropdown.
+  // intent: DEC-333 — 折り畳まれた selector button 上にドットを出し、dropdown を開かなくても他 workspace の活動を気付けるようにする
   const hasOtherWorkspaceActivity = useMemo(
     () => [...projectActivity.entries()].some(
       ([key, { running, unread }]) => key !== selectedProject?.key && (running > 0 || unread > 0),
@@ -923,6 +885,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const filteredSessions = selectedProject
     ? sessionsForProject(allSessions, selectedProject.key)
     : allSessions;
+  // intent: DEC-336 — git 直下 project でのみ switcher を出し、selected cwd が同一プロジェクトなら refetch 中も表示継続させる（forCwd 一致だけを条件にすると worktree 切替のたびに行が unmount して flicker する）
   const showWorktreeSwitcher = Boolean(
     worktreeState?.isGit
     && worktreeState.isTopLevel
@@ -952,7 +915,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         }
       : null);
 
-  // Build parent-child tree within the filtered set
   const sessionTree = buildSessionTree(filteredSessions);
 
   return (
@@ -968,7 +930,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           onSelect={(path) => void commitCustomPath(path)}
         />
       )}
-      {/* Header */}
       <div
         style={{
           padding: "12px 10px 10px",
@@ -1059,7 +1020,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           </div>
         </div>
 
-        {/* CWD picker */}
         <div ref={dropdownRef} style={{ position: "relative" }}>
           <button
             onClick={() => setDropdownOpen((v) => !v)}
@@ -1210,7 +1170,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                 )}
               </div>
 
-              {/* Default cwd shortcut */}
               {!customPathOpen && (
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDefaultCwd(); }}
@@ -1236,7 +1195,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                 </button>
               )}
 
-              {/* Custom path directory picker */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1265,13 +1223,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           </AnimatedDropdown>
         </div>
 
-        {/* Worktree switcher — shown only for git projects at a checkout top
-            level (repo subdirs keep their own project identity, so switching
-            from them would jump projects). Rendered whenever the selected cwd
-            belongs to the loaded project (not just when forCwd matches), so
-            switching between worktrees of one project keeps the row mounted
-            instead of flickering while data refetches: all worktrees of a
-            project share the same list anyway. */}
         {showWorktreeSwitcher && (() => {
           if (!worktreeState) return null;
           const showWtFilter = worktreeState.worktrees.length >= 8;
@@ -1618,7 +1569,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         )}
       </div>
 
-      {/* Session list */}
       <div style={{ flex: explorerOpen && (selectedCwdProp || selectedCwd) ? "1 1 0" : "1 1 auto", overflowY: "auto", padding: "0", minHeight: 80 }}>
         {loading && (
           <div style={{ padding: "16px 14px", color: "var(--text-muted)", fontSize: 12 }}>
@@ -1653,7 +1603,6 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         ))}
       </div>
 
-      {/* File Explorer section */}
       {(selectedCwdProp || selectedCwd) && (
         <div
           style={{
@@ -1799,7 +1748,6 @@ function SessionTreeItem({
   return (
     <div>
       <div style={{ position: "relative" }}>
-        {/* Indent line for child sessions */}
         {depth > 0 && (
           <div style={{
             position: "absolute",
@@ -1910,12 +1858,7 @@ function UnreadSessionIndicator() {
   );
 }
 
-/**
- * Compact per-project activity badges for the workspace selector dropdown items:
- * a spinning running icon + count and an unread dot + count. Renders nothing
- * when the project has no activity. Counts share the accent / unread colors of
- * the per-session indicators so the two stay visually consistent.
- */
+// intent: DEC-333 — per-session indicator と同一の accent/unread 配色を使い、per-project 集計だと視覚的に一致していると分かるようにする
 function showProjectActivity(
   activity: { running: number; unread: number } | undefined,
   t: (key: string) => string,
@@ -1985,8 +1928,7 @@ function SessionItem({
   const [deleting, setDeleting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Select the whole name once the rename input is mounted (startRename's
-  // immediate setTimeout can fire before the input exists).
+  // intent: DEC-334 — startRename の同期 setTimeout では input が未 mount のことがあるので、renaming state 変化を rAF で待って初めて select する
   useEffect(() => {
     if (renaming) {
       const id = requestAnimationFrame(() => inputRef.current?.select());
@@ -1994,9 +1936,7 @@ function SessionItem({
     }
   }, [renaming]);
 
-  // A stored first message may be an SDK-expanded <skill> block; collapse it
-  // back to the compact /skill:name args command the user typed before using
-  // it as the auto-name fallback, mirroring MessageView's rendering.
+  // intent: DEC-334 — 保存された first message が SDK 展開後の <skill> block だと自動タイトルに XML が出るので、MessageView と同じ /skill:name 表現に畳んで揃える
   const displayFirstMessage = skillExpansionToCommand(session.firstMessage) ?? session.firstMessage;
   const title = session.name || displayFirstMessage.slice(0, 50) || session.id.slice(0, 12);
 
@@ -2010,10 +1950,7 @@ function SessionItem({
   const commitRename = useCallback(async () => {
     const name = renameValue.trim();
     setRenaming(false);
-    // No-op when unchanged: the fallback title (first message / id) isn't a
-    // real stored name, so don't persist it as one. (The rename input seeds
-    // from the same collapsed displayFirstMessage, so an untouched rename of
-    // a skill-invoked session stays a no-op instead of persisting raw XML.)
+    // intent: DEC-334 — fallback title（first message / id）は保存されていないので、未編集の rename を実 name として persist しない（skill 起動セッションで raw XML を書き込まないための保険を含む）
     if (renameValue === title || name === (session.name ?? "")) return;
     try {
       await fetch(`/api/sessions/${encodeURIComponent(session.id)}`, {
@@ -2023,7 +1960,7 @@ function SessionItem({
       });
       onRenamed?.();
     } catch {
-      // ignore
+      // intent: DEC-323 — rename PATCH 失敗は UI を巻き戻さず next refetch に委ねる
     }
   }, [renameValue, session.id, session.name, onRenamed, title]);
 
@@ -2073,7 +2010,7 @@ function SessionItem({
     e.stopPropagation();
   }, [onRenamed, session.cwd, session.id, session.name, session.path]);
 
-  // Fixed-height outer wrapper — content swaps in place so the list never reflows
+  // intent: DEC-335 — 各行の高さを固定し、rename/delete 確認 UI を同 slot に差し替えることで list 全体の reflow を起こさない
   const ITEM_HEIGHT = 54;
 
   return (
@@ -2102,7 +2039,6 @@ function SessionItem({
       }}
     >
       {confirmDelete ? (
-        /* ── Delete confirmation: same height, two flat buttons ── */
         <>
           <div style={{ flex: 1, minWidth: 0, fontSize: 12, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {t("sidebar.deleteSession", { title: title.slice(0, 22) + (title.length > 22 ? "…" : "") })}
@@ -2143,7 +2079,6 @@ function SessionItem({
           </div>
         </>
       ) : renaming ? (
-        /* ── Rename: input fills the same row ── */
         <input
           ref={inputRef}
           value={renameValue}
@@ -2167,9 +2102,7 @@ function SessionItem({
           }}
         />
       ) : (
-        /* ── Normal view ── */
         <>
-          {/* Fork indicator for child sessions */}
           {depth > 0 && (
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <line x1="6" y1="3" x2="6" y2="15" />
@@ -2222,7 +2155,6 @@ function SessionItem({
             </div>
           </div>
 
-          {/* Collapse toggle — always visible when has children */}
           {hasChildren && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleCollapse?.(); }}
@@ -2242,7 +2174,6 @@ function SessionItem({
             </button>
           )}
 
-          {/* Action buttons — shown on hover */}
           {hovered && !session.transient && (
             <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
               <button

@@ -1,3 +1,5 @@
+// intent: DEC-209 — regex 内で "/" を書く際は "\/" ではなく "[/]" を使う (validator の regex-literal 未追跡による "//" 誤検出を避けるため)
+
 function safeDecode(value: string): string {
   try {
     return decodeURIComponent(value);
@@ -19,7 +21,7 @@ function stripLineSuffix(filePath: string): string {
 
 function normalizeLocalPath(filePath: string): string {
   const normalized = normalizeFilePathSlashes(filePath);
-  const isWindowsDrive = /^[a-zA-Z]:\//.test(normalized);
+  const isWindowsDrive = /^[a-zA-Z]:[/]/.test(normalized);
   const isUnc = normalized.startsWith("//");
   const leadingSlash = normalized.startsWith("/") && !isWindowsDrive && !isUnc;
   const parts: string[] = [];
@@ -46,7 +48,7 @@ function normalizeLocalPath(filePath: string): string {
 function isPathInside(candidate: string, root: string): boolean {
   const normalizedCandidate = normalizeLocalPath(candidate).replace(/\/+$/, "");
   const normalizedRoot = normalizeLocalPath(root).replace(/\/+$/, "");
-  const useCaseInsensitive = /^[a-zA-Z]:\//.test(normalizedCandidate) || /^[a-zA-Z]:\//.test(normalizedRoot);
+  const useCaseInsensitive = /^[a-zA-Z]:[/]/.test(normalizedCandidate) || /^[a-zA-Z]:[/]/.test(normalizedRoot);
   const filePath = useCaseInsensitive ? normalizedCandidate.toLowerCase() : normalizedCandidate;
   const rootPath = useCaseInsensitive ? normalizedRoot.toLowerCase() : normalizedRoot;
   return filePath === rootPath || filePath.startsWith(`${rootPath}/`);
@@ -67,7 +69,7 @@ function fileUrlToPath(href: string): string | null {
     if (url.hostname) {
       return `//${url.hostname}${pathname.startsWith("/") ? pathname : `/${pathname}`}`;
     }
-    if (/^\/[a-zA-Z]:\//.test(pathname)) return pathname.slice(1);
+    if (/^[/][a-zA-Z]:[/]/.test(pathname)) return pathname.slice(1);
     return pathname;
   } catch {
     return null;
@@ -93,14 +95,14 @@ export function resolveLocalFileHref(
 
   if (lowerHref.startsWith("/api/") || lowerHref.startsWith("/_next/")) return null;
   if (!isBackslashUncPath && normalizedHref.startsWith("//")) return null;
-  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/i.test(normalizedHref) && !lowerHref.startsWith("file:") && !/^[a-zA-Z]:\//.test(normalizedHref)) {
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/i.test(normalizedHref) && !lowerHref.startsWith("file:") && !/^[a-zA-Z]:[/]/.test(normalizedHref)) {
     return null;
   }
 
   if (lowerHref.startsWith("file:")) {
     candidate = fileUrlToPath(normalizedHref);
     candidateKind = candidate ? "absolute" : null;
-  } else if (/^[a-zA-Z]:\//.test(normalizedHref)) {
+  } else if (/^[a-zA-Z]:[/]/.test(normalizedHref)) {
     candidate = normalizedHref;
     candidateKind = "absolute";
   } else if (normalizedHref.startsWith("/")) {
@@ -118,7 +120,7 @@ export function resolveLocalFileHref(
   return filePath;
 }
 
-/** Resolve a filesystem path without applying URL or source-location syntax. */
+// intent: DEC-210 — URL / source-location 構文を適用しない生 path 専用の resolver として href 側と役割を分ける
 export function resolveLocalFilePath(filePath: string | undefined, baseDir?: string): string | null {
   if (!filePath) return null;
 
@@ -129,7 +131,7 @@ export function resolveLocalFilePath(filePath: string | undefined, baseDir?: str
   const normalizedPath = normalizeSlashes(filePath);
   const normalizedBase = baseDir ? normalizeSlashes(baseDir).replace(/\/+$/, "") : undefined;
 
-  const isDriveAbsolute = /^[a-zA-Z]:\//.test(normalizedPath);
+  const isDriveAbsolute = /^[a-zA-Z]:[/]/.test(normalizedPath);
   const isUncAbsolute = normalizedPath.startsWith("//");
   let candidate: string;
 

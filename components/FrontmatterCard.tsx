@@ -17,15 +17,13 @@ function renderValue(value: unknown): ReactNode {
   const text = formatFrontmatterValue(value);
   if (!text) return null;
   if (typeof value === "string" && isUrl(value)) {
-    // Only safe schemes — values come from the user's own file but stay escaped
-    // by React regardless; this just prevents javascript: hrefs.
+    // intent: DEC-301 — frontmatter 由来の URL は http/https/mailto のみ許可、javascript: を弾く
     return (
       <a href={value} target="_blank" rel="noopener noreferrer">
         {text}
       </a>
     );
   }
-  // Arrays are rendered as inline text; anything else keeps its plain text form.
   return text;
 }
 

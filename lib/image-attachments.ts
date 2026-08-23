@@ -37,7 +37,6 @@ export function isBase64ImageWithinLimits(value: unknown): value is Base64ImageA
   return bytes !== null && bytes <= MAX_ATTACHED_IMAGE_BYTES;
 }
 
-/** Return an API-safe error for prompt, steering, and follow-up image arrays. */
 export function validateAgentImages(value: unknown): string | null {
   if (value === undefined) return null;
   if (!Array.isArray(value)) return "images must be an array";

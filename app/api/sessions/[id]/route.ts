@@ -41,7 +41,7 @@ export async function GET(
 
     const header = sm.getHeader();
     let modified = header?.timestamp ?? new Date().toISOString();
-    try { modified = statSync(filePath).mtime.toISOString(); } catch { /* use header timestamp */ }
+    try { modified = statSync(filePath).mtime.toISOString(); } catch {}
     const parentSessionId = header?.parentSession
       ? await resolveSessionIdByPath(header.parentSession)
       : undefined;
@@ -78,7 +78,6 @@ export async function GET(
   }
 }
 
-// PATCH /api/sessions/[id]  body: { name: string }
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -102,7 +101,6 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/sessions/[id]
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -114,11 +112,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    // Read only the bounded header before deleting.
+    // intent: DEC-531 — bounded header 読み取り + 子 session の cascade re-parent
     const parentSessionPath = readSessionHeader(filePath)?.parentSession;
 
-    // Re-attach all direct children to this session's parent (cascade re-parent)
-    // Scan sibling files in the same directory
     const targetPathKey = sessionPathKey(filePath);
     const dir = dirname(filePath);
     try {
@@ -136,14 +132,13 @@ export async function DELETE(
             header.parentSession &&
             sessionPathKey(header.parentSession) === targetPathKey
           ) {
-            // Rewrite header with new parentSession
             header.parentSession = parentSessionPath;
             lines[0] = JSON.stringify(header);
             writeFileSync(childPath, lines.join("\n"));
           }
-        } catch { /* skip malformed */ }
+        } catch {}
       }
-    } catch { /* skip if dir unreadable */ }
+    } catch {}
 
     await getRpcSession(id)?.shutdown();
     unlinkSync(filePath);

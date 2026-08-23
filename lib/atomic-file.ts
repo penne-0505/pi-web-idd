@@ -2,10 +2,7 @@ import { randomUUID } from "crypto";
 import { renameSync, unlinkSync, writeFileSync } from "fs";
 import { basename, dirname, join } from "path";
 
-/**
- * Replace a file atomically without exposing credentials through default
- * process permissions. The caller must create the parent directory first.
- */
+// intent: DEC-255 — 秘匿ファイル書き込みは 0o600 で temp に書いて rename、default mask 経由の credential 露出を避ける
 export function writePrivateFileAtomicSync(path: string, contents: string): void {
   const dir = dirname(path);
   const tempPath = join(dir, `.${basename(path)}-${randomUUID()}.tmp`);

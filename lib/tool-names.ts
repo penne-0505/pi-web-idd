@@ -1,11 +1,4 @@
-/**
- * Tool-name predicates shared by the chat views.
- *
- * Pi's built-in names are plain `write` / `edit`, but MCP servers expose the
- * same operations under prefixed or namespaced names, so each predicate also
- * accepts the common decorated forms.
- */
-
+// intent: DEC-247 — MCP server は write/edit を prefix/namespace で包む、bare 名と包み込み名の両方を受理する
 export function isWriteToolName(toolName: string): boolean {
   const name = toolName.toLowerCase();
   return name === "write" ||

@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 
-// Mobile breakpoint shared with app/globals.css (max-width: 640px).
+// intent: DEC-517 — breakpoint 値は app/globals.css と共有する定数
 const MOBILE_QUERY = "(max-width: 640px)";
 
 function subscribe(cb: () => void): () => void {
@@ -21,11 +21,7 @@ function getServerSnapshot(): boolean {
   return false;
 }
 
-/**
- * Returns true when the viewport is at or below the mobile breakpoint.
- * SSR-safe: renders as desktop (false) on the server and first client paint,
- * then syncs to the real viewport after hydration.
- */
+// intent: DEC-517 — SSR / hydration 初回は desktop 固定
 export function useIsMobile(): boolean {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

@@ -23,13 +23,12 @@ const { wireChildProcessLifecycle } = require("./process-lifecycle");
 const pkgDir = path.join(__dirname, "..");
 const nextDir = path.join(pkgDir, ".next");
 
-// Resolve next's CLI entry directly to avoid relying on .bin symlinks (which
-// may not exist when installed via npx).
+// intent: DEC-543 — next CLI を直接 resolve して npx 経由の .bin symlink 欠落を回避
 let nextBin;
 try {
   nextBin = require.resolve("next/dist/bin/next", { paths: [pkgDir] });
 } catch {
-  // Fallback: locate next package root and derive the bin path manually.
+  // intent: DEC-543 — resolve 失敗時は package root から bin path を derive
   try {
     const nextPkg = require.resolve("next/package.json", { paths: [pkgDir] });
     nextBin = path.join(path.dirname(nextPkg), "dist", "bin", "next");
@@ -62,8 +61,7 @@ if (!loopbackHostnames.has(hostname)) {
 const nextArgs = ["start", "-p", port];
 nextArgs.push("-H", hostname);
 
-// Always run next's JS entry with node directly — avoids .bin symlink issues
-// and path-with-spaces problems on Windows when shell: true is used.
+// intent: DEC-543 — node で JS entry を直接起動して shell:true 経由の path with spaces 問題を回避
 const child = spawn(process.execPath, [nextBin, ...nextArgs], {
   cwd: pkgDir,
   stdio: ["inherit", "pipe", "inherit"],
@@ -81,15 +79,10 @@ child.stdout.on("data", (chunk) => {
     browserOpened = true;
     const isWindows = process.platform === "win32";
     const isMac = process.platform === "darwin";
-    // Avoid `shell: true` to suppress Node.js DEP0190 deprecation
-    // ("Passing args to a child process with shell option true can lead to
-    // security vulnerabilities, as the arguments are not escaped").
-    // Pass a structured argv so Node.js handles escaping instead of
-    // concatenating the args into a shell command string.
+    // intent: DEC-543 — Node.js DEP0190 と shell escaping リスクを避けるため argv 分離で spawn
     let opener;
     if (isWindows) {
-      // `start` is a cmd.exe built-in, so invoke cmd directly. The empty
-      // title argument is required by `start` before the target URL.
+      // intent: DEC-543 — `start` は cmd 内蔵、空 title 引数を URL の前に置く必要がある
       opener = spawn(process.env.ComSpec || "cmd.exe", ["/c", "start", "", url], {
         stdio: "ignore",
         detached: true,

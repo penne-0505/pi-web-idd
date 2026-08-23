@@ -1,6 +1,5 @@
 import type { LocalePlugin } from "../types";
 
-/** Pi Web 内置英语语言包。 */
 export const enLocale: LocalePlugin = {
   id: "en",
   label: "English",

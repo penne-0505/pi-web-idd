@@ -39,8 +39,7 @@ export function mergeSessionLists(
   supplementalSessions: SessionInfo[],
 ): SessionInfo[] {
   const byId = new Map(supplementalSessions.map((session) => [session.id, session]));
-  // A disk scan is authoritative once the JSONL exists. In particular, this
-  // replaces a transient registry snapshot without briefly rendering two rows.
+  // intent: DEC-152 — disk 上の session が transient snapshot を上書きし二重表示を避ける
   for (const session of persistedSessions) byId.set(session.id, session);
   return [...byId.values()].sort((a, b) => b.modified.localeCompare(a.modified));
 }
@@ -72,22 +71,18 @@ export async function listAllSessions(options: { force?: boolean } = {}): Promis
   if (options.force) invalidateSessionListCache();
   const generation = globalThis.__piSessionListGeneration ?? 0;
 
-  // Return cached result if still fresh (avoids re-scanning session files
-  // and re-spawning git processes on every page load).
+  // intent: DEC-150 — TTL 内は再スキャンと子プロセス再起動を避けキャッシュを返す
   if (globalThis.__piSessionListCache && Date.now() - globalThis.__piSessionListCache.ts < SESSION_LIST_CACHE_TTL_MS) {
     return globalThis.__piSessionListCache.data;
   }
 
-  // Coalescing dedup: concurrent callers share the same in-flight promise
-  // only while it belongs to the current cache generation.
+  // intent: DEC-151 — 同世代の in-flight promise のみ共有し、無効化後は新規スキャンを走らせる
   if (globalThis.__piSessionListPromise && globalThis.__piSessionListPromiseGeneration === generation) {
     return globalThis.__piSessionListPromise;
   }
 
   const loadPromise = loadAllSessions().then((data) => {
-    // If a mutation invalidated this scan, make this caller join (or start) a
-    // scan for the current generation. Returning the stale result here made a
-    // refresh race indistinguishable from a successful refresh.
+    // intent: DEC-151 — 走査中に世代が進んだら stale 結果を返さず現世代の再スキャンに合流する
     if ((globalThis.__piSessionListGeneration ?? 0) !== generation) {
       return listAllSessions();
     }
@@ -106,9 +101,7 @@ export async function listAllSessions(options: { force?: boolean } = {}): Promis
   return trackedPromise;
 }
 
-// ============================================================================
-// Session path caches, stored in globalThis for hot-reload safety.
-// ============================================================================
+// intent: DEC-153 — globalThis に置くことで Next.js hot-reload をまたいでキャッシュを保つ
 declare global {
   var __piSessionPathCache: Map<string, string> | undefined;
   var __piPathToSessionIdCache: Map<string, string> | undefined;
@@ -139,7 +132,6 @@ export async function resolveSessionPath(sessionId: string): Promise<string | nu
   const cached = getPathCache().get(sessionId);
   if (cached) return cached;
 
-  // Cache miss: scan all sessions to populate cache, then retry
   await listAllSessions();
   return getPathCache().get(sessionId) ?? null;
 }
@@ -243,8 +235,7 @@ export function buildSessionContext(
     byId as unknown as Map<string, PiSessionEntry>,
   );
 
-  // Convert the SDK-selected context entries and their IDs together. This keeps
-  // fork/navigation targets aligned while preserving pi's compaction ordering.
+  // intent: DEC-154 — messages と entryIds を同一 loop で並列生成し fork/navigation の添字対応を保つ
   const messages: AgentMessage[] = [];
   const entryIds: string[] = [];
   for (const entry of contextEntries) {
@@ -315,17 +306,11 @@ function omitToolResultBase64Images(message: AgentMessage): AgentMessage {
   return { ...message, content };
 }
 
-// Convert a session entry on the active branch into a UI message.
-// Returns null for entries that do not map to chat history (metadata, non-message types).
 function entryToUiMessage(
   entry: SessionEntry,
   options: { deferThinking?: boolean; deferToolResultImages?: boolean },
 ): AgentMessage | null {
-  // Supported message roles: user, assistant, toolResult, bashExecution.
-  // bashExecution messages enter the case "message" branch (entry.type === "message").
-  // The early return at line below ("!options.deferThinking || message.role !== "assistant"")
-  // passes non-assistant messages — including bashExecution — through unchanged.
-  // normalizeToolCalls is a secondary guard (returns non-assistant messages as-is).
+  // intent: DEC-155 — deferThinking は assistant 限定、bashExecution など他 role は素通し
   switch (entry.type) {
     case "message": {
       const message = options.deferToolResultImages

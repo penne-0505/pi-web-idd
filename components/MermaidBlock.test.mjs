@@ -11,7 +11,6 @@ const jiti = createJiti(import.meta.url, {
 const { MermaidBlock, CodeBlock } = await jiti.import("./MermaidBlock.tsx");
 const { I18nProvider } = await jiti.import("../hooks/useI18n.tsx");
 
-// Simple sequenceDiagram for testing
 const mermaidSrc = `sequenceDiagram
     Alice->>Bob: Hello
     Bob-->>Alice: Hi`;

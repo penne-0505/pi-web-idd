@@ -1,14 +1,6 @@
 import path from "node:path";
 
-/**
- * Stable, internal identity for a project path.
- *
- * Keep the original cwd/projectRoot for display and filesystem operations.
- * This key is only for grouping and equality: Windows paths are normalized
- * with win32 rules and case-folded because the default Windows filesystem is
- * case-insensitive. The explicit platform argument keeps those semantics
- * testable on non-Windows CI.
- */
+// intent: DEC-250 — 内部識別 key は Windows で case-fold し、platform 注入で非 Windows CI でも同等挙動を検証可能に
 export function projectIdentityKey(
   projectRoot: string,
   platform: NodeJS.Platform = process.platform,

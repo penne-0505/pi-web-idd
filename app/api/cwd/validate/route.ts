@@ -12,8 +12,7 @@ function normalizeCwd(cwd: string): string {
   return isAbsolute(cwd) ? cwd : resolve(cwd);
 }
 
-// POST /api/cwd/validate  body: { cwd: string }
-// Validates a candidate workspace before the UI selects it.
+// intent: DEC-541 — UI 選択前に allow_root 登録 + project 解決を pre-warm
 export async function POST(req: Request) {
   try {
     const body = await req.json() as { cwd?: unknown };

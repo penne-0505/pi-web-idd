@@ -9,9 +9,7 @@ import {
 } from "@/lib/bash-output";
 import { isBashOutputPathReferencedBySession } from "@/lib/session-file-references";
 
-// GET /api/agent/[id]/bash-output?path=<absPath>
-// Reads a bash output temp file referenced by this session. Inline display is
-// size-limited; download responses stream the file without buffering it.
+// intent: DEC-536 — inline は size 上限で JSON 返し、download は buffering せず stream
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

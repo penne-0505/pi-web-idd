@@ -86,7 +86,7 @@ export async function showBrowserNotification(
         return "service-worker";
       }
     } catch {
-      // Fall back to a page notification where the constructor is supported.
+      // intent: DEC-245 — SW 失敗時は Notification コンストラクタが使える環境で page notification に fallback
     }
   }
 
@@ -98,7 +98,7 @@ export async function showBrowserNotification(
     };
     return "window";
   } catch {
-    // Most mobile browsers expose Notification but require service-worker delivery.
+    // intent: DEC-245 — mobile ブラウザは Notification を公開しつつ construct 時に throw する、null で諦める
     return null;
   }
 }

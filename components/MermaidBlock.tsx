@@ -227,16 +227,7 @@ interface CodeBlockProps {
   isStreaming?: boolean;
 }
 
-/**
- * Syntax-highlighted code block with copy button.
- * Used as the "source" view for mermaid blocks and for all non-mermaid code fences.
- *
- * Memoized: parent markdown re-renders (e.g. streaming updates elsewhere in
- * the message list) must not re-run Prism tokenization on unchanged code.
- * While the owning message is still streaming, the block renders as plain
- * monospace text — highlighting a growing block re-tokenizes all of it on
- * every chunk, which is the single most expensive part of streamed rendering.
- */
+// intent: DEC-303 — CodeBlock は memo 化＋ストリーム中はプレーン表示、Prism 再トークン化コストを抑える
 export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isStreaming }: CodeBlockProps) {
   const { isDark } = useTheme();
   const { t } = useI18n();

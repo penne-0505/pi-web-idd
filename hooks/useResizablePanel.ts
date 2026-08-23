@@ -53,7 +53,7 @@ function writeStoredWidth(storageKey: string, width: number): void {
   try {
     window.localStorage.setItem(storageKey, String(width));
   } catch {
-    // Resizing remains available when storage is unavailable.
+    // intent: DEC-521 — storage 失敗は resize 動作を止めない
   }
 }
 
@@ -121,7 +121,7 @@ export function useResizablePanel(options: UseResizablePanelOptions) {
         drag.target.releasePointerCapture(pointerId);
       }
     } catch {
-      // The browser may have already released capture after pointer cancellation.
+      // intent: DEC-521 — pointer capture 二重解放は握り潰す
     }
   }, [commitWidth, restoreBodyState, widthRef]);
 

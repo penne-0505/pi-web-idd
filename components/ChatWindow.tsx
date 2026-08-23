@@ -43,8 +43,7 @@ interface Props {
   onSessionStatsPanelOpen?: () => void;
   onContextUsageChange?: (usage: { percent: number | null; contextWindow: number; tokens: number | null } | null) => void;
   onOpenFile?: (filePath: string) => void;
-  /** Completion sound state + controls, owned by AppShell so tasks finishing in
-   *  a non-active workspace can still ring. */
+  // intent: DEC-435 — 非アクティブなワークスペースで終わったタスクでも完了音が鳴るよう、状態と制御を AppShell 側に集約する
   soundEnabled?: boolean;
   onSoundToggle?: () => void;
   playDoneSound?: () => void;
@@ -91,7 +90,7 @@ function NewSessionUpdateLink({
         }
       })
       .catch(() => {
-        // Update checks are best-effort and must not interrupt a new session.
+        // intent: DEC-436 — 更新チェックの失敗が新規セッション作成体験を止めないよう best-effort でサイレントに握り潰す
       });
     return () => controller.abort();
   }, []);
@@ -184,14 +183,7 @@ function hasDisplayableProcessMessage(message: AgentMessage): boolean {
   return message.role === "custom";
 }
 
-// A user message normally anchors a turn (user prompt → process → final
-// answer), and the process messages in between get folded into a collapsed
-// ProcessDetailsGroup. When compaction fires mid-turn, pi drops the original
-// user prompt and inserts a compaction summary (role "custom", customType
-// "compaction") in its place; the agent then keeps producing tool calls and a
-// final answer with no user message left to anchor them. Treat a compaction
-// summary as an anchor too, otherwise every post-compaction message renders
-// standalone and never collapses.
+// intent: DEC-437 — compaction が user プロンプトを差し替えても後続の tool call と最終回答を折り畳めるよう、compaction 要約も user と同格のアンカーとして扱う
 function isGroupAnchor(message: AgentMessage): boolean {
   if (message.role === "user") return true;
   return message.role === "custom" && (message as CustomMessage).customType === "compaction";
@@ -254,10 +246,7 @@ export function ChatWindow({ session, sessionRunning, newSessionCwd, newSessionD
   const { t } = useI18n();
   const isMobile = useIsMobile();
 
-  // Wrap onAgentEnd to play the completion sound. This is more reliable than
-  // wrapping handleAgentEventRef because useAgentSession overwrites that ref
-  // on every render (it syncs the latest callback), which would blow away an
-  // externally-installed wrapper after the first re-render.
+  // intent: DEC-435 — useAgentSession が handleAgentEventRef を毎レンダで上書きするため、完了音は上書き耐性のある onAgentEnd 側でラップする
   const playDoneSoundRef = useRef(playDoneSound);
   playDoneSoundRef.current = playDoneSound;
   const soundEnabledRef = useRef(soundEnabled);
@@ -270,7 +259,7 @@ export function ChatWindow({ session, sessionRunning, newSessionCwd, newSessionD
     onAgentEnd?.();
   }, [onAgentEnd]);
 
-  // 稳定化 onEditContent 引用，配合 React.memo 防止历史消息重渲染
+  // intent: DEC-438 — onEditContent 参照を安定化し、MessageView 側の React.memo() が履歴メッセージの再レンダを抑止できるようにする
   const handleEditContent = useCallback((message: UserMessage) => {
     chatInputRef?.current?.replaceMessage(message);
   }, [chatInputRef]);
@@ -304,20 +293,15 @@ export function ChatWindow({ session, sessionRunning, newSessionCwd, newSessionD
     playDoneSoundRef.current();
   }, [extensionDialog]);
 
-  // Register the abort handler for the global Esc shortcut
   useEffect(() => {
     registerAbortHandler(sessionBusy ? handleAbort : null);
   }, [sessionBusy, handleAbort]);
 
-  // --- Lazy-load historical messages ---
-  // Only render the last N messages initially. When the user scrolls to the
-  // top, load another page while keeping the scroll position stable.
+  // intent: DEC-439 — 長い履歴の初回描画コストを抑えるため、直近 N 件だけ描画しスクロールで古いページを段階ロードする
   const [visibleCount, setVisibleCount] = useState(VISIBLE_PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const prevScrollDistanceRef = useRef<number | null>(null);
 
-  // IntersectionObserver on the sentinel div at the top of the message list.
-  // When it becomes visible, load the next page of older messages.
   useEffect(() => {
     const sentinel = sentinelRef.current;
     const container = scrollContainerRef.current;
@@ -325,7 +309,6 @@ export function ChatWindow({ session, sessionRunning, newSessionCwd, newSessionD
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
-          // Save distance from top before prepending to restore scroll later
           prevScrollDistanceRef.current = captureScrollDistance(container.scrollHeight, container.scrollTop);
           setVisibleCount((prev) => getNextVisibleCount(prev));
         }
@@ -336,8 +319,7 @@ export function ChatWindow({ session, sessionRunning, newSessionCwd, newSessionD
     return () => observer.disconnect();
   }, [visibleCount, messages.length, scrollContainerRef]);
 
-  // After visibleCount increases (more messages prepended), restore the
-  // scroll position so the viewport doesn't jump.
+  // intent: DEC-439 — 追加ページ挿入で scrollHeight が伸びた直後にビューポートが飛ばないよう保存済み距離からスクロール位置を戻す
   useEffect(() => {
     if (prevScrollDistanceRef.current == null) return;
     const container = scrollContainerRef.current;
@@ -345,8 +327,7 @@ export function ChatWindow({ session, sessionRunning, newSessionCwd, newSessionD
     container.scrollTop = restoreScrollTop(container.scrollHeight, prevScrollDistanceRef.current);
     prevScrollDistanceRef.current = null;
   }, [visibleCount, scrollContainerRef]);
-  // Push session stats up to AppShell for the top bar.
-  // Compare scalar fields to avoid loops from new object identity each render.
+  // intent: DEC-440 — セッション統計はスカラー結合キーで変更検知し、参照恒等が毎レンダ変わる sessionStats を依存に置いても AppShell への通知がループしないようにする
   const statsKey = sessionStats
     ? [
       sessionStats.sessionId,
@@ -373,7 +354,7 @@ export function ChatWindow({ session, sessionRunning, newSessionCwd, newSessionD
   }, [statsKey, onSessionStatsChange]);
   useEffect(() => () => { onSessionStatsChange?.(null); }, [onSessionStatsChange]);
 
-  // Push context usage up to AppShell as well.
+  // intent: DEC-440 — コンテキスト使用量も同じキー比較方式で AppShell に伝播し参照恒等ループを避ける
   const ctxKey = contextUsage
     ? `${contextUsage.percent ?? "null"}|${contextUsage.contextWindow}|${contextUsage.tokens ?? "null"}`
     : null;
@@ -391,10 +372,7 @@ export function ChatWindow({ session, sessionRunning, newSessionCwd, newSessionD
   const { isDragOver, handleDragEnter, handleDragOver, handleDragLeave, handleDrop } = useDragDrop(onDrop);
 
   const visibleMessages = messages.filter((m) => m.role === "user" || m.role === "assistant");
-  // Stable Map identity: `messages` doesn't change during streaming updates
-  // (the streaming message lives in streamState), so memoized MessageViews
-  // skip re-rendering on every message_update event. An inline `new Map()`
-  // here used to defeat MessageView's memo() on each streamed chunk.
+  // intent: DEC-441 — ストリーミング中は messages 配列が変わらない性質を利用し useMemo で toolResultsMap 参照を安定化して MessageView の memo() を効かせる
   const toolResultsMap = useMemo(() => {
     const map = new Map<string, ToolResultMessage>();
     for (const msg of messages) {
@@ -706,11 +684,7 @@ export function ChatWindow({ session, sessionRunning, newSessionCwd, newSessionD
               for (let i = messages.length - 1; i >= 0; i--) {
                 if (messages[i].role === "user") { lastUserIdx = i; break; }
               }
-              // Anchor for live-tail detection: the last user message, or a
-              // compaction summary when compaction has replaced it mid-turn.
-              // Computed independently from lastUserIdx (which is kept for the
-              // scroll-to-user ref) because a compaction summary can sit after
-              // the last user message and anchor the still-streaming segment.
+              // intent: DEC-437 — live-tail 判定は compaction 要約もアンカーとして扱う必要があるため、scroll-to-user 用の lastUserIdx とは別に独立で計算する
               let lastAnchorIdx = -1;
               for (let i = messages.length - 1; i >= 0; i--) {
                 if (isGroupAnchor(messages[i])) { lastAnchorIdx = i; break; }
@@ -746,7 +720,7 @@ export function ChatWindow({ session, sessionRunning, newSessionCwd, newSessionD
                     if (r === "user") break;
                     if (r === "assistant") { showTimestamp = false; break; }
                   }
-                  // Hide on the currently-streaming tail (the streaming bubble owns the live timestamp)
+                  // intent: DEC-442 — ストリーミング中の末尾ではライブバブル側がタイムスタンプを担うため、確定済み側の表示を抑制して二重表示を防ぐ
                   if (showTimestamp && streamState.isStreaming && idx === messages.length - 1) {
                     showTimestamp = false;
                   }
@@ -856,10 +830,7 @@ export function ChatWindow({ session, sessionRunning, newSessionCwd, newSessionD
                 }
 
                 if (finalAnswerMessage) {
-                  // Each tool call is stored as its own assistant entry, so the
-                  // final answer alone carries no record of what the turn wrote.
-                  // Gather the turn's assistant blocks and derive the file list
-                  // from the write/edit calls among them.
+                  // intent: DEC-443 — tool call が個別アシスタントエントリに散らばるため、書き込みファイル一覧はターン内の全 write/edit ブロックを再走査して復元する
                   const turnContent: AssistantContentBlock[] = [];
                   for (let i = userIdx + 1; i <= finalAssistantIdx; i++) {
                     const m = messages[i];

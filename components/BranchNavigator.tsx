@@ -4,27 +4,20 @@ import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import type { BranchPreview, SessionEntry, SessionTreeNode } from "@/lib/types";
 import { useI18n } from "@/hooks/useI18n";
 
+// intent: DEC-465 — インラインモードは別コンポーネントがトリガー・開閉状態・幅を制御する組み込みシナリオを想定しており、propsで外部制御と表示切替の両輪を受ける
 interface Props {
   tree: SessionTreeNode[];
   activeLeafId: string | null;
   onLeafChange: (leafId: string | null) => void;
-  /** When true, renders as a compact inline button for embedding in a top bar */
   inline?: boolean;
-  /** When inline, use this ref's bounding rect to size/position the dropdown */
   containerRef?: React.RefObject<HTMLElement | null>;
-  /** Controlled open state for inline mode */
   open?: boolean;
-  /** Called when the button is clicked in inline mode */
   onToggle?: () => void;
-  /** Whether a session is currently active (used to show appropriate empty reason) */
   hasSession?: boolean;
-  /** When inline, render icon-only (no text label) to save horizontal space */
   compact?: boolean;
-  /** Keep the inline dropdown mounted while another control supplies its trigger */
   hideInlineButton?: boolean;
 }
 
-// Find the visible entry IDs on the path from root to activeLeafId.
 function buildActivePath(nodes: SessionTreeNode[], targetId: string | null): Set<string> {
   if (!targetId) return new Set();
   const target = targetId;
@@ -46,10 +39,7 @@ function isMessageEntry(entry: SessionEntry): boolean {
   return entry.type === "message" && "message" in entry;
 }
 
-// Compress a visible linear chain into the first branching/leaf node.
-// Server-side compressed IDs also count as skipped nodes.
-// branchPreview is the bounded preview of the first message on the source
-// chain. labelEntry keeps unprojected/test shapes working as a fallback.
+// intent: DEC-466 — 一本道の分岐なし区間を先頭ノードに畳んでツリーの視覚ノイズを減らし、branchPreviewはサーバ配信の要約を優先しつつlabelEntryで未射影・テスト形状のフォールバックを保つ
 export function compressChain(node: SessionTreeNode): {
   node: SessionTreeNode;
   skipped: number;
@@ -69,9 +59,7 @@ export function compressChain(node: SessionTreeNode): {
   return { node: current, skipped, branchPreview, labelEntry: labelEntry ?? current.entry };
 }
 
-// Top-level rows of the panel: with multiple roots (a branch was started from
-// the very first message) the roots themselves are the branches; otherwise the
-// children of the first branching node.
+// intent: DEC-467 — 複数root(最初のメッセージから分岐した場合)はroot群自体をブランチ行とし、単一rootなら最初の分岐点の子をブランチ行として扱うルール差を吸収する
 export function selectTopLevelBranches(tree: SessionTreeNode[]): SessionTreeNode[] {
   if (tree.length > 1) return tree;
   if (tree.length === 0) return [];
@@ -99,7 +87,6 @@ function getLabel(entry: SessionEntry): string {
   return entry.type;
 }
 
-// Does the tree have any branching at all?
 function hasBranch(nodes: SessionTreeNode[]): boolean {
   if (nodes.length > 1) return true;
   for (const node of nodes) {
@@ -114,7 +101,7 @@ interface TreeNodeProps {
   activePathIds: Set<string>;
   depth: number;
   isLast: boolean;
-  parentLines: boolean[]; // whether ancestor at each depth has more siblings after
+  parentLines: boolean[];
   onSelect: (id: string) => void;
 }
 
@@ -131,7 +118,6 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
 
   return (
     <div>
-      {/* This node row */}
       <div
         style={{
           display: "flex",
@@ -141,7 +127,6 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
         }}
         onClick={() => onSelect(rep.entry.id)}
       >
-        {/* Indent guide lines */}
         {parentLines.map((hasLine, i) => (
           <div key={i} style={{ width: 16, flexShrink: 0, position: "relative", height: "100%", alignSelf: "stretch" }}>
             {hasLine && (
@@ -157,9 +142,7 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
           </div>
         ))}
 
-        {/* Branch connector */}
         <div style={{ width: 16, flexShrink: 0, position: "relative", height: "100%", alignSelf: "stretch" }}>
-          {/* vertical line up (to parent) */}
           <div style={{
             position: "absolute",
             left: 7,
@@ -168,7 +151,6 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
             width: 1,
             background: "var(--border)",
           }} />
-          {/* horizontal line to node */}
           <div style={{
             position: "absolute",
             left: 7,
@@ -179,7 +161,6 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
           }} />
         </div>
 
-        {/* Node dot */}
         <div style={{
           width: 7,
           height: 7,
@@ -191,7 +172,6 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
           transition: "background 0.12s",
         }} />
 
-        {/* Role badge */}
         {role && (
           <span style={{
             fontSize: 9,
@@ -209,14 +189,12 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
           </span>
         )}
 
-        {/* Skipped indicator */}
         {skipped > 0 && (
           <span style={{ fontSize: 10, color: "var(--text-dim)", marginRight: 5, flexShrink: 0 }}>
             +{skipped}
           </span>
         )}
 
-        {/* Label */}
         <span style={{
           fontSize: 11,
           color: isActive ? "var(--text)" : isOnPath ? "var(--text-muted)" : "var(--text-dim)",
@@ -231,7 +209,6 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
         </span>
       </div>
 
-      {/* Children */}
       {rep.children.map((child, idx) => (
         <TreeNodeView
           key={child.entry.id}
@@ -370,7 +347,6 @@ export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, cont
 
   return (
     <div style={{ borderBottom: "1px solid var(--border)", background: "var(--bg)", flexShrink: 0, position: "relative" }}>
-      {/* Header toggle */}
       <button
         onClick={() => setOpenInternal((v) => !v)}
         style={{
@@ -392,7 +368,6 @@ export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, cont
         {chevron}
       </button>
 
-      {/* Tree panel - overlay */}
       {open && (
         <div style={{
           position: "absolute",

@@ -61,7 +61,7 @@ test("keeps the session event stream open through the idle grace window", () => 
 test("a rejected submission preserves a different run reported by the server", () => {
   const reconcileSource = source.slice(
     source.indexOf("  const reconcileAgentState = useCallback"),
-    source.indexOf("  // Recovery net for missed SSE events"),
+    source.indexOf("  // intent: DEC-505 — SSE 欠落 recovery net"),
   );
 
   assert.match(reconcileSource, /sessionIdRef\.current !== sid/);
@@ -192,7 +192,7 @@ test("abandoned fresh-session drafts are cleared and cannot be recreated by late
     source.indexOf("  const sessionStats = useMemo"),
   );
   const mountSource = source.slice(
-    source.indexOf("  // Load session on mount"),
+    source.indexOf("  useEffect(() => {\n    sessionHookMountedRef.current = true;"),
     source.indexOf("  useEffect(() => {\n    onSystemPromptChange"),
   );
 
@@ -203,7 +203,7 @@ test("abandoned fresh-session drafts are cleared and cannot be recreated by late
 
 test("streaming submissions cannot be stranded in an idle direct queue", () => {
   const queueSource = source.slice(
-    source.indexOf("  // Let AgentSession.prompt decide atomically"),
+    source.indexOf("  // intent: DEC-513 — steer/followUp を直接叩かず"),
     source.indexOf("  const handleAbortCompaction"),
   );
 
@@ -345,7 +345,7 @@ test("keeps live following cancellable when the user scrolls away from the tail"
   );
   const scrollHandlerSource = source.slice(
     source.indexOf("const handleScrollPositionChange"),
-    source.indexOf("// Load session on mount"),
+    source.indexOf("  useEffect(() => {\n    sessionHookMountedRef.current = true;"),
   );
   const scrollToBottomSource = source.slice(
     source.indexOf("const scrollToBottom"),
@@ -377,7 +377,7 @@ test("keeps a newly sent user message at the top while its response starts", () 
   );
   const scrollEffectSource = source.slice(
     source.indexOf("useLayoutEffect(() => {\n    if (messages.length > 0)"),
-    source.indexOf("// Load model list"),
+    source.indexOf("  useEffect(() => {\n    const controller = new AbortController();"),
   );
 
   assert.match(streamUpdateSource, /!pendingScrollToUserRef\.current && isNearBottomRef\.current/);
@@ -439,7 +439,7 @@ test("uses the prompt anchor as the only trailing message spacer", () => {
 test("keeps a detached viewport in place when streaming completes", () => {
   const scrollEffectSource = source.slice(
     source.indexOf("useLayoutEffect(() => {\n    if (messages.length > 0)"),
-    source.indexOf("// Load model list"),
+    source.indexOf("  useEffect(() => {\n    const controller = new AbortController();"),
   );
 
   assert.match(scrollEffectSource, /!agentRunningRef\.current && isNearBottomRef\.current[\s\S]*?scrollToBottom\("auto"\)/);

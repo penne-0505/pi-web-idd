@@ -13,8 +13,7 @@ import { buildEntriesFromFiles, filterFileEntries, type FileIndexEntry } from "@
 
 const execFileAsync = promisify(execFile);
 
-// Same skip lists as /api/files — only used for the non-git readdir fallback.
-// Git-tracked repos rely on .gitignore instead (matches the TUI's fd behavior).
+// intent: DEC-526 — skip 一覧は git 非対象の fallback 用（git repo は .gitignore に従う）
 const IGNORED_NAMES = new Set([
   "node_modules", ".git", ".next", "dist", "build", "__pycache__",
   ".turbo", ".cache", "coverage", ".pytest_cache", ".mypy_cache",
@@ -23,9 +22,9 @@ const IGNORED_NAMES = new Set([
 
 const IGNORED_SUFFIXES = [".pyc"];
 
-/** Cap on the plain (no-query) response used as the client-side index */
+// intent: DEC-525 — client-side index の cap（fuzzy filter は local で回すので送る量を絞る）
 const MAX_FILES = 5000;
-/** Hard caps on the full in-memory listing that ?q= searches against */
+// intent: DEC-525 — full in-memory listing の hard cap（?q= が対象にする母集合）
 const GIT_HARD_CAP = 200_000;
 const WALK_HARD_CAP = 50_000;
 const MAX_WALK_DEPTH = 8;
@@ -34,22 +33,18 @@ const CACHE_TTL_MS = 10_000;
 const CACHE_MAX_ENTRIES = 20;
 
 interface FileListing {
-  /** Full listing up to the hard cap (not the client cap) */
   files: string[];
-  /** True when even the hard cap was exceeded */
   hardTruncated: boolean;
 }
 
 interface CacheEntry {
   listing: FileListing;
-  /** Derived lazily on the first ?q= search against this listing */
+  // intent: DEC-526 — entries は ?q= 初回に lazy に構築
   entries?: FileIndexEntry[];
   expiresAt: number;
 }
 
-// Per-cwd cache on globalThis so it survives Next.js hot-reload; the @ menu
-// re-requests on every open and searches on every keystroke, so listings must
-// not be recomputed within a short window.
+// intent: DEC-526 — globalThis cache は hot-reload を跨いで生存させ短 window での再計算を避ける
 declare global {
   var __piFileIndexCache: Map<string, CacheEntry> | undefined;
 }
@@ -72,14 +67,14 @@ async function listWithGit(cwd: string): Promise<FileListing | null> {
     }
     return { files: all, hardTruncated: false };
   } catch {
-    // Not a git repo (or git unavailable) — caller falls back to readdir walk.
+    // intent: DEC-526 — git 不在 or non-repo は readdir walk へ fallback
     return null;
   }
 }
 
 function listWithWalk(cwd: string): FileListing {
   const files: string[] = [];
-  // BFS so shallow files win when the cap truncates the listing.
+  // intent: DEC-525 — BFS で cap 到達時に浅い path が残る
   const queue: Array<{ abs: string; rel: string; depth: number }> = [{ abs: cwd, rel: "", depth: 0 }];
   while (queue.length > 0) {
     const { abs, rel, depth } = queue.shift()!;
@@ -107,13 +102,7 @@ function listWithWalk(cwd: string): FileListing {
   return { files, hardTruncated: false };
 }
 
-// GET /api/file-index?cwd=/abs/path[&q=query]
-// Without q: { files: string[] (relative to cwd, capped at MAX_FILES),
-// truncated: boolean } — the client-side index for local filtering.
-// With q: { matches: { path, isDir }[] } — ranked against the FULL listing so
-// repos larger than MAX_FILES still find deep files (cap applied after
-// matching, like the TUI passing the query to fd).
-// Guarded by the same allow-list as /api/files.
+// intent: DEC-525 — client-side は cap 済み、?q= は full listing に match してから cap
 export async function GET(req: NextRequest) {
   try {
     const cwd = req.nextUrl.searchParams.get("cwd")?.trim() ?? "";

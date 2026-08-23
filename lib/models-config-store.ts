@@ -24,7 +24,7 @@ function normalizeModelCost(value: unknown): Record<string, unknown> | undefined
   ]);
 }
 
-/** Complete partial cost groups with zero; omit a cost group only when it is empty. */
+// intent: DEC-184 — cost group は部分入力を 0 埋めで完成させ、空なら削除する（部分値の未定義扱いをストア境界で消す）
 export function normalizeModelsConfigCosts(
   data: Record<string, unknown>,
 ): Record<string, unknown> {

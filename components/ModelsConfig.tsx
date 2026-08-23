@@ -16,7 +16,6 @@ import {
   type ModelCostDraft,
   type ModelCostKey,
 } from "./models-config-helpers";
-// Color icons (have their own fill colors — no background needed)
 import AnthropicIcon from "@lobehub/icons/es/Anthropic/components/Mono";
 import OpenAIIcon from "@lobehub/icons/es/OpenAI/components/Mono";
 import GoogleColorIcon from "@lobehub/icons/es/Google/components/Color";
@@ -50,8 +49,7 @@ import ZAIIcon from "@lobehub/icons/es/ZAI/components/Mono";
 
 type IconComponent = React.ComponentType<{ size?: number | string; style?: React.CSSProperties }>;
 
-// hasColor=true → Color icon (self-colored SVG, no wrapper)
-// hasColor=false → Mono icon (rendered with currentColor, inherits theme text color)
+// intent: DEC-410 — hasColor=true は自己配色 SVG、false は currentColor でテーマ追従
 const PROVIDER_ICONS: Record<string, { Icon: IconComponent; hasColor: boolean }> = {
   "anthropic":              { Icon: AnthropicIcon,        hasColor: false },
   "openai":                 { Icon: OpenAIIcon,           hasColor: false },
@@ -96,14 +94,12 @@ const PROVIDER_ICONS: Record<string, { Icon: IconComponent; hasColor: boolean }>
   "grok":                   { Icon: GrokIcon,             hasColor: false },
 };
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
 interface OAuthProvider {
   id: string;
   name: string;
   usesCallbackServer: boolean;
   loggedIn: boolean;
-  /** Provider also accepts an API key, so it appears in both picker sections. */
+  // intent: DEC-411 — OAuth/APIキー両対応プロバイダーは両ピッカーセクションに出す
   supportsApiKey?: boolean;
 }
 
@@ -113,7 +109,7 @@ interface ApiKeyProvider {
   configured: boolean;
   source?: string;
   modelCount: number;
-  /** Provider also supports OAuth, so it appears in both picker sections. */
+  // intent: DEC-411 — OAuth/APIキー両対応プロバイダーは両ピッカーセクションに出す
   supportsOAuth?: boolean;
 }
 
@@ -181,8 +177,6 @@ type Selection =
   | { type: "apikey"; providerId: string };
 
 const API_OPTIONS = ["openai-completions", "openai-responses", "anthropic-messages", "google-generative-ai"] as const;
-
-// ── Form field helpers ────────────────────────────────────────────────────────
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -316,8 +310,6 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>{children}</div>;
 }
-
-// ── Provider detail ───────────────────────────────────────────────────────────
 
 function ProviderDetail({ name, provider, onChange, onRename, onDelete, onAddModels }: {
   name: string; provider: ProviderEntry;
@@ -563,8 +555,6 @@ function ProviderDetail({ name, provider, onChange, onRename, onDelete, onAddMod
   );
 }
 
-// ── ThinkingLevelMap editor ───────────────────────────────────────────────────
-
 const THINKING_LEVELS = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
 type ThinkingLevel = typeof THINKING_LEVELS[number];
 
@@ -701,8 +691,6 @@ function ThinkingLevelMapEditor({
   );
 }
 
-// ── Model detail ──────────────────────────────────────────────────────────────
-
 const DEEPSEEK_COMPAT = {
   thinkingFormat: "deepseek",
   requiresReasoningContentOnAssistantMessages: true,
@@ -723,16 +711,12 @@ function setDeepseekCompat(model: ModelEntry, enabled: boolean): ModelEntry {
   return { ...model, compat: Object.keys(rest).length ? rest : undefined };
 }
 
-// Compat can be configured at the provider or model level; provider-composer
-// merges them (model wins) at runtime. The UI reads the effective value so
-// hand-edited models.json settings are reflected correctly, while toggles
-// write to the model entry so a per-model override is explicit.
+// intent: DEC-412 — provider+model の compat を結合表示し、書き込みは model のみに寄せて上書きを明示化
 function effectiveCompat(provider: ProviderEntry, model: ModelEntry): Record<string, unknown> {
   return { ...(provider.compat ?? {}), ...(model.compat ?? {}) };
 }
 
-// Editable key/value request-header list for a provider or model. Rows stay
-// local so a blank draft is never persisted as an invalid HTTP header name.
+// intent: DEC-413 — ドラフト行はローカル state に留め、空欄を不正な HTTP ヘッダ名として保存させない
 function HeaderListEditor({ headers, onChange }: {
   headers: Record<string, string> | undefined;
   onChange: (h: Record<string, string> | undefined) => void;
@@ -1321,8 +1305,6 @@ function ModelDetail({
   );
 }
 
-// ── OAuth detail ──────────────────────────────────────────────────────────────
-
 function OAuthDetail({ provider, onRefresh }: { provider: OAuthProvider; onRefresh: () => void }) {
   const [loginState, setLoginState] = useState<OAuthLoginState>({ phase: "idle" });
   const { t } = useI18n();
@@ -1336,7 +1318,7 @@ function OAuthDetail({ provider, onRefresh }: { provider: OAuthProvider; onRefre
     }
   }, [loginState.phase]);
 
-  // Reset state when provider changes
+  // intent: DEC-417 — プロバイダー切替時に detail 内部 state を初期化して前プロバイダーの認証進行を持ち越さない
   useEffect(() => {
     setLoginState({ phase: "idle" });
     setInputValue("");
@@ -1420,7 +1402,7 @@ function OAuthDetail({ provider, onRefresh }: { provider: OAuthProvider; onRefre
         return;
       }
       setInputValue("");
-      // Success path: SSE stream will emit "success" and update state
+      // intent: DEC-414 — 成功状態は SSE 側の success イベントで確定させる
     } catch (e) {
       setLoginState({ phase: "error", message: e instanceof Error ? e.message : "Network error" });
     }
@@ -1459,7 +1441,6 @@ function OAuthDetail({ provider, onRefresh }: { provider: OAuthProvider; onRefre
         </div>
       </div>
 
-      {/* Status */}
       <div style={{ minHeight: 48 }}>
         {loginState.phase === "idle" && (
           <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
@@ -1549,7 +1530,6 @@ function OAuthDetail({ provider, onRefresh }: { provider: OAuthProvider; onRefre
         )}
       </div>
 
-      {/* Actions */}
       <div style={{ display: "flex", gap: 8 }}>
         {isWorking ? (
           <button
@@ -1581,8 +1561,6 @@ function OAuthDetail({ provider, onRefresh }: { provider: OAuthProvider; onRefre
   );
 }
 
-// ── API Key detail ────────────────────────────────────────────────────────────
-
 function ApiKeyDetail({ provider, onRefresh }: { provider: ApiKeyProvider; onRefresh: () => void }) {
   const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
@@ -1591,7 +1569,7 @@ function ApiKeyDetail({ provider, onRefresh }: { provider: ApiKeyProvider; onRef
   const [savedOk, setSavedOk] = useState(false);
   const { t } = useI18n();
 
-  // Reset state when provider changes
+  // intent: DEC-417 — プロバイダー切替時に detail 内部 state を初期化して前プロバイダーの認証進行を持ち越さない
   useEffect(() => {
     setApiKey("");
     setError(null);
@@ -1713,8 +1691,6 @@ function ApiKeyDetail({ provider, onRefresh }: { provider: ApiKeyProvider; onRef
   );
 }
 
-// ── Provider icon ─────────────────────────────────────────────────────────────
-
 function ProviderIcon({ id, size }: { id: string; size: number }) {
   const pi = PROVIDER_ICONS[id];
   if (!pi) {
@@ -1747,13 +1723,10 @@ function ProviderIcon({ id, size }: { id: string; size: number }) {
       </span>
     );
   }
-  // Color icons: self-colored SVG, no wrapper needed
+  // intent: DEC-410 — hasColor=true は自己配色 SVG、false は currentColor でテーマ追従
   if (pi.hasColor) return <pi.Icon size={size} />;
-  // Mono icons: use currentColor so they adapt to light/dark theme
   return <pi.Icon size={size} style={{ color: "var(--text-muted)" }} />;
 }
-
-// ── Add provider picker ───────────────────────────────────────────────────────
 
 interface AddProviderPickerProps {
   oauthProviders: OAuthProvider[];
@@ -1804,7 +1777,6 @@ function AddProviderPicker({
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{ width: 820, maxWidth: "calc(100vw - 32px)", maxHeight: "min(72vh, calc(100vh - 32px))", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 10, display: "flex", flexDirection: "column", boxShadow: "0 8px 32px rgba(0,0,0,0.22)", overflow: "hidden" }}>
-        {/* Search */}
         <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border)", flexShrink: 0, display: "flex", alignItems: "center", gap: 8 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-dim)", flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -1819,7 +1791,6 @@ function AddProviderPicker({
           />
         </div>
 
-        {/* Card grid */}
         <div style={{ flex: 1, overflowY: "auto", padding: 14 }}>
           {totalCount === 0 ? (
             <div style={{ padding: "20px 0", fontSize: 12, color: "var(--text-dim)", textAlign: "center" }}>{t("i18n.noProviders")}</div>
@@ -1889,8 +1860,6 @@ function AddProviderPicker({
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-
 export function ModelsConfig({ onClose }: { onClose: () => void }) {
   const isMobile = useIsMobile();
   const { t } = useI18n();
@@ -1922,10 +1891,7 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
       .catch(() => {});
   }, []);
 
-  // A dual-auth provider moves between the two lists when its credential type
-  // changes, so any auth change has to reload both — refreshing only one leaves
-  // the provider rendered twice, and disconnecting the stale row would delete
-  // the credential that was just created (#309).
+  // intent: DEC-415 — dual-auth プロバイダー切替では両リストを同時にリロードし重複表示と #309 の誤削除を防ぐ
   const refreshAuthProviders = useCallback(() => {
     loadOAuthProviders();
     loadApiKeyProviders();
@@ -2056,7 +2022,6 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
   const activeOAuth = oauthProviders.filter((p) => p.loggedIn);
   const activeApiKey = apiKeyProviders.filter((p) => p.configured);
 
-  // Resolve current detail
   const detailContent = (() => {
     if (!selection) return null;
     if (selection.type === "oauth") {
@@ -2105,7 +2070,6 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{ width: isMobile ? "calc(100vw - 16px)" : 860, maxWidth: "calc(100vw - 16px)", height: isMobile ? "calc(100dvh - 16px)" : "78vh", maxHeight: "calc(100dvh - 16px)", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 10, display: "flex", flexDirection: "column", boxShadow: "0 8px 32px rgba(0,0,0,0.18)", overflow: "hidden" }}>
 
-        {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
              <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text)" }}>{t("common.models")}</span>
@@ -2114,10 +2078,8 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 20, lineHeight: 1, padding: "2px 6px" }}>×</button>
         </div>
 
-        {/* Body */}
         <div style={{ flex: 1, display: "flex", flexDirection: isMobile ? "column" : "row", overflow: "hidden" }}>
 
-          {/* Left: tree */}
           <div style={{
             width: isMobile ? "100%" : 210,
             maxHeight: isMobile ? "40vh" : undefined,
@@ -2126,7 +2088,6 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
             display: "flex", flexDirection: "column", flexShrink: 0, background: "var(--bg-panel)",
           }}>
             <div style={{ flex: 1, overflowY: "auto", padding: "8px 6px" }}>
-              {/* Active OAuth subscriptions */}
               {activeOAuth.map((p) => {
                 const isSelected = selection?.type === "oauth" && selection.providerId === p.id;
                 return (
@@ -2143,7 +2104,6 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
                 );
               })}
 
-              {/* Active API key providers */}
               {activeApiKey.map((p) => {
                 const isSelected = selection?.type === "apikey" && selection.providerId === p.id;
                 return (
@@ -2160,12 +2120,13 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
                 );
               })}
 
-              {/* Divider before custom providers, only when there are active managed providers */}
-              {(activeOAuth.length > 0 || activeApiKey.length > 0) && providers.length > 0 && (
-                <div style={{ margin: "4px 8px", borderTop: "1px solid var(--border)" }} />
-              )}
+              {
+                // intent: DEC-416 — 管理プロバイダーとカスタムの間にだけ区切り線を出す
+                (activeOAuth.length > 0 || activeApiKey.length > 0) && providers.length > 0 && (
+                  <div style={{ margin: "4px 8px", borderTop: "1px solid var(--border)" }} />
+                )
+              }
 
-              {/* Custom providers */}
               {loading ? (
                  <div style={{ padding: "10px 8px", fontSize: 12, color: "var(--text-muted)" }}>{t("i18n.loading")}</div>
               ) : providers.map(([pName, pData]) => {
@@ -2173,7 +2134,6 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
                 const models = pData.models ?? [];
                 return (
                   <div key={pName} style={{ marginBottom: 2 }}>
-                    {/* Provider row */}
                     <div
                       onClick={() => setSelection({ type: "provider", name: pName })}
                       style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 8px", borderRadius: 5, cursor: "pointer", background: isProviderSelected ? "var(--bg-selected)" : "none" }}
@@ -2192,7 +2152,6 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
                       </span>
                     </div>
 
-                    {/* Model rows */}
                     {models.map((m, i) => {
                       const isModelSelected = selection?.type === "model" && selection.providerName === pName && selection.index === i;
                       return (
@@ -2213,7 +2172,6 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
                       );
                     })}
 
-                    {/* Add model button */}
                     <div
                       onClick={(e) => { e.stopPropagation(); addModel(pName); }}
                       style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 8px 4px 26px", borderRadius: 5, cursor: "pointer", color: "var(--text-dim)" }}
@@ -2227,7 +2185,6 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
               })}
             </div>
 
-            {/* Add provider */}
             <div style={{ borderTop: "1px solid var(--border)", padding: "8px 6px" }}>
               <button onClick={() => setPickerOpen(true)} style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
@@ -2242,7 +2199,6 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {/* Right: detail */}
           <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
             {loading ? null : detailContent ?? (
               <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-dim)", fontSize: 13 }}>
@@ -2252,7 +2208,6 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {/* Footer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, padding: "10px 18px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
           {saveError && <span style={{ fontSize: 12, color: "#f87171", flex: 1 }}>{saveError}</span>}
           <button onClick={onClose} style={{ padding: "6px 14px", background: "none", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-muted)", cursor: "pointer", fontSize: 13 }}>

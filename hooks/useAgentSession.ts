@@ -145,7 +145,6 @@ export interface UseAgentSessionOptions {
   chatInputRef?: React.RefObject<ChatInputHandle | null>;
   onBranchDataChange?: (tree: SessionTreeNode[], activeLeafId: string | null, onLeafChange: (leafId: string | null) => void) => void;
   onSystemPromptChange?: (prompt: string | null) => void;
-  /** Registers an action that lazily starts the session and returns its system prompt. */
   onSystemPromptLoaderChange?: (loader: (() => Promise<void>) | null) => void;
   onSessionStatsPanelOpen?: () => void;
   setToolPreset?: (preset: ToolPreset) => void;
@@ -581,8 +580,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     if (ensuringNewSessionRef.current) return ensuringNewSessionRef.current;
 
     const promise = (async () => {
-      // Only send explicit user overrides. The server resolves the current
-      // enabledModels scope atomically with AgentSession construction.
+      // intent: DEC-500 — 明示 override のみ送信、models scope は server が原子的に解決
       const selectedModel = newSessionModelOverrideRef.current;
       const selectedThinkingLevel = thinkingLevelOverrideRef.current;
       if (selectedModel) setPendingModel(selectedModel);
@@ -629,9 +627,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     }
   }, [isNew, newSessionCwd, toolPreset]);
 
-  // Opening the System panel is also allowed to initialize an otherwise dormant
-  // session. This is deliberately a non-prompt command: it creates no message
-  // or model run, but lets users inspect the exact prompt before sending one.
+  // intent: DEC-501 — System パネル起動は dormant session を prompt 副作用なしで初期化
   const loadSystemPrompt = useCallback(async () => {
     const sid = sessionIdRef.current ?? await ensureNewSession();
     if (!sid) return;
@@ -683,10 +679,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     eventConnectionRef.current!.maintain(sid);
   }, []);
 
-  // A different browser can start this session after it was opened here.
-  // The sidebar's lightweight running-state poll gives us a cheap signal to
-  // attach to the existing SSE stream without adding another synchronization
-  // protocol to the chat.
+  // intent: DEC-502 — 他ブラウザ起動 session への SSE 再接続を sidebar poll 信号で trigger
   useEffect(() => {
     if (!session?.id || !sessionRunning) return;
     maintainEventsConnected(session.id);
@@ -862,7 +855,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         eventStreamGraceTimerRef.current = null;
         closeEvents();
       } catch {
-        // Keep the stream alive while state cannot be verified.
+        // intent: DEC-503 — server state 確認不能時は SSE を切らず poll 継続
         if (
           generation !== eventStreamGraceGenerationRef.current
           || sessionIdRef.current !== sid
@@ -876,8 +869,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   }, [cancelEventStreamGrace, closeEvents]);
 
   const finishPromptWithoutStream = useCallback(async (sid: string | null = sessionIdRef.current, runId = promptRunIdRef.current) => {
-    // Bail out before loadSession too: a stale finish for a previous run
-    // must not overwrite the messages of the run currently streaming.
+    // intent: DEC-504 — run boundary 越えの stale finish は messages 上書きしない
     if (promptRunIdRef.current !== runId) return;
     try {
       if (sid) await loadSession(sid);
@@ -915,7 +907,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
           }
         }
       } catch {
-        // SSE remains the primary completion path.
+        // intent: DEC-505 — poll は recovery net、主完了経路は SSE
       }
       await delay(PROMPT_SETTLE_POLL_MS);
     }
@@ -944,16 +936,12 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         setPendingBash(null);
         return;
       } catch {
-        // Keep polling while the page is mounted; network recovery is transparent.
+        // intent: DEC-505 — mount 中は poll を続け、network 復帰は透過的に反映
       }
     }
   }, [loadSession]);
 
-  // Reconcile client streaming state with the server. When SSE events are
-  // missed (network drop, mobile tab backgrounded, half-open connection),
-  // agent_end never arrives and the UI stays in streaming state forever.
-  // If the server reports idle while we still think it's running, finish
-  // through the same settlement path used by non-streaming prompts.
+  // intent: DEC-505 — SSE 欠落時に server の idle を検出して settlement path に戻す recovery net
   const reconcileAgentState = useCallback(async (sid: string) => {
     if (!agentRunningRef.current || sessionIdRef.current !== sid) return;
     const runId = promptRunIdRef.current;
@@ -961,14 +949,10 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       const res = await fetch(`/api/agent/${encodeURIComponent(sid)}`);
       if (!res.ok) return;
       const data = await res.json() as { running?: boolean; state?: AgentStateResponse };
-      // A slow response can straddle a run boundary (previous run finished
-      // and the user already started the next one while this request was in
-      // flight) — everything in it is stale, drop it.
+      // intent: DEC-504 — run boundary を跨いだ response は stale、drop
       if (sessionIdRef.current !== sid || promptRunIdRef.current !== runId) return;
       const state = data.state;
-      // Mirror compaction state unconditionally: a missed compaction_end
-      // would otherwise leave the "Stop compaction" UI stuck. No state
-      // (wrapper destroyed) means nothing is compacting.
+      // intent: DEC-506 — missed compaction_end を防ぐため unconditional mirror（state 消失は idle 扱い）
       setIsCompacting(state?.isCompacting ?? false);
       setQueuedMessages(normalizeQueuedMessages(state?.queuedMessages));
       const busy = data.running && state
@@ -987,18 +971,15 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       }
       await finishPromptWithoutStream(sid, runId);
     } catch {
-      // Network still down — the next poll / visibility / online tick retries.
+      // intent: DEC-505 — network 復帰は次の poll / visibility / online tick に任せる
     }
   }, [finishPromptWithoutStream]);
 
-  // Recovery net for missed SSE events: while the agent is running, verify
-  // against the server periodically and whenever the tab returns to the
-  // foreground or the network comes back.
+  // intent: DEC-505 — SSE 欠落 recovery net として interval / visibility / online で reconcile を trigger
   useEffect(() => {
     if (!agentRunning) return;
     const reconcile = () => {
-      // Read the ref on every tick: for brand-new sessions the id is
-      // assigned only after ensure_session returns.
+      // intent: DEC-505 — 新規 session は ensure_session 完了後に id が確定するので tick 毎に ref を読む
       const sid = sessionIdRef.current;
       if (sid) void reconcileAgentState(sid);
     };
@@ -1041,9 +1022,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         dispatch({ type: "start" });
         break;
       case "agent_end":
-        // One logical prompt can emit multiple agent_end events before retrying,
-        // compacting, or continuing messages queued by extension handlers.
-        // Keep the stream open until prompt_done/agent_settled and the idle grace.
+        // intent: DEC-507 — retry / compact / extension で agent_end は複数回発火、stream は settlement + grace まで開放
         if (!agentRunningRef.current) break;
         setAgentPhase(null);
         setRetryInfo(null);
@@ -1057,8 +1036,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
               if (d.state?.systemPrompt !== undefined) setSystemPrompt(d.state.systemPrompt ?? null);
               if (d.state?.extensionStatuses !== undefined) setExtensionStatuses(d.state.extensionStatuses ?? []);
               if (d.state?.extensionWidgets !== undefined) setExtensionWidgets(d.state.extensionWidgets ?? []);
-              // Aborted turns can leave messages queued in pi (delivered with the
-              // next turn); dead wrapper (no state) means the queue is gone.
+              // intent: DEC-507 — abort 後の queued messages は次 turn で delivered、wrapper 消失は queue も消失
               setQueuedMessages(normalizeQueuedMessages(d.state?.queuedMessages));
             })
             .catch(() => {});
@@ -1090,9 +1068,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
 
           const sid = sessionIdRef.current;
           if (sid) void loadSession(sid);
-          // An extension-injected agent may already have started before the
-          // command's prompt_done. Keep that active stage visible and let its
-          // agent_settled event perform the next completion transition.
+          // intent: DEC-507 — extension-injected agent が既に start していれば active stage を残し、agent_settled で次の遷移
           if (!sdkAgentActiveRef.current) {
             settleUiStage();
             if (sid) scheduleEventStreamClose(sid);
@@ -1110,9 +1086,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         break;
       case "message_start":
       case "message_update": {
-        // Ignore streaming events arriving after this run already finished
-        // (e.g. SSE data buffered while the tab was frozen, flushed after
-        // reconcile) — they would resurrect a ghost streaming bubble.
+        // intent: DEC-504 — run 終了後の遅延 streaming event はゴースト bubble 復活を防ぐため drop
         if (!agentRunningRef.current) break;
         if (event.type === "message_start") {
           const msg = event.message as AgentMessage | undefined;
@@ -1132,11 +1106,9 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
             }
           }
         }
-        // Live-follow the streaming output only when the user is already near
-        // the bottom of the message list. If they scrolled up, leave them there.
+        // intent: DEC-508 — live-follow は tail 近接時のみ
         if (!pendingScrollToUserRef.current && isNearBottomRef.current && liveFollowFrameRef.current === null) {
-          // Defer the scroll so React has time to update the DOM with the new
-          // streaming content; otherwise scrollIntoView may target stale layout.
+          // intent: DEC-508 — 次 frame まで defer して React の DOM 更新後に scroll
           liveFollowFrameRef.current = requestAnimationFrame(() => {
             liveFollowFrameRef.current = null;
             if (isNearBottomRef.current) scrollToBottom("auto");
@@ -1145,16 +1117,11 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         break;
       }
       case "message_end": {
-        // Same late-event guard: after reconcile finished this run,
-        // loadSession already loaded this message from the session file —
-        // appending it again would duplicate it.
+        // intent: DEC-504 — reconcile 完了後の遅延 message_end は loadSession が既に取り込んでいるので drop
         if (!agentRunningRef.current) break;
         const completed = event.message as AgentMessage | undefined;
         if (completed && completed.role === "user") {
-          // Delivered steering/follow-up messages surface here as user
-          // messages. The run's initial prompt also emits one, but handleSend
-          // already appended it optimistically. Consume only the still-adjacent
-          // optimistic bubble; later same-text queue deliveries must render.
+          // intent: DEC-509 — 楽観 bubble は 1 回だけ consume、以降の same-text queue delivery は render
           const delivered = normalizeToolCalls(completed);
           const deliveredKey = userMessageKey(delivered);
           const optimisticKey = optimisticUserMessageKeyRef.current;
@@ -1337,9 +1304,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     } catch (e) {
       console.error("Failed to send message:", e);
       const definitivelyRejected = !promptRequestStarted || isPromptRejectedError(e);
-      // A transport/proxy failure after dispatch is ambiguous: the server may
-      // have accepted the prompt before the response was lost. Keep SSE alive
-      // until server state confirms the run is idle.
+      // intent: DEC-510 — 送信後 transport failure は不確定、SSE 保持して server state で確定させる
       if (!definitivelyRejected && sentSessionId) {
         void waitForPromptSettlement(sentSessionId, promptRunId);
         return;
@@ -1354,9 +1319,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       addNotice({ type: "error", message: e instanceof Error ? e.message : String(e) });
       restoreSubmission(message, images, composerDraftKey);
       optimisticUserMessageKeyRef.current = null;
-      // Rejection only describes this submission. Another tab or an event we
-      // missed may still have a real run active for the same session, so keep
-      // its SSE connection until server state says the wrapper is idle.
+      // intent: DEC-510 — rejection は本 submission のみを表す、他 tab / 未受信 event の run は server state で確定
       if (sentSessionId) {
         void reconcileAgentState(sentSessionId);
         return;
@@ -1480,8 +1443,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     setModelSwitching(true);
     try {
       await sendAgentCommand(sid, { type: "set_model", provider, modelId });
-      // Pi persists model_change synchronously. Reload the canonical session so
-      // the model, thinking level, and active leaf all advance together.
+      // intent: DEC-511 — pi は model_change を同期永続化するので session を再読込して canonical state に揃える
       modelSwitchPendingRef.current = false;
       await loadSession(sid);
     } catch (e) {
@@ -1492,8 +1454,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         type: "error",
         message: `Failed to switch model: ${e instanceof Error ? e.message : String(e)}`,
       });
-      // A failed response can still follow a server-side write (for example, a
-      // dropped connection), so let the session file settle the displayed model.
+      // intent: DEC-511 — 失敗 response 後も server 書き込みが進んでいる可能性があるため session 再読込で決める
       await loadSession(sid);
     } finally {
       modelSwitchPendingRef.current = false;
@@ -1538,8 +1499,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
         : undefined;
       const displayModel = match ?? nextModelList[0];
       setNewSessionDefaultModel(displayModel ? { provider: displayModel.provider, modelId: displayModel.id } : null);
-      // An `enabledModels` pattern may pin a thinking level (`anthropic/*:high`).
-      // Like pi, apply it to the model a new session starts with.
+      // intent: DEC-512 — enabledModels の thinking level pin を新規 session に反映（pi と同じ挙動）
       const pinned = displayModel && d.thinkingLevelPins?.[`${displayModel.provider}/${displayModel.id}`];
       if (thinkingLevelOverrideRef.current === null) {
         setThinkingLevel((pinned as ThinkingLevelOption | undefined) ?? "auto");
@@ -1630,9 +1590,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     }
   }, [addNotice, ensureNewSession, isCompacting, loadModels, loadSession, loadSlashCommands, loadTools, promoteNewSession, onSessionStatsPanelOpen]);
 
-  // Let AgentSession.prompt decide atomically whether to queue against the
-  // current run or start a new turn if it settled while the request was in
-  // flight. Direct steer/followUp calls can strand a message in an idle queue.
+  // intent: DEC-513 — steer/followUp を直接叩かず AgentSession.prompt に atomic 判定させ idle queue strand を回避
   const sendStreamingPrompt = useCallback(async (
     message: string,
     behavior: "steer" | "followUp",
@@ -1655,9 +1613,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       });
     } catch (e) {
       console.error("Failed to submit streaming prompt:", e);
-      // A transport failure after dispatch is ambiguous: the server may have
-      // accepted the queued prompt before the response was lost. Restoring in
-      // that case would invite a duplicate turn.
+      // intent: DEC-510 — 送信後 transport failure は不確定、rejected と確定した場合のみ restore
       if (isPromptRejectedError(e)) restore();
       addNotice({
         type: "error",
@@ -1697,8 +1653,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     if (!sid) return;
     try {
       const result = await sendAgentCommand<{ steering?: string[]; followUp?: string[] }>(sid, { type: "clear_queue" });
-      // clearQueue also emits an empty queue_update, but that only reaches us
-      // while SSE is connected — clear locally so idle recalls update the UI.
+      // intent: DEC-514 — clearQueue の queue_update は SSE 経由のみ、SSE 未接続でも UI を反映するため local clear
       setQueuedMessages({ steering: [], followUp: [] });
       const texts = [...(result?.steering ?? []), ...(result?.followUp ?? [])];
       if (texts.length > 0) {
@@ -1715,7 +1670,8 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     if (isNew && !sessionIdRef.current) {
       thinkingLevelOverrideRef.current = level === "auto" ? null : level;
     }
-    if (level === "auto") return; // "auto" leaves pi's current setting untouched
+    // intent: DEC-512 — "auto" は pi 側の設定を触らず pass-through
+    if (level === "auto") return;
     const sid = sessionIdRef.current ?? await ensuringNewSessionRef.current;
     if (!sid) return;
     try {
@@ -1782,7 +1738,6 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     }
   }, [scrollToBottom]);
 
-  // Load session on mount
   useEffect(() => {
     sessionHookMountedRef.current = true;
     if (session) {
@@ -1883,7 +1838,6 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     }
   }, [messages.length, agentRunning, scrollToBottom, scrollUserMsgToTop]);
 
-  // Load model list
   useEffect(() => {
     const controller = new AbortController();
     loadModels(controller.signal).catch((e) => {
@@ -1920,7 +1874,6 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   }, [messages.length, contextUsage?.tokens, contextUsage?.percent, contextUsage?.contextWindow]);
 
   return {
-    // State
     data, loading, error, activeLeafId, messages, entryIds, streamState,
     agentRunning, modelNames, modelList, modelError, modelScopeWarnings, modelThinkingLevels, modelThinkingLevelMaps, newSessionModel, toolPreset, thinkingLevel,
     retryInfo, contextUsage, systemPrompt, forkingEntryId,
@@ -1931,10 +1884,8 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     agentPhase,
     isNew,
     promptAnchorActive,
-    // Refs
     sessionIdRef, messagesEndRef, scrollContainerRef,
     lastUserMsgRef, pendingScrollToUserRef, initialScrollDoneRef,
-    // Actions
     handleSend, handleAbort, handleFork, handleNavigate, handleModelChange,
     handleCompact, handleSteer, handleFollowUp, handlePromptWithStreamingBehavior, handleAbortCompaction,
     handleRecallQueue,
@@ -1943,7 +1894,6 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     scrollToBottom, scrollUserMsgToTop,
     dispatch, setAgentRunning, setForkingEntryId,
     bashRunning, pendingBash,
-    // Subscriptions
     handleAgentEventRef,
   };
 }

@@ -8,9 +8,7 @@ import { getAllowedFileRoots, isExistingFilePathAllowed } from "@/lib/file-acces
 
 export const dynamic = "force-dynamic";
 
-// GET /api/skills?cwd=<path>
-// Uses DefaultResourceLoader (same logic as AgentSession startup) so settings.json
-// skill paths, package skills, and .agents/skills directories are all included.
+// intent: DEC-527 — DefaultResourceLoader を AgentSession 起動と共通化して画面と実挙動を揃える
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const cwd = searchParams.get("cwd");
@@ -27,7 +25,6 @@ export async function GET(req: Request) {
   }
 }
 
-// PATCH /api/skills — toggle disable-model-invocation on a SKILL.md file
 export async function PATCH(req: Request) {
   try {
     const body = await req.json() as { filePath: string; disableModelInvocation: boolean };
@@ -36,10 +33,7 @@ export async function PATCH(req: Request) {
     if (!existsSync(filePath)) return NextResponse.json({ error: "file not found" }, { status: 404 });
     const allowedRoots = new Set(await getAllowedFileRoots());
     allowedRoots.add(getAgentDir());
-    // Globally installed skills live in ~/.agents/skills and are symlinked into
-    // the agent's skills dir; isExistingFilePathAllowed resolves the symlink, so
-    // the real target sits outside getAgentDir(). Allow the global skills root
-    // too (the SDK always treats ~/.agents/skills as trusted).
+    // intent: DEC-527 — ~/.agents/skills は symlink 経由なので realpath 先を allow-list に追加（SDK も trusted 扱い）
     const globalSkillsDir = path.join(homedir(), ".agents", "skills");
     if (existsSync(globalSkillsDir)) allowedRoots.add(globalSkillsDir);
     if (!isExistingFilePathAllowed(filePath, allowedRoots)) {
@@ -49,19 +43,15 @@ export async function PATCH(req: Request) {
     const content = readFileSync(filePath, "utf8");
     const key = "disable-model-invocation";
 
-    // Use parseFrontmatter to check current value, then do a surgical line edit
-    // to preserve the original YAML formatting of all other fields.
+    // intent: DEC-527 — YAML parser round-trip を避けて line 単位の surgical edit
     const { frontmatter } = parseFrontmatter<Record<string, unknown>>(content);
     const alreadySet = Boolean(frontmatter[key]);
 
     let updated = content;
     if (disableModelInvocation && !alreadySet) {
-      // Add key after the opening --- line
       updated = content.replace(/^---\r?\n/, `---\n${key}: true\n`);
-      // If no frontmatter exists, create one
       if (updated === content) updated = `---\n${key}: true\n---\n${content}`;
     } else if (!disableModelInvocation && alreadySet) {
-      // Remove the key line entirely
       updated = content.replace(new RegExp(`^${key}\\s*:.*\\r?\\n`, "m"), "");
     }
 

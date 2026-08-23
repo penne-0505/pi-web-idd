@@ -21,8 +21,7 @@ export async function POST(
       ? { session: existing }
       : await startRpcSession(id, filePath, undefined);
 
-    // globalThis keeps wrappers alive across dev hot reloads; older instances
-    // may predate waitUntilReady(), but those have already completed startup.
+    // intent: DEC-539 — dev hot-reload で古い wrapper が生存する場合の防御（既 ready なので undefined 呼び出しはスキップ可）
     await session.waitUntilReady?.();
     const result = await generateSessionTitle(session.inner as unknown as AgentSession);
 

@@ -4,8 +4,7 @@ import { collectProviderListingInputs } from "@/lib/provider-listing-runtime";
 
 export const dynamic = "force-dynamic";
 
-// Providers that declare an OAuth login method, including anthropic
-// (Claude Pro/Max) — see lib/provider-listing.ts (#309).
+// intent: DEC-534 — capability-based で OAuth login を持つ provider を列挙（dual-auth も含む）
 export async function GET() {
   const modelRuntime = await ModelRuntime.create();
   const providers = buildOAuthProviderList(await collectProviderListingInputs(modelRuntime));

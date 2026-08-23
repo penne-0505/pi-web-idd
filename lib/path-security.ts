@@ -2,11 +2,7 @@ import { realpathSync } from "fs";
 import path from "path";
 import { isWindowsAbsolutePath } from "./paths";
 
-/**
- * Lexical containment check. Accepts either canonical form on both sides: it
- * re-resolves through path.win32/path.posix and case-folds on Windows, so
- * separator style and drive-letter case never decide the answer.
- */
+// intent: DEC-131 — target/root の canonical form を問わず containment 判定するため path.win32/posix で再解決し Windows は case-fold
 export function isPathWithinRoots(target: string, roots: Set<string>): boolean {
   for (const root of roots) {
     const useWindowsRules = isWindowsAbsolutePath(target) || isWindowsAbsolutePath(root);
@@ -35,7 +31,7 @@ export function isExistingPathWithinRoots(target: string, roots: Set<string>): b
     try {
       realRoots.add(realpathSync(root));
     } catch {
-      // Ignore stale roots derived from removed sessions or worktrees.
+      // intent: DEC-131 — session/worktree 削除で残った stale root は握りつぶして残りの root で判定を続ける
     }
   }
   return isPathWithinRoots(realTarget, realRoots);

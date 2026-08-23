@@ -16,7 +16,6 @@ declare global {
   }
 }
 
-/** Returns true when a synchronous listener claims the context menu. */
 export function dispatchSessionRowContextMenu(
   detail: SessionRowContextMenuDetail,
   target: EventTarget = window,

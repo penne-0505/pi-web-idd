@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { resolveSessionPath } from "@/lib/session-reader";
 import { startRpcSession, getRpcSession } from "@/lib/rpc-manager";
 
-// POST /api/agent/[id] - Send a command to an existing session
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -15,7 +14,7 @@ export async function POST(
     const body = await req.json() as { type: string; [key: string]: unknown };
     commandType = typeof body.type === "string" ? body.type : undefined;
 
-    // Fast path: already-running session
+    // intent: DEC-536 — in-memory session を優先し file 再解釈のコストを避ける
     const existing = getRpcSession(id);
     if (existing?.isAlive()) {
       const result = await existing.send(body);
@@ -48,7 +47,6 @@ export async function POST(
   }
 }
 
-// GET /api/agent/[id] - Get current agent state
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

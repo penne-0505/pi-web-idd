@@ -33,9 +33,7 @@ async function loadModels(cwd: string): Promise<ModelsData> {
   const thinkingLevelMaps: Record<string, Record<string, string | null>> = {};
 
   const agentDir = getAgentDir();
-  // Gate untrusted project extensions: enumerating models still imports and
-  // runs a repository's .pi/extensions factories, so honor project trust here
-  // too (see lib/project-trust.ts, #236).
+  // intent: DEC-535 — models 列挙でも .pi/extensions factory が走るので project trust を通す
   const trustReloadOptions = projectTrustReloadOptions(cwd, agentDir);
   const services = await createAgentSessionServices({
     cwd,
@@ -44,8 +42,7 @@ async function loadModels(cwd: string): Promise<ModelsData> {
   });
   const modelError = services.modelRuntime.getError();
   const settings: SettingsManager = services.settingsManager;
-  // `enabledModels` supports globs and fuzzy patterns, so resolve it the same
-  // way the CLI does instead of comparing pattern strings literally (#307).
+  // intent: DEC-535 — enabledModels は CLI と同じ pattern 解決を通す
   const scope = await resolveVisibleModels(
     services.modelRuntime,
     settings.getEnabledModels(),

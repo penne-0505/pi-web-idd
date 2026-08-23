@@ -34,7 +34,7 @@ function readStoredPreference(): ThemePreference {
     const value = localStorage.getItem(STORAGE_KEY);
     if (value === "light" || value === "dark" || value === "auto") return value;
   } catch {
-    // ignore storage errors (private mode, quota, etc.)
+    // intent: DEC-518 — storage 失敗は握り潰す
   }
   return "auto";
 }
@@ -65,7 +65,7 @@ function setThemeState(preference: ThemePreference, theme: ResolvedTheme, persis
     try {
       localStorage.setItem(STORAGE_KEY, preference);
     } catch {
-      // ignore storage errors (private mode, quota, etc.)
+      // intent: DEC-518 — storage 失敗は握り潰す
     }
   }
   state = { preference, theme };
@@ -85,7 +85,7 @@ function ensureSystemListener(): void {
 
   const mql = window.matchMedia("(prefers-color-scheme: dark)");
   mql.addEventListener("change", syncAutoThemeFromSystem);
-  // Some browsers delay or miss scheme events while backgrounded.
+  // intent: DEC-518 — 一部ブラウザは background 中に prefers-color-scheme 変化を落とすので focus / visibilitychange で補償
   window.addEventListener("focus", syncAutoThemeFromSystem);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") syncAutoThemeFromSystem();
@@ -161,7 +161,7 @@ export function useTheme() {
         );
       })
       .catch(() => {
-        // transition cancelled — ignore
+        // intent: DEC-518 — ViewTransition cancel は握り潰す
       });
   }, []);
 

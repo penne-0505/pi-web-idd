@@ -9,7 +9,7 @@ let piVersion = "unknown";
 try {
   const piPkgPath = join(configDir, "node_modules/@earendil-works/pi-coding-agent/package.json");
   piVersion = (JSON.parse(readFileSync(piPkgPath, "utf8")) as { version: string }).version;
-} catch { /* package not found, use default */ }
+} catch {}
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: configDir,

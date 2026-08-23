@@ -71,9 +71,7 @@ export function AppShell() {
   const { locale, setLocale, t: translate, supportedLocales } = useI18n();
   const isMobile = useIsMobile();
   useViewportHeight();
-  // Audio ownership lives here (not in ChatWindow) so the completion tone can
-  // also fire for tasks finishing in a non-active workspace whose ChatWindow
-  // is not mounted. ChatWindow receives the audio callbacks as props.
+  // intent: DEC-350 — 非activeなworkspaceのChatWindowはunmountされうるため、完了音は常設のAppShellで所有する
   const { soundEnabled, onSoundToggle, playDoneSound, unlockAudio, soundEnabledRef } = useAudio();
   const notifiedAttentionRequestIdsRef = useRef(new Set<string>());
   const handleBackgroundTaskDone = useCallback(() => {
@@ -87,7 +85,7 @@ export function AppShell() {
       return ids;
     });
   }, []);
-  // The temporary id distinguishes consecutive fresh composers in one cwd.
+  // intent: DEC-351 — 同一cwd内で連続するfresh composerを一時idで識別してremountを制御する
   const [newSessionCwd, setNewSessionCwd] = useState<string | null>(null);
   const [newSessionDraftId, setNewSessionDraftId] = useState("initial");
   const activeNewSessionDraftKeyRef = useRef<string | null>(null);
@@ -163,8 +161,7 @@ export function AppShell() {
   });
   const reclampSidebarWidth = sidebarResizer.reclampWidth;
   const reclampRightPanelWidth = rightPanelResizer.reclampWidth;
-  // On mobile the sidebar is an overlay drawer; hide it by default so the chat
-  // is visible on load. Runs once the breakpoint resolves after hydration.
+  // intent: DEC-352 — mobileではsidebarをoverlay drawer扱いにし、hydration後にbreakpointが解決した時点で初期非表示にする
   useEffect(() => {
     if (isMobile) setSidebarOpen(false);
   }, [isMobile]);
@@ -181,7 +178,6 @@ export function AppShell() {
   const mobileToolbarRef = useRef<HTMLDivElement>(null);
   const languageBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Branch navigator state — populated by ChatWindow via onBranchDataChange
   const [branchTree, setBranchTree] = useState<SessionTreeNode[]>([]);
   const [branchActiveLeafId, setBranchActiveLeafId] = useState<string | null>(null);
   const branchLeafChangeFnRef = useRef<((leafId: string | null) => void) | null>(null);
@@ -213,7 +209,6 @@ export function AppShell() {
     setSystemPromptLoading(false);
   }, []);
 
-  // Session stats (tokens + cost) — populated by ChatWindow, displayed in top bar
   const [sessionStats, setSessionStats] = useState<SessionStatsInfo | null>(null);
   const [autoNameStatus, setAutoNameStatus] = useState<AutoNameStatus>({ kind: "idle" });
   const autoNameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -239,13 +234,12 @@ export function AppShell() {
     };
   }, []);
 
-  // Context usage — populated by ChatWindow, displayed in top bar
   const [contextUsage, setContextUsage] = useState<{ percent: number | null; contextWindow: number; tokens: number | null } | null>(null);
   const handleContextUsageChange = useCallback((usage: { percent: number | null; contextWindow: number; tokens: number | null } | null) => {
     setContextUsage(usage);
   }, []);
 
-  // Single active panel — only one dropdown open at a time
+  // intent: DEC-353 — top barのdropdownは同時に一つだけ開くよう単一stateで排他制御する
   const [activeTopPanel, setActiveTopPanel] = useState<"branches" | "system" | "session" | "language" | null>(null);
   const [topPanelPos, setTopPanelPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
@@ -355,7 +349,6 @@ export function AppShell() {
     return () => ro.disconnect();
   }, [activeTopPanel, isMobile]);
 
-  // Right panel — file tabs only
   const [fileTabs, setFileTabs] = useState<Tab[]>([]);
   const [activeFileTabId, setActiveFileTabId] = useState<string | null>(null);
 
@@ -367,8 +360,7 @@ export function AppShell() {
     setFileTabs((prev) => saveFileViewerState(prev, tabId, viewerRevision, viewerState));
   }, []);
 
-  // Same @mention format as the chat input's @ autocomplete, so the agent's
-  // read tool resolves it the same way (it strips the @ prefix).
+  // intent: DEC-354 — chat inputの@補完と同一書式にすることでagentのread toolが同じ経路でresolveできるようにする
   const handleAtMention = useCallback((relativePath: string, isDir: boolean) => {
     chatInputRef.current?.insertText(buildAtMentionText(relativePath, isDir));
     if (isMobile) { setRightPanelOpen(false); setSidebarOpen(false); }
@@ -388,21 +380,18 @@ export function AppShell() {
   const initialSessionId = initialNavigation.sessionId;
   const [activeCwd, setActiveCwd] = useState<string | null>(null);
   const activeProjectKeyRef = useRef<string | null>(null);
-  // True once the initial ?session= URL param has been resolved (or confirmed absent)
+  // intent: DEC-355 — 初期URL復元の完了フラグ、これが立つまでplaceholderは出さない
   const [initialSessionRestored, setInitialSessionRestored] = useState<boolean>(() => !initialSessionId);
-  // Suppresses sessionKey bump in handleCwdChange during the initial URL restore
+  // intent: DEC-355 — 初期URL復元中のhandleCwdChangeによるsessionKey重複bumpを抑止する
   const suppressCwdBumpRef = useRef(false);
-  // Guards the async workspace restore so a slow response from an earlier
-  // switch cannot resurrect a session into a project the user already left.
+  // intent: DEC-356 — 直前の切替のasyncレスポンスが後発projectにsessionを蘇らせるのを防ぐtoken
   const workspaceRestoreTokenRef = useRef(0);
 
   const invalidateWorkspaceRestore = useCallback(() => {
     workspaceRestoreTokenRef.current += 1;
   }, []);
 
-  // Persist every active-session transition, including new and forked sessions
-  // that bypass the sidebar selection handler. Transient sessions do not yet
-  // carry projectKey, so use the active project identity until hydration.
+  // intent: DEC-357 — sidebar経由でない新規/fork sessionもlastOpen記録に含めるためactive project keyでfallbackする
   useEffect(() => {
     if (!selectedSession) return;
     const projectKey = selectedSession.projectKey
@@ -431,8 +420,7 @@ export function AppShell() {
           throw new Error(data.error ?? `HTTP ${response.status}`);
         }
 
-        // The sidebar will notify us when it adopts this cwd. Avoid remounting
-        // the just-created empty chat during that initial synchronization.
+        // intent: DEC-355 — sidebarがこのcwdを採用した通知でfresh chatをremountさせない
         suppressCwdBumpRef.current = true;
         const draftId = `initial:${requestedCwd}`;
         setNewSessionDraftId(draftId);
@@ -449,10 +437,7 @@ export function AppShell() {
     return () => controller.abort();
   }, [initialNavigation]);
 
-  // Restore the workspace's last open session after switching to it. Called
-  // from handleCwdChange once the outgoing context has been reset. The session
-  // is looked up against the live list so a deleted or drifted session falls
-  // back to the default welcome page instead of erroring.
+  // intent: DEC-358 — workspace切替後、liveなsession一覧に照合して前回開いていたsessionを復元。存在しなければwelcomeに戻す
   const restoreWorkspaceContext = useCallback((projectKey: string) => {
     const token = ++workspaceRestoreTokenRef.current;
     const lastOpenSessionId = getLastOpenSession(projectKey);
@@ -460,24 +445,19 @@ export function AppShell() {
     void fetch("/api/sessions")
       .then((r) => (r.ok ? (r.json() as Promise<{ sessions: SessionInfo[] }>) : null))
       .then((d) => {
-        if (token !== workspaceRestoreTokenRef.current) return; // stale switch
+        if (token !== workspaceRestoreTokenRef.current) return; // intent: DEC-356 — stale switch
         const s = d?.sessions.find((x) => x.id === lastOpenSessionId);
         if (!s) {
-          // The list loaded but the remembered session is gone — forget it.
-          // When the list itself failed (d === null) keep the memory so a
-          // later switch retries the restore.
+          // intent: DEC-358 — 一覧取得成功かつsession消失時のみ記憶を破棄、fetch失敗時は次回に賭ける
           if (d) clearLastOpen(projectKey);
           return;
         }
         if (workspaceKeyOf(s) !== projectKey) {
-          // Defensive: the remembered session drifted out of this workspace.
+          // intent: DEC-358 — 記憶したsessionが別workspaceにdriftしていたら記憶を破棄
           clearLastOpen(projectKey);
           return;
         }
-        // Selecting the session must remount the chat with the session
-        // present: useAgentSession loads content in a mount-only effect, so
-        // the null-session welcome mount from the switch would never load
-        // the restored session's messages.
+        // intent: DEC-358 — useAgentSessionはmount-only effectでロードするため、welcome mount後に差し替えるのではなくsession付きで新規mountする
         setSelectedSession(s);
         setSessionKey((k) => k + 1);
         if (new URLSearchParams(window.location.search).get("session") !== s.id) {
@@ -485,7 +465,7 @@ export function AppShell() {
         }
       })
       .catch(() => {
-        // Network hiccup: keep the remembered session for a later retry.
+        // intent: DEC-358 — 通信失敗は記憶を保持して次回切替時に再試行
       });
   }, [router]);
 
@@ -497,33 +477,28 @@ export function AppShell() {
     invalidateWorkspaceRestore();
     const currentFreshCwd = newSessionCwd ?? activeCwd;
     setActiveCwd(cwd);
-    // Skip if cwd is null (initial mount).
+    // intent: DEC-359 — cwd nullは初期mountであり切替とは扱わない
     if (!cwd) return;
     const newProject = projectKey ?? projectRoot ?? cwd;
     const currentProject = activeProjectKeyRef.current
       ?? (selectedSession ? workspaceKeyOf(selectedSession) : null);
     activeProjectKeyRef.current = newProject;
 
-    // Keep the project identity in sync during the initial URL restore without
-    // remounting the just-created or restored chat.
+    // intent: DEC-355 — 初期URL復元時のprojectKey同期はremountを伴わないよう1回だけ抑止する
     if (suppressCwdBumpRef.current) {
       suppressCwdBumpRef.current = false;
       return;
     }
-    // The server may hydrate a normalized key after a custom cwd is already
-    // active. Updating identity for the exact same cwd is not a user switch.
+    // intent: DEC-359 — 同一cwdへの正規化key hydrateはユーザー操作ではないため無視
     if (currentFreshCwd === cwd && currentProject !== newProject) return;
-    // Existing sessions stay open when the worktree selector moves within the
-    // same project. A fresh composer must remount when its effective cwd moves,
-    // otherwise its already-created runtime would keep sending to the old cwd.
+    // intent: DEC-359 — 同一project内のworktree切替では既存sessionを維持し、fresh composerはcwd移動時のみremountして古いruntimeへの送信を防ぐ
     if (
       currentProject === newProject
       && (selectedSession !== null || currentFreshCwd === cwd)
     ) {
       return;
     }
-    // Close any session that belongs to a different project — it no longer
-    // matches the selected project directory.
+    // intent: DEC-360 — 異なるproject切替時は現sessionを閉じる（選択project外のため）
     const draftId = typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
       : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
@@ -541,13 +516,11 @@ export function AppShell() {
     setSystemPromptLoading(false);
     setActiveTopPanel(null);
     if (currentProject !== newProject) {
-      // File tabs are keyed by absolute path, so tabs opened in the previous
-      // project must not linger. Same-project worktree switches keep them.
+      // intent: DEC-360 — file tabsは絶対path key、異なるprojectでは残さない（同一project内worktree切替では引き継ぐ）
       setFileTabs([]);
       setActiveFileTabId(null);
       setRightPanelOpen(false);
-      // Restore the workspace we switched to: its last open session, or keep
-      // the default welcome page when none is remembered.
+      // intent: DEC-358 — 切替先projectの前回開いていたsessionを復元、なければwelcomeを維持
       restoreWorkspaceContext(newProject);
     }
     router.replace("/", { scroll: false });
@@ -556,10 +529,7 @@ export function AppShell() {
   const handleSelectSession = useCallback((session: SessionInfo, isRestore = false) => {
     invalidateWorkspaceRestore();
     activeNewSessionDraftKeyRef.current = null;
-    // Re-clicking the already-open session must not remount the chat and
-    // re-run the full load/positioning cycle. Only skip when the effective
-    // cwd context already matches — otherwise a pending cwd move still needs
-    // the full re-select flow.
+    // intent: DEC-361 — 同一sessionの再クリックはremount/reloadを避ける。ただしcwd不整合時はre-select flowを通す必要がある
     if (!isRestore && selectedSession) {
       const sameProject =
         workspaceKeyOf(selectedSession) === workspaceKeyOf(session);
@@ -574,15 +544,13 @@ export function AppShell() {
     setSystemPrompt(null);
     setSystemPromptLoading(false);
     setInitialSessionRestored(true);
-    // On mobile, collapse the overlay drawer so the chat is revealed after pick.
+    // intent: DEC-352 — mobileではsession選択後にdrawerを畳んでchatを見せる
     if (isMobile && !isRestore) setSidebarOpen(false);
     if (isRestore) {
-      // Suppress the redundant sessionKey bump that would come from the
-      // onCwdChange effect firing after setSelectedCwd in the sidebar
+      // intent: DEC-355 — sidebar側のsetSelectedCwdが起こすonCwdChange effectの二重bumpを抑止
       suppressCwdBumpRef.current = true;
     }
-    // Skip router.replace when restoring from URL — the param is already correct
-    // and calling replace in production Next.js triggers a Suspense remount loop
+    // intent: DEC-362 — URL復元時のrouter.replaceはNext.js prodでSuspense remount loopを引き起こすため呼ばない
     if (!isRestore) {
       router.replace(`?session=${encodeURIComponent(session.id)}`, { scroll: false });
     }
@@ -605,16 +573,12 @@ export function AppShell() {
     router.replace("/", { scroll: false });
   }, [invalidateWorkspaceRestore, router, isMobile]);
 
-  // Global keyboard shortcuts (handles Esc, Ctrl+Alt+N etc.)
   useGlobalKeyboardShortcuts({
     onNewSession: (cwd: string) => handleNewSession(`kb-${Date.now()}`, cwd),
     activeCwd,
   });
 
-  // Client-built transient SessionInfo (new session / fork) lacks the
-  // server-computed projectKey, which the same-project check in
-  // handleCwdChange relies on. Hydrate it from the session list so switching
-  // worktrees right after creating a session doesn't close the chat.
+  // intent: DEC-363 — transient SessionInfoにはserver由来projectKeyが無いため、session一覧から補完してhandleCwdChangeの同一project判定を成立させる
   const hydrateSelectedSession = useCallback((sessionId: string) => {
     void fetch("/api/sessions", { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<{ sessions: SessionInfo[] }>) : null))
@@ -630,7 +594,6 @@ export function AppShell() {
       .catch(() => {});
   }, []);
 
-  // Called by ChatWindow when a new session gets its real id from pi
   const handleSessionCreated = useCallback((session: SessionInfo, sourceDraftKey: string) => {
     setRefreshKey((k) => k + 1);
     if (activeNewSessionDraftKeyRef.current !== sourceDraftKey) return;
@@ -802,7 +765,7 @@ export function AppShell() {
     }));
     setActiveFileTabId(tabId);
     setRightPanelOpen(true);
-    // On mobile the file panel is full-screen; close the drawer so it shows.
+    // intent: DEC-352 — mobileではfile panelが全画面のためdrawerを畳んで表示させる
     if (isMobile) setSidebarOpen(false);
   }, [isMobile]);
 
@@ -832,7 +795,6 @@ export function AppShell() {
     );
   }, [selectedSession]);
 
-  // Show chat area if a session is selected, or if we have a cwd to start a new session in
   const effectiveNewSessionCwd = newSessionCwd ?? (selectedSession === null && activeCwd ? activeCwd : null);
   const newSessionDraftKey = selectedSession === null && effectiveNewSessionCwd
     ? `new:${newSessionDraftId}:${effectiveNewSessionCwd}`
@@ -842,7 +804,7 @@ export function AppShell() {
   }, [newSessionDraftKey]);
   const showChat = selectedSession !== null || effectiveNewSessionCwd !== null;
   const projectTrustCwd = selectedSession?.cwd ?? effectiveNewSessionCwd;
-  // While restoring initial session from URL, don't show the placeholder
+  // intent: DEC-355 — URLからの初期session復元中はplaceholderを表示しない
   const showPlaceholder = initialSessionRestored && !showChat;
 
   useEffect(() => {
@@ -1198,7 +1160,7 @@ export function AppShell() {
           {!mobile && <span>{translate("history.label")}</span>}
         </button>
         {(() => {
-          // 上下文压缩后当前消息可能不再包含 user 消息，需同时参考会话文件的消息总数。
+          // intent: DEC-364 — 文脈圧縮後は現メッセージがuser発話を含まないためsession fileのmessageCountも参照する
           const hasMessages = Boolean(
             selectedSession
             && ((sessionStats?.userMessages ?? 0) > 0 || selectedSession.messageCount > 0),
@@ -1650,7 +1612,6 @@ export function AppShell() {
       overflow: "hidden",
       background: "var(--bg)",
     }}>
-      {/* Mobile overlay backdrop */}
       <div
         className={`sidebar-overlay-backdrop${mobileSidebarReady ? "" : " sidebar-mobile-pending"}`}
         onClick={() => setSidebarOpen(false)}
@@ -1665,7 +1626,6 @@ export function AppShell() {
         }}
       />
 
-      {/* Left sidebar */}
       <div
         ref={sidebarResizer.panelRef}
         id="session-sidebar"
@@ -1694,9 +1654,7 @@ export function AppShell() {
         />
       )}
 
-      {/* Center: chat */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-        {/* Top bar with sidebar toggle */}
         <div ref={topBarRef} style={{ flexShrink: 0, background: "var(--bg-panel)" }}>
         <div style={{ display: "flex", alignItems: "center", position: "relative", borderBottom: "1px solid var(--border)", height: "calc(36px + env(safe-area-inset-top))", paddingTop: "env(safe-area-inset-top)" }}>
           <button
@@ -1815,7 +1773,6 @@ export function AppShell() {
               hideInlineButton
             />
           )}
-          {/* Top panel dropdown — shared, only one active at a time */}
           {activeTopPanel && topPanelPos && (
             <div style={{
               position: "fixed",
@@ -1942,7 +1899,7 @@ export function AppShell() {
                     const extraTokenRows = [
                        ...(sessionStats.cost > 0 ? [[translate("session.cost"), `$${sessionStats.cost.toFixed(4)}`]] : []),
                        ...(ctx?.contextWindow ? [[translate("session.context"), `${ctx.percent !== null ? `${ctx.percent.toFixed(1)}%` : "?"} / ${formatCompact(ctx.contextWindow)}`]] : []),
-                       // Cache hit rate = cache reads / (input + cache writes + cache reads) — the denominator covers all input-class tokens.
+                       // intent: DEC-365 — cache hit rateはcacheRead/(cacheRead+cacheWrite+input)、分母は全input系tokenを覆う
                        ...(sessionStats.tokens.cacheRead + sessionStats.tokens.cacheWrite > 0 && sessionStats.tokens.cacheRead + sessionStats.tokens.cacheWrite + sessionStats.tokens.input > 0
                          ? [[translate("session.cacheHitRate"), `${(sessionStats.tokens.cacheRead / (sessionStats.tokens.cacheRead + sessionStats.tokens.cacheWrite + sessionStats.tokens.input) * 100).toFixed(1)}%`]]
                          : []),
@@ -2075,7 +2032,6 @@ export function AppShell() {
         {isMobile && renderProjectTrustWarning(true)}
         </div>
 
-        {/* Chat content */}
         <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
           {showChat ? (
             <ChatWindow
@@ -2161,7 +2117,6 @@ export function AppShell() {
         />
       )}
 
-      {/* Right panel: file viewer — always mounted, width animated via CSS */}
       <div
         ref={rightPanelResizer.panelRef}
         id="file-panel"
@@ -2174,7 +2129,6 @@ export function AppShell() {
           background: "var(--bg)",
         } as React.CSSProperties}
       >
-        {/* Right panel tab bar */}
         <div style={{
           display: "flex",
           alignItems: "center",
@@ -2214,7 +2168,6 @@ export function AppShell() {
           </button>
         </div>
 
-        {/* Only the active viewer is mounted. Lightweight per-tab state is restored on activation. */}
         <div style={{ flex: 1, overflow: "hidden", paddingBottom: "env(safe-area-inset-bottom)" }}>
           {activeFileTab?.filePath ? (
             <FileViewer

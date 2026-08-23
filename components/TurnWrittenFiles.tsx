@@ -5,11 +5,7 @@ import { getFileName } from "@/lib/file-paths";
 import type { WrittenFile } from "@/lib/turn-written-files";
 import { getFileIcon } from "./FileIcons";
 
-/**
- * Lists the files a turn actually wrote, as buttons that open each one in the
- * preview pane. Entries come from the turn's successful `write`/`edit` tool
- * calls — the reply text is never scanned for paths.
- */
+// intent: DEC-300 — 書いたファイル一覧は tool call 結果からのみ導出、返答本文の path 抽出はしない
 export function TurnWrittenFiles({ files, onOpenFile }: {
   files: WrittenFile[];
   onOpenFile?: (filePath: string) => void;

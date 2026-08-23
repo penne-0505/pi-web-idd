@@ -31,9 +31,7 @@ export function useAudio() {
   const enabledRef = useRef(enabled);
   useEffect(() => { enabledRef.current = enabled; }, [enabled]);
 
-  // Reuse a single AudioContext so it can be resumed if the browser
-  // autoplay policy suspends it (contexts created outside user gestures
-  // start in "suspended" state and produce no sound).
+  // intent: DEC-519 — AudioContext を単一保持し autoplay policy suspended から resume できるようにする
   const ctxRef = useRef<AudioContext | null>(null);
   const getCtx = useCallback((): AudioContext | null => {
     if (ctxRef.current && ctxRef.current.state !== "closed") return ctxRef.current;
@@ -68,7 +66,7 @@ export function useAudio() {
       try {
         playTone(ctx);
       } catch {
-        // AudioContext not available
+        // intent: DEC-519 — playTone 失敗は握り潰す
       }
     };
     if (ctx.state === "suspended") {

@@ -16,7 +16,7 @@ export async function GET(
     const filePath = await resolveSessionPath(id);
     if (!filePath) return NextResponse.json({ error: "Session not found" }, { status: 404 });
 
-    // SessionManager-backed parsing preserves the SDK's malformed-line tolerance.
+    // intent: DEC-540 — SessionManager 経由で SDK の malformed-line 許容を継承
     const entry = getSessionEntries(filePath).find((candidate) => candidate.id === entryId);
     if (!entry || entry.type !== "message" || entry.message.role !== "assistant") {
       return NextResponse.json({ error: "Assistant message not found" }, { status: 404 });

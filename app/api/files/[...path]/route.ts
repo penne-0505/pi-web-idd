@@ -42,7 +42,7 @@ type FileRequestType = typeof FILE_REQUEST_TYPES[number];
 const FILE_REQUEST_TYPE_SET = new Set<string>(FILE_REQUEST_TYPES);
 const MAX_UPLOAD_FILE_BYTES = 25 * 1024 * 1024;
 const MAX_UPLOAD_TOTAL_BYTES = 100 * 1024 * 1024;
-// Multipart boundaries and headers are not file bytes, but must be bounded too.
+// intent: DEC-523 — multipart boundary / header 分の余白を file bytes 上限に加算
 const MAX_UPLOAD_REQUEST_BYTES = MAX_UPLOAD_TOTAL_BYTES + 1024 * 1024;
 
 const EXT_TO_LANGUAGE: Record<string, string> = {
@@ -62,7 +62,6 @@ const EXT_TO_LANGUAGE: Record<string, string> = {
 
 function getLanguage(filePath: string): string {
   const base = path.basename(filePath).toLowerCase();
-  // Special full-name matches
   if (base === "dockerfile" || base.startsWith("dockerfile.")) return "dockerfile";
   if (base === ".env" || base.startsWith(".env.")) return "bash";
   if (base === "makefile" || base === "gnumakefile") return "makefile";
@@ -100,15 +99,14 @@ async function getUploadDirectory(segments: string[]): Promise<
     return { response: NextResponse.json({ error: "Upload target is not a directory" }, { status: 400 }) };
   }
 
-  // A browsable directory can be a symlink. Resolve both sides before writes
-  // so a symlink inside an allowed root cannot redirect uploads outside it.
+  // intent: DEC-523 — symlink 経由の upload 迂回を防ぐため realpath で両側解決
   const realDirectory = fs.realpathSync(directory);
   const realRoots = new Set<string>();
   for (const root of allowedRoots) {
     try {
       realRoots.add(fs.realpathSync(root));
     } catch {
-      // Ignore stale session roots that no longer exist.
+      // intent: DEC-523 — 消失済み session root は無視
     }
   }
   if (!isFilePathAllowed(realDirectory, realRoots)) {
@@ -263,7 +261,7 @@ function createFileBodyStream(filePath: string, range?: { start: number; end: nu
         try {
           controller.close();
         } catch {
-          // The browser may cancel media probes before the file stream ends.
+          // intent: DEC-523 — client 側の media probe cancel は握り潰す
         }
       });
       fileStream.once("error", (error) => {
@@ -272,7 +270,7 @@ function createFileBodyStream(filePath: string, range?: { start: number; end: nu
         try {
           controller.error(error);
         } catch {
-          // The response was already abandoned by the client.
+          // intent: DEC-523 — client abort 済みなら握り潰す
         }
       });
     },
@@ -551,7 +549,7 @@ export async function GET(
             try {
               controller.enqueue(new TextEncoder().encode(payload));
             } catch {
-              // client disconnected
+              // intent: DEC-523 — client 切断 enqueue エラーは握り潰す
             }
           };
           try {
@@ -563,8 +561,7 @@ export async function GET(
               ) return;
               try {
                 const s = fs.statSync(filePath);
-                // Some platforms emit watch events for file reads/attribute
-                // access. Ignore those or the client's refresh read loops.
+                // intent: DEC-524 — read / attribute だけの event を 4 field 一致で filter
                 if (
                   lastExists
                   && s.mtimeMs === lastMtimeMs
@@ -585,12 +582,11 @@ export async function GET(
               }
             });
             watcher.on("error", () => {
-              try { watcher?.close(); } catch { /* ignore */ }
+              try { watcher?.close(); } catch {}
               watcher = null;
-              try { controller.close(); } catch { /* ignore */ }
+              try { controller.close(); } catch {}
             });
-            // The client snapshots only after this event, so emit it after the
-            // watcher exists to avoid dropping changes between those steps.
+            // intent: DEC-524 — watcher 生成後に connected を emit しないと変化を取りこぼす
             send("connected", { filePath });
           } catch {
             send("error", { message: "Failed to watch file" });
@@ -598,7 +594,7 @@ export async function GET(
           }
         },
         cancel() {
-          try { watcher?.close(); } catch { /* ignore */ }
+          try { watcher?.close(); } catch {}
         },
       });
       return new Response(stream, {
@@ -611,13 +607,11 @@ export async function GET(
       });
     }
 
-    // type === "list"
     if (!stat?.isDirectory()) {
       return NextResponse.json({ error: "Not a directory" }, { status: 400 });
     }
 
-    // Avoid per-entry stat calls for normal files and directories. Symlinks and
-    // filesystems without directory type information use the stat fallback.
+    // intent: DEC-524 — withFileTypes で per-entry stat を回避、非対応 dtype のみ fallback
     const dirents = fs.readdirSync(filePath, { withFileTypes: true });
     const entries = dirents
       .filter((d) => !IGNORED_NAMES.has(d.name) && !IGNORED_SUFFIXES.some((s) => d.name.endsWith(s)))
@@ -628,7 +622,6 @@ export async function GET(
           : [{ name: d.name, isDir, size: 0, modified: "" }];
       })
       .sort((a, b) => {
-        // Dirs first, then files, both alphabetically
         if (a.isDir !== b.isDir) return a.isDir ? -1 : 1;
         return a.name.localeCompare(b.name);
       });

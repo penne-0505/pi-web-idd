@@ -108,7 +108,7 @@ function normalizeProvider(value: string): string {
 }
 
 function normalizeModelId(value: string): string {
-  return value.trim().toLocaleLowerCase().replace(/^models\//, "");
+  return value.trim().toLocaleLowerCase().replace(/^models[/]/, "");
 }
 
 function hostname(value: string | undefined): string | undefined {

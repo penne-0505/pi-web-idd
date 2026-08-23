@@ -1,4 +1,4 @@
-// Types mirrored from pi-mono coding-agent session-manager
+// intent: DEC-159 — upstream pi-mono の session-manager 型をミラーし、UI 拡張は additive に付ける
 
 export interface SessionHeader {
   type: "session";
@@ -34,7 +34,7 @@ export interface ImageContent {
 export interface ThinkingContent {
   type: "thinking";
   thinking: string;
-  /** Historical content omitted from the initial response and loaded on demand. */
+  // intent: DEC-160 — 初回ペイロードから除外した履歴を on-demand 再取得するための marker
   deferred?: boolean;
 }
 
@@ -43,7 +43,7 @@ export interface ToolCallContent {
   toolCallId: string;
   toolName: string;
   input: Record<string, unknown>;
-  /** Client-only buffer for streamed tool input. Never persisted to session files. */
+  // intent: DEC-161 — streaming 中の tool 入力を組み立てる client 専用バッファ、JSONL に永続化しない
   rawInput?: string;
 }
 
@@ -304,25 +304,20 @@ export interface SessionInfo {
   modified: string;
   messageCount: number;
   firstMessage: string;
-  parentSessionId?: string; // set if this session was forked from another
-  /** Main repo root shared by all worktrees of this cwd (cwd itself for non-git dirs).
-   *  Always set by the server; optional because the client builds transient
-   *  SessionInfo objects before the first refresh. Fall back to cwd. */
+  parentSessionId?: string;
+  // intent: DEC-162 — 全 worktree 共通の repo root。server 常時セット、client transient 時は cwd に fallback
   projectRoot?: string;
-  /** Stable server-computed project identity for grouping and comparison.
-   *  Unlike projectRoot, Windows keys are case- and separator-insensitive.
-   *  Internal only: use projectRoot/cwd for display and filesystem operations. */
+  // intent: DEC-162 — Windows 大文字小文字/セパレータ非依存の internal 識別子、表示/FS 操作には使わない
   projectKey?: string;
-  /** Branch name when cwd is a linked git worktree (not the main checkout) */
   worktreeBranch?: string;
-  /** True while the runtime session exists only in memory and its JSONL file
-   *  has not been created yet. Disk-backed actions must wait until this clears. */
+  // intent: DEC-163 — memory-only runtime session を示し disk 依存操作は false 化を待つ
   transient?: boolean;
 }
 
 export interface SessionContext {
   messages: AgentMessage[];
-  entryIds: string[]; // parallel to messages — the session entry id for each message
+  // intent: DEC-164 — messages と index-parallel に維持し fork/navigation の位置解決を保つ
+  entryIds: string[];
   thinkingLevel: string;
   model: { provider: string; modelId: string } | null;
 }

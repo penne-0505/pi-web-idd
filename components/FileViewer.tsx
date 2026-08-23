@@ -40,7 +40,6 @@ interface Props {
   sourceSessionId?: string | null;
   onOpenFile?: (filePath: string) => void;
   onMentionLines?: (relativePath: string, startLine: number, endLine: number) => void;
-  /** Insert this file's relative path into the chat input (@ mention). */
   onAtMention?: (relativePath: string, isDir: boolean) => void;
   gitRefreshKey?: number;
   initialDisplayMode?: DisplayMode;
@@ -125,9 +124,7 @@ function getSelectedSourceLineRange(root: HTMLElement, selection: Selection | nu
   if (!Number.isInteger(startLine) || !Number.isInteger(endLine)) return null;
 
   if (startLine < endLine) {
-    // Browser ranges can start at the end of the preceding line or end at the
-    // start of the following line. Exclude either boundary line when none of
-    // its source text is actually selected.
+    // intent: DEC-481 — 選択端の実文字数がゼロなら境界行を範囲から外す
     const startContent = startElement.querySelector<HTMLElement>(".file-source-line-content");
     if (startContent?.contains(range.startContainer)) {
       const selectedSuffix = document.createRange();
@@ -300,7 +297,7 @@ function DiffView({ patch }: { patch: string }) {
     );
   }
 
-  // Render with context: show 3 lines around each change, collapse the rest
+  // intent: DEC-483 — 差分は変更±3行のみ描画してそれ以外を折り畳む
   const CONTEXT = 3;
   const changed = new Set(diff.flatMap((l, i) => (l.type !== "unchanged" ? [i] : [])));
   const visible = new Set<number>();
@@ -485,7 +482,9 @@ function ImageViewer({ filePath, cwd, sourceSessionId, watchEnabled = true }: Pr
       try {
         const d = JSON.parse((e as MessageEvent).data) as { size?: number };
         if (typeof d.size === "number") setSize(d.size);
-      } catch { /* ignore */ }
+      } catch {
+        // intent: DEC-480 — watch payload の JSON 破損は size 未更新のまま refetch を継続
+      }
       setNaturalSize(null);
       setError(null);
       setBust((b) => b + 1);
@@ -657,7 +656,9 @@ function AudioViewer({ filePath, cwd, sourceSessionId, watchEnabled = true }: Pr
       try {
         const d = JSON.parse((e as MessageEvent).data) as { size?: number };
         if (typeof d.size === "number") setSize(d.size);
-      } catch { /* ignore */ }
+      } catch {
+        // intent: DEC-480 — watch payload の JSON 破損は size 未更新のまま refetch を継続
+      }
       setDuration(null);
       setError(null);
       setBust((b) => b + 1);
@@ -845,7 +846,9 @@ function DocumentViewer({ filePath, cwd, sourceSessionId, watchEnabled = true }:
             return;
           }
         }
-      } catch { /* ignore */ }
+      } catch {
+        // intent: DEC-480 — watch payload の JSON 破損は size 未更新のまま refetch を継続
+      }
       setError(null);
       setBust((b) => b + 1);
     });
@@ -1092,8 +1095,7 @@ function TextFileViewer({
     }
   }, [cwd]);
 
-  // Reset and load the file itself when its identity changes. Live watching is
-  // managed separately so pausing it never clears the displayed content.
+  // intent: DEC-480 — ファイル本体のロードと watch を分離し watch 停止でも内容を保持
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -1132,8 +1134,7 @@ function TextFileViewer({
 
     es.addEventListener("connected", () => {
       setWatching(true);
-      // The server emits connected only after its watcher exists. Reading now
-      // closes the gap between the last snapshot and live events.
+      // intent: DEC-480 — connected 直後に同期し watcher 作成前後のスナップショット漏れを塞ぐ
       synchronize();
     });
 
@@ -1156,10 +1157,7 @@ function TextFileViewer({
   }, [fetchGitDiff, filePath, gitRefreshKey]);
 
   useEffect(() => {
-    // HTML gets the same rendered-first treatment as markdown: a generated page
-    // is usually more useful viewed than read as source. Both have a preview
-    // mode already; the source tab stays one click away. A restored choice or
-    // explicit mode hint always wins over this default.
+    // intent: DEC-482 — 復元/明示指定がない限り markdown と html は preview を初期表示にする
     if (
       defaultPreviewEligibleRef.current
       && (data?.language === "markdown" || data?.language === "html")
@@ -1176,8 +1174,7 @@ function TextFileViewer({
     if (gitDiffResolved && !hasGitDiff && displayMode === "diff") updateDisplayMode("source");
   }, [displayMode, gitDiffResolved, hasGitDiff, updateDisplayMode]);
 
-  // Wait for the git request before restoring diff mode so the unresolved
-  // placeholder cannot immediately demote it back to source.
+  // intent: DEC-482 — git 応答前は diff 復元を保留し未解決状態で source に落とさない
   useEffect(() => {
     if (requestedInitialDisplayMode === "diff" && hasGitDiff && !autoDiffAppliedRef.current) {
       autoDiffAppliedRef.current = true;
@@ -1366,9 +1363,7 @@ function TextFileViewer({
                 type="button"
                 onPointerDown={(event) => event.preventDefault()}
                 onClick={() => {
-                  // Mention selected lines when a range is active (and line
-                  // mention is wired up); otherwise fall back to a whole-file
-                  // @mention. Same button, behavior follows the selection.
+                  // intent: DEC-481 — 選択範囲があれば行 mention、なければ file @mention に切替
                   if (selectedLineRange && onMentionLines) {
                     mentionLineRange(selectedLineRange);
                   } else {
@@ -1416,7 +1411,6 @@ function TextFileViewer({
         </div>
       </div>
 
-      {/* Content area */}
       <div
         ref={contentRef}
         className="file-viewer-content"
@@ -1462,8 +1456,7 @@ function TextFileViewer({
                   );
                 },
                 pre({ children }) {
-                  // Render the code block directly — CodeBlock provides its own wrapping.
-                  // For non-mermaid blocks, pass through to default pre rendering.
+                  // intent: DEC-484 — pre は CodeBlock 側で wrap 済みのため素通しする
                   return <>{children}</>;
                 },
                 a({ href, children, ...props }) {
@@ -1492,7 +1485,7 @@ function TextFileViewer({
                   const imageSrc = imagePath
                     ? getFileApiUrl(imagePath, "read", sourceSessionId)
                     : src;
-                  // Dynamic local paths are served directly by the file API.
+                  // intent: DEC-484 — markdown 内のローカル画像は file API 経由で解決する
                   // eslint-disable-next-line @next/next/no-img-element
                   return <img src={imageSrc} alt={alt ?? ""} loading="lazy" {...props} />;
                 },

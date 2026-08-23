@@ -11,10 +11,7 @@ function declaredContentLength(request: Request): number | null {
   return Number.isSafeInteger(length) ? length : null;
 }
 
-/**
- * Parse multipart data only after constraining the complete wire body. This
- * bounds chunked requests too, where Content-Length is unavailable or false.
- */
+// intent: DEC-254 — chunked encoding では Content-Length が欠落/詐称され得るため、実際のワイヤバイト数を数えて上限判定する
 export async function parseFormDataWithinLimit(request: Request, maxBytes: number): Promise<FormData> {
   const declared = declaredContentLength(request);
   if (declared !== null && declared > maxBytes) {

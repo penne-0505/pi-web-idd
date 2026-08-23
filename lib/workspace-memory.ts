@@ -1,16 +1,4 @@
-/**
- * Per-workspace "last open session" memory.
- *
- * Switching to a workspace (project root or cwd) restores the session the user
- * had open there last, instead of landing on a blank new-session page. Without
- * this, every workspace switch required re-picking the session by hand.
- *
- * The workspace key is the server-provided project identity when known, so
- * Windows path variants and all worktrees of one repo share one memory slot.
- * Transient and legacy session objects fall back to projectRoot/cwd.
- *
- * Stored in localStorage; best-effort (silently ignored when unavailable).
- */
+// intent: DEC-217 — workspace 切替後に「その場所で最後に開いた session」に戻れるよう localStorage で覚える (best-effort、失敗しても機能は落とさない)
 
 const STORAGE_KEY = "pi-web:last-open-by-workspace";
 
@@ -42,7 +30,6 @@ function readMap(storage: StorageLike): Record<string, string | undefined> {
   }
 }
 
-/** The remembered session id for a workspace, or null when none/stale. */
 export function getLastOpenSession(
   workspaceKey: string,
   storage: StorageLike | null = getBrowserStorage(),
@@ -67,7 +54,7 @@ export function setLastOpenSession(
     map[workspaceKey] = sessionId;
     storage.setItem(STORAGE_KEY, JSON.stringify(map));
   } catch {
-    // storage unavailable — memory is best-effort
+    // intent: DEC-217 — storage 失敗は best-effort 方針で無視
   }
 }
 
@@ -80,15 +67,15 @@ export function clearLastOpen(
     const map = readMap(storage);
     if (!(workspaceKey in map)) return;
     delete map[workspaceKey];
-    // Keep the store clean: drop the key entirely when nothing is remembered.
+    // intent: DEC-219 — 覚える対象がゼロなら key ごと消して localStorage をクリーンに保つ
     if (Object.keys(map).length === 0) storage.removeItem(STORAGE_KEY);
     else storage.setItem(STORAGE_KEY, JSON.stringify(map));
   } catch {
-    // ignore
+    // intent: DEC-217 — storage 失敗は best-effort 方針で無視
   }
 }
 
-/** Workspace identity for a session: resolved project root when known, else cwd. */
+// intent: DEC-218 — workspace identity は projectKey → projectRoot → cwd の順で決め、Windows path 差異や同一 repo の worktree 群を 1 slot にまとめる
 export function workspaceKeyOf(session: {
   cwd: string;
   projectRoot?: string | null;

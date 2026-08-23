@@ -4,14 +4,7 @@ interface TimingEntry {
   message?: { role?: string };
 }
 
-/**
- * Estimate active wall-clock time from the append-only session log.
- *
- * Raw entries preserve compacted history and every executed branch exactly
- * once. Gaps ending at user messages are treated as human idle. User-initiated
- * bash entries are also boundaries because the log records only their finish
- * time, so counting the incoming gap could include arbitrary human idle.
- */
+// intent: DEC-158 — user/bashExecution エントリはユーザー待ち時間を含みうるので active 集計の境界とする
 export function computeSessionTotalActiveMs(entries: readonly TimingEntry[]): number {
   let totalActiveMs = 0;
   let previousTimestamp: number | undefined;

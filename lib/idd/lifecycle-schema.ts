@@ -1,18 +1,4 @@
-/**
- * IDD lifecycle event schema + emit / fold helpers.
- *
- * Contract inherited from the Meltly side (see DEC-005 in
- * _docs/intent/Workspace/pi-web-idd-workspace/decision.md). The event vocabulary
- * mirrors sync-tools/lib/lifecycle.py exactly — event names, attr sets, enum
- * values, and the field order of the emitted JSON line all match. Any change
- * here is a breaking change to the shared ledger contract.
- *
- * Pure module: no fs / process / node built-ins. Safe to import from React
- * client code (for typed button POST bodies) and from server API routes.
- * File I/O lives in a separate module (see lib/idd/ledger-io.ts when added).
- */
-
-// ---------- Schema (SSOT) ----------
+// intent: DEC-005 — Meltly 側 sync-tools/lib/lifecycle.py の TS 移植。event 名・attr セット・enum 値・emit JSON の field 順は同一 (contract 承継)。純粋 module (fs / node 依存なし)、client / server 両側から import 可。
 
 export const LIFECYCLE_SCHEMA = {
   lane_open: {
@@ -90,18 +76,11 @@ export type LifecycleEventType = `lifecycle_${LifecycleEventName}`;
 
 export const ALL_LIFECYCLE_EVENT_NAMES = Object.keys(LIFECYCLE_SCHEMA) as LifecycleEventName[];
 
-// ---------- Emit ----------
-
 export interface EmitOptions {
-  /** Event stem without the `lifecycle_` prefix. */
   event: LifecycleEventName;
-  /** ISO 8601 timestamp with tz offset, e.g. "2026-08-23T09:32:05+09:00". */
   ts: string;
-  /** Repo alias (flutter / server / web / …). */
   repo: string;
-  /** Attrs seed. Overrides `attrsJson` on key collision (matches Python behavior). */
   attrs?: Record<string, unknown>;
-  /** Optional JSON-string overlay applied *before* `attrs` (attrs then overlay wins). */
   attrsJson?: string;
 }
 
@@ -109,7 +88,6 @@ export type EmitResult =
   | { ok: true; line: string; parsed: LifecycleEventRecord }
   | { ok: false; error: string };
 
-/** A parsed ledger line. Field order matches the emitted JSON. */
 export interface LifecycleEventRecord {
   ts: string;
   repo: string;
@@ -118,14 +96,6 @@ export interface LifecycleEventRecord {
   [key: string]: unknown;
 }
 
-/**
- * Validate a lifecycle event and produce the JSON line the caller must append
- * to `state/ledger-<repo>.jsonl`.
- *
- * The caller is responsible for the ledger flock and file append; this
- * function is pure. Field order in the emitted JSON mirrors Python:
- *   ts, repo, type, then schema-declared attrs in declared order.
- */
 export function emitLifecycleLine(opts: EmitOptions): EmitResult {
   if (!(opts.event in LIFECYCLE_SCHEMA)) {
     return {
@@ -135,7 +105,6 @@ export function emitLifecycleLine(opts: EmitOptions): EmitResult {
   }
   const schema = LIFECYCLE_SCHEMA[opts.event];
 
-  // 1. Seed from attrsJson (if provided).
   const seeded: Record<string, unknown> = {};
   if (opts.attrsJson) {
     let parsed: unknown;
@@ -149,18 +118,15 @@ export function emitLifecycleLine(opts: EmitOptions): EmitResult {
     }
     Object.assign(seeded, parsed as Record<string, unknown>);
   }
-
-  // 2. Overlay explicit attrs (win on collision).
   if (opts.attrs) Object.assign(seeded, opts.attrs);
 
-  // 3. Silently drop unknown keys (per contract — extra fields ignored).
+  // intent: DEC-005 — 未知 attr は silent drop (contract 承継、Python 側の attrs.filter 挙動と一致)
   const known = new Set<string>([...schema.required, ...schema.optional]);
   const attrs: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(seeded)) {
     if (known.has(k)) attrs[k] = v;
   }
 
-  // 4. Required-attr check.
   const missing = schema.required.filter((k) => !(k in attrs));
   if (missing.length > 0) {
     return {
@@ -169,7 +135,6 @@ export function emitLifecycleLine(opts: EmitOptions): EmitResult {
     };
   }
 
-  // 5. Enum check.
   for (const [k, allowed] of Object.entries(schema.enums) as [string, readonly string[]][]) {
     if (k in attrs) {
       const v = attrs[k];
@@ -182,7 +147,7 @@ export function emitLifecycleLine(opts: EmitOptions): EmitResult {
     }
   }
 
-  // 6. Build the record in declared field order.
+  // intent: DEC-005 — field 順は ts, repo, type, linear_issue_id, 以降は schema 宣言順。Python 側 JSON と byte parity を維持する
   const out: LifecycleEventRecord = {
     ts: opts.ts,
     repo: opts.repo,
@@ -190,18 +155,13 @@ export function emitLifecycleLine(opts: EmitOptions): EmitResult {
     linear_issue_id: attrs.linear_issue_id as string,
   };
   for (const k of [...schema.required, ...schema.optional]) {
-    if (k === "linear_issue_id") continue; // already placed above
+    if (k === "linear_issue_id") continue;
     if (k in attrs) out[k] = attrs[k];
   }
 
-  // JSON separators must match Python: no spaces, ensure_ascii=False equivalent.
-  // TS JSON.stringify already emits UTF-8 without spaces by default.
   return { ok: true, line: JSON.stringify(out), parsed: out };
 }
 
-// ---------- Fold ----------
-
-/** Stage template + attr keys whose values fill the template. */
 const STAGE_MAP: Record<LifecycleEventType, [string, readonly string[]]> = {
   lifecycle_lane_open:    ["lane-open",       []],
   lifecycle_s1_ready:     ["s1-ready-{}",     ["clarity_verdict"]],
@@ -218,7 +178,6 @@ const STAGE_MAP: Record<LifecycleEventType, [string, readonly string[]]> = {
   lifecycle_lane_close:   ["lane-close",      []],
 };
 
-/** Derive a human-facing stage label from one lifecycle event. */
 export function deriveStage(event: Pick<LifecycleEventRecord, "type"> & Record<string, unknown>): string {
   const entry = STAGE_MAP[event.type];
   if (!entry) return "unknown";
@@ -237,11 +196,10 @@ export interface LaneState {
   stage: string;
   worker?: string;
   worktree?: string;
-  since: string; // ISO ts of the most recent event
+  since: string;
   lastEvent: LifecycleEventRecord;
 }
 
-/** Type guard for a well-formed lifecycle event record. */
 export function isLifecycleEvent(value: unknown): value is LifecycleEventRecord {
   if (value === null || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
@@ -255,12 +213,7 @@ export function isLifecycleEvent(value: unknown): value is LifecycleEventRecord 
   );
 }
 
-/**
- * Fold a sequence of lifecycle events into per-lane state. Non-lifecycle events
- * are skipped silently. Retired lanes (last event = `lifecycle_lane_close`) are
- * omitted from the output — matches Python `cmd_status`. Use `foldLifecycleLedgerFull`
- * if the caller needs retired lanes too.
- */
+// intent: DEC-005 — retired lane (last event = lifecycle_lane_close) は Python cmd_status と同じく active 一覧から除外
 export function foldLifecycleLedger(events: readonly unknown[]): Map<string, LaneState> {
   const full = foldLifecycleLedgerFull(events);
   const active = new Map<string, LaneState>();
@@ -270,9 +223,6 @@ export function foldLifecycleLedger(events: readonly unknown[]): Map<string, Lan
   return active;
 }
 
-/**
- * Fold that keeps retired lanes too. Useful for a history tab or archived view.
- */
 export function foldLifecycleLedgerFull(events: readonly unknown[]): Map<string, LaneState> {
   interface Accum {
     lastEvent: LifecycleEventRecord;
@@ -285,6 +235,7 @@ export function foldLifecycleLedgerFull(events: readonly unknown[]): Map<string,
     if (!isLifecycleEvent(raw)) continue;
     const state = acc.get(raw.linear_issue_id) ?? ({ lastEvent: raw } as Accum);
     state.lastEvent = raw;
+    // intent: DEC-005 — worker は lane_open / s2_start のみで carry (Python 挙動と一致、他 event 由来の worker 値は無視)
     if (raw.type === "lifecycle_lane_open") {
       const wt = raw.worktree_branch;
       const wk = raw.worker;

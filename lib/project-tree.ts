@@ -1,6 +1,6 @@
 import type { BranchPreview } from "@/lib/types";
 
-// BranchNavigator still traverses recursively, so keep the response tree shallow.
+// intent: DEC-244 — client 側 BranchNavigator が再帰走査するため response tree は必ず浅く保つ
 export const MAX_PROJECTED_TREE_DEPTH = 200;
 const MAX_BRANCH_PREVIEW_LENGTH = 40;
 
@@ -69,12 +69,7 @@ function previewForEntry(entry: ProjectableEntry): BranchPreview | undefined {
   return { ...(role ? { role } : {}), text };
 }
 
-/**
- * Project the session tree into the shallow navigation tree sent to the client.
- * Keeps roots, branch points, and leaves while contracting single-child chains
- * without recursive traversal. Contracted entry IDs are attached to the next
- * visible node so the UI can still recognize an active leaf inside the chain.
- */
+// intent: DEC-244 — root・分岐点・葉のみ残し、単一子鎖は圧縮した entry ID を次残存ノードに載せる
 export function projectTreeForResponse<T extends ProjectableTreeNode<T>>(
   nodes: T[]
 ): T[] {

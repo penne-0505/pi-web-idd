@@ -7,24 +7,13 @@ import { samePath, toNativePath } from "./paths";
 
 const execFileAsync = promisify(execFile);
 
-// ============================================================================
-// Project resolution: cwd → { projectRoot, branch }
-//
-// A worktree's `git rev-parse --git-common-dir` points at the *main* repo's
-// .git directory, so its parent is the project root shared by all worktrees.
-// Non-git directories resolve to themselves. Results are cached on globalThis
-// (hot-reload safe) with a short TTL; add/remove worktree invalidates eagerly.
-// ============================================================================
+// intent: DEC-125 — common-dir 親を projectRoot にすると全 worktree が同一 identity を共有し、cache は hot-reload safe な globalThis に置く
 
 export interface ProjectInfo {
   projectRoot: string;
-  /** Current branch of the cwd, null for non-git dirs or detached HEAD */
   branch: string | null;
-  /** True when cwd is a linked worktree (not the main checkout) */
   isWorktree: boolean;
-  /** True when cwd is the top-level directory of a checkout (main or linked).
-   *  False for repo subdirectories and non-git dirs — the worktree switcher
-   *  is only meaningful at the top level. */
+  // intent: DEC-125 — worktree switcher は top-level でのみ意味を持つため subdir と非 git は false
   isTopLevel: boolean;
 }
 
@@ -53,8 +42,7 @@ async function git(cwd: string, args: string[]): Promise<string> {
   const { stdout } = await execFileAsync("git", ["-C", cwd, ...args], {
     timeout: 10_000,
     maxBuffer: 1024 * 1024,
-    // Pin the message locale so error-text matching (e.g. the dirty-worktree
-    // detection in the DELETE route) works regardless of system language.
+    // intent: DEC-126 — LC_ALL=C で git のエラーメッセージ pattern-match を system 言語から独立させる
     env: { ...process.env, LC_ALL: "C" },
   });
   return stdout.trim();
@@ -68,12 +56,7 @@ function realPathOrSelf(filePath: string): string {
   }
 }
 
-/**
- * addWorktree() places worktrees in `<repoRoot>-worktrees/<dir>`. When such a
- * directory no longer exists (worktree removed), group its sessions back
- * under the main repo instead of letting them dangle as a phantom project.
- * The dir name is the sanitized branch name — close enough for display.
- */
+// intent: DEC-127 — 消失 worktree の session は main repo に集約して phantom project 化を避ける
 function inferRemovedWorktree(cwd: string): ProjectInfo | null {
   const parent = dirname(cwd);
   if (!parent.endsWith("-worktrees")) return null;
@@ -100,16 +83,11 @@ export async function resolveProject(cwd: string): Promise<ProjectInfo> {
       "--abbrev-ref", "HEAD",
     ]);
     const [commonDirRaw, gitDirRaw, toplevelRaw, ref] = out.split("\n").map((l) => l.trim());
-    // Only the first three lines are paths — `ref` is a branch name and must
-    // keep its forward slashes (`feature/foo`).
+    // intent: DEC-128 — 最初の 3 行だけ path、ref は branch 名なので forward slash を保つ
     const [commonDir, gitDir, toplevel] = [commonDirRaw, gitDirRaw, toplevelRaw].map(toNativePath);
-    // git prints resolved (symlink-free) paths; normalize cwd the same way
+    // intent: DEC-128 — git は既に resolved path を返すため cwd も realpath して比較を揃える
     const realCwd = realPathOrSelf(cwd);
-    // For a linked worktree, --git-dir differs from --git-common-dir.
-    // Only collapse *worktree toplevels* into the main repo. A session whose
-    // cwd is a subdirectory of a repo keeps its own project identity —
-    // grouping subdirs under the repo root would change where new sessions
-    // are created for existing users.
+    // intent: DEC-125 — collapse は worktree top-level のみ、subdir は既存 session の identity を保つ
     const isTopLevel = samePath(toplevel, realCwd);
     const isWorktreeTopLevel = !samePath(gitDir, commonDir) && isTopLevel;
     const topLevelProjectRoot = isWorktreeTopLevel ? dirname(commonDir) : toplevel;
@@ -127,15 +105,6 @@ export async function resolveProject(cwd: string): Promise<ProjectInfo> {
   return info;
 }
 
-// ============================================================================
-// Worktree operations
-//
-// These take any directory inside the repo (a worktree, the main checkout, or
-// a subdirectory) and resolve the main repo root themselves via the git
-// common dir, so callers can pass session cwds directly.
-// ============================================================================
-
-/** Main repo root (parent of the shared .git dir), or throws for non-git dirs */
 async function getRepoRoot(cwd: string): Promise<string> {
   const commonDir = await git(cwd, ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   return realPathOrSelf(dirname(toNativePath(commonDir)));
@@ -148,9 +117,7 @@ export async function listWorktrees(cwd: string): Promise<WorktreeInfo[]> {
 
   const flush = () => {
     if (current?.path) {
-      // Prunable worktrees point at missing/broken gitdirs and cannot be
-      // browsed or selected usefully. Also skip vanished paths even if git has
-      // not marked them prunable yet.
+      // intent: DEC-129 — prunable と消失 path は UI 上で意味のある操作ができないので listing から除外
       if (!current.prunable && existsSync(current.path)) {
         worktrees.push({
           path: current.path,
@@ -167,7 +134,7 @@ export async function listWorktrees(cwd: string): Promise<WorktreeInfo[]> {
       flush();
       current = { path: toNativePath(line.slice("worktree ".length).trim()) };
     } else if (line.startsWith("branch ") && current) {
-      current.branch = line.slice("branch ".length).trim().replace(/^refs\/heads\//, "");
+      current.branch = line.slice("branch ".length).trim().replace(/^refs\/heads[/]/, "");
     } else if (line.startsWith("prunable") && current) {
       current.prunable = true;
     } else if (line.trim() === "") {
@@ -205,7 +172,6 @@ export async function addWorktree(cwd: string, branch: string): Promise<{ path: 
   }
   mkdirSync(baseDir, { recursive: true });
 
-  // Reuse the branch if it already exists, otherwise create it at HEAD.
   let branchExists = false;
   try {
     await git(repoRoot, ["rev-parse", "--verify", "--quiet", `refs/heads/${trimmed}`]);

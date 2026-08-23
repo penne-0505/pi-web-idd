@@ -124,7 +124,7 @@ function getConfiguredVersion(source: string): string | undefined {
     return undefined;
   }
 
-  if (source.startsWith("git:") || /^[a-z]+:\/\//.test(source)) {
+  if (source.startsWith("git:") || /^[a-z]+:[/][/]/.test(source)) {
     const lastAt = source.lastIndexOf("@");
     const lastSlash = source.lastIndexOf("/");
     const lastColon = source.lastIndexOf(":");
@@ -294,7 +294,6 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/plugins body: { action, source?, scope?, cwd }
 export async function POST(req: Request) {
   if (!isApiRequestAllowed(req)) {
     return NextResponse.json({ error: "Untrusted API request" }, { status: 403 });

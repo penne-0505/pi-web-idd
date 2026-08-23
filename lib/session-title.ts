@@ -38,11 +38,7 @@ function createShadowTools(tools: AgentTool[]): AgentTool[] {
   }));
 }
 
-/**
- * Build a temporary Agent configuration whose provider-facing prefix matches
- * the source Agent. Tool implementations are replaced without changing their
- * names, descriptions, or schemas, so a naming run cannot mutate the project.
- */
+// intent: DEC-156 — tool 名/説明/schema は保ったまま execute だけ差し替え、命名 run で副作用を起こさない
 export function buildSessionTitleAgentOptions(source: Agent): AgentOptions {
   const state = source.state;
   return {
@@ -69,11 +65,7 @@ export function buildSessionTitleAgentOptions(source: Agent): AgentOptions {
   };
 }
 
-/**
- * A running source session usually ends in the user message currently being
- * answered. Fold the title request into a copy of that message so the title
- * request does not send two consecutive user messages to the provider.
- */
+// intent: DEC-157 — 末尾 user message に畳み込み provider に user を 2 連続で並べない
 export function appendTitleRequestToTrailingUser(messages: AgentMessage[]): AgentMessage[] {
   const lastMessage = messages.at(-1);
   if (!lastMessage || lastMessage.role !== "user") return messages;
@@ -114,9 +106,7 @@ export function parseGeneratedSessionTitle(raw: string): string {
     try {
       const parsed = JSON.parse(value) as { title?: unknown };
       if (typeof parsed.title === "string") value = parsed.title.trim();
-    } catch {
-      // Fall back to plain-text cleanup below.
-    }
+    } catch {}
   }
 
   value = value.split(/\r?\n/, 1)[0] ?? "";

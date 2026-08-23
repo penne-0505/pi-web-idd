@@ -3,7 +3,6 @@ import { resolveLocalFilePath } from "./file-links";
 import { isEditToolName, isWriteToolName } from "./tool-names";
 
 export interface WrittenFile {
-  /** Resolved absolute path of a file this turn wrote. */
   filePath: string;
 }
 
@@ -17,16 +16,7 @@ function readToolPath(input: Record<string, unknown> | undefined): string | null
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-/**
- * Collect the distinct files a single assistant turn actually wrote.
- *
- * Every entry is derived from a `write`/`edit` tool call whose result arrived
- * and did not error — never from the reply text. A path the assistant merely
- * mentions in prose is not evidence that any file was touched, so it is not a
- * source here; the tool call is the record of what happened.
- *
- * Paths are resolved against `cwd`, deduped, and kept in first-seen order.
- */
+// intent: DEC-236 — 書き込みの真実は write/edit ツール結果のみ、reply text の言及は無視
 export function extractTurnWrittenFiles(
   content: AssistantContentBlock[],
   toolResults: Map<string, ToolResultMessage> | undefined,
@@ -39,15 +29,14 @@ export function extractTurnWrittenFiles(
     if (block.type !== "toolCall") continue;
     if (!isFileWritingToolName(block.toolName)) continue;
 
-    // No result yet (still streaming) or the call failed — nothing was written.
+    // intent: DEC-236 — 結果未着 or error なら書き込みは発生していないので除外
     const result = toolResults?.get(block.toolCallId);
     if (!result || result.isError) continue;
 
     const rawPath = readToolPath(block.input);
     if (!rawPath) continue;
 
-    // Tool arguments are filesystem paths, not hrefs: preserve characters such
-    // as #, ?, and :digits that have special meaning in links and source refs.
+    // intent: DEC-236 — ツール引数はファイルパスであり href ではない、# ? :digits を保存する
     const filePath = resolveLocalFilePath(rawPath, cwd);
     if (!filePath) continue;
 

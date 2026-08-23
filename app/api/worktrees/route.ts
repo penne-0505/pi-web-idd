@@ -4,8 +4,7 @@ import { addWorktree, findCurrentWorktreePath, listWorktrees, removeWorktree, re
 import { allowFileRoot, getAllowedFileRoots, isExistingFilePathAllowed, isFilePathAllowed } from "@/lib/file-access";
 import { projectIdentityKey } from "@/lib/project-identity";
 
-/** Same gate as /api/files: only session cwds / project roots / explicitly
- *  allowed dirs may be inspected or mutated through this endpoint. */
+// intent: DEC-528 — /api/files と同じ allow-list gate を worktrees にも適用
 async function checkCwdAllowed(cwd: string): Promise<NextResponse | null> {
   const allowedRoots = await getAllowedFileRoots();
   if (!isFilePathAllowed(cwd, allowedRoots) || !isExistingFilePathAllowed(cwd, allowedRoots)) {
@@ -14,7 +13,6 @@ async function checkCwdAllowed(cwd: string): Promise<NextResponse | null> {
   return null;
 }
 
-// GET /api/worktrees?cwd=  →  { projectRoot, projectKey, isGit, isTopLevel, currentWorktreePath, worktrees }
 export async function GET(req: Request) {
   try {
     const cwd = new URL(req.url).searchParams.get("cwd");
@@ -29,16 +27,13 @@ export async function GET(req: Request) {
     let currentWorktreePath: string | null = null;
     let isGit = true;
     try {
-      // For a removed-worktree cwd (session of a deleted worktree), fall back
-      // to the inferred project root so the switcher still shows the project.
+      // intent: DEC-528 — 削除済み worktree の cwd では inferred project root で switcher 表示を継続
       worktrees = await listWorktrees(existsSync(cwd) ? cwd : project.projectRoot);
       currentWorktreePath = findCurrentWorktreePath(worktrees, cwd);
     } catch {
       isGit = false;
     }
-    // Every listed path is a git-verified worktree of this project; allow the
-    // file explorer to browse them even before they have any session (the
-    // in-memory allowlist from addWorktree does not survive server restarts).
+    // intent: DEC-528 — git-verified worktree を allow-list 再登録（addWorktree の in-memory は server restart で消える）
     for (const w of worktrees) allowFileRoot(w.path);
     return NextResponse.json({
       projectRoot: project.projectRoot,
@@ -53,7 +48,6 @@ export async function GET(req: Request) {
   }
 }
 
-// POST /api/worktrees  body: { cwd, branch }  →  { path, branch }
 export async function POST(req: Request) {
   try {
     const body = await req.json() as { cwd?: string; branch?: string };
@@ -77,7 +71,6 @@ export async function POST(req: Request) {
   }
 }
 
-// DELETE /api/worktrees  body: { cwd, path, force? }
 export async function DELETE(req: Request) {
   try {
     const body = await req.json() as { cwd?: string; path?: string; force?: boolean };
@@ -94,8 +87,7 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    // git refuses to remove dirty worktrees without --force; surface that so
-    // the UI can offer a force-remove confirmation.
+    // intent: DEC-528 — dirty removal を 409 で表面化して UI に force-remove 確認を出させる
     const dirty = /contains modified or untracked files|is dirty/i.test(message);
     return NextResponse.json({ error: message, dirty }, { status: dirty ? 409 : 400 });
   }

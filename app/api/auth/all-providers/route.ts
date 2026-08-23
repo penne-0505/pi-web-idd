@@ -4,8 +4,7 @@ import { collectProviderListingInputs } from "@/lib/provider-listing-runtime";
 
 export const dynamic = "force-dynamic";
 
-// Providers that accept an API key, including dual-auth ones such as anthropic —
-// see lib/provider-listing.ts for why membership is capability-based (#309).
+// intent: DEC-534 — capability-based で API key を受け付ける provider を列挙（dual-auth も含む）
 export async function GET() {
   const modelRuntime = await ModelRuntime.create();
   const providers = buildApiKeyProviderList(await collectProviderListingInputs(modelRuntime));

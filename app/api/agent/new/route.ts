@@ -15,10 +15,7 @@ function parseThinkingLevel(value: unknown): ThinkingLevel | undefined {
   }
   throw new Error(`Invalid thinking level: ${String(value)}`);
 }
-// POST /api/agent/new  body: { cwd: string; type: string; message?: string; ... }
-// Spawns a brand-new pi session. Most calls immediately send the first command;
-// type:"ensure_session" only creates the runtime so clients can query commands.
-// Returns pi's real session id plus the model/thinking state selected at startup.
+// intent: DEC-530 — ensure_session は runtime だけ作成、他 command 型は初回 prompt 送信
 export async function POST(req: Request) {
   let commandType: string | undefined;
   let promptAccepted = false;
@@ -44,16 +41,14 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // Use a one-time key so startRpcSession's lock doesn't conflict with real session ids
+    // intent: DEC-530 — 一時 key を使い real session id との lock 衝突を避ける
     const { provider, modelId, toolNames, thinkingLevel, ...promptCommand } = command as { provider?: string; modelId?: string; toolNames?: string[]; thinkingLevel?: unknown; [key: string]: unknown };
     if ((provider && !modelId) || (!provider && modelId)) {
       throw new Error("provider and modelId must be provided together");
     }
     const explicitThinkingLevel = parseThinkingLevel(thinkingLevel);
 
-    // Must be unique per request: startRpcSession coalesces concurrent callers
-    // that share a key onto one session. Date.now() (ms resolution) collides for
-    // requests in the same millisecond, merging two new sessions into one.
+    // intent: DEC-530 — startRpcSession は同 key を coalesce するので UUID で必ず一意にする
     const tempKey = `__new__${randomUUID()}`;
     const { session, realSessionId } = await startRpcSession(tempKey, "", cwd, {
       ...(toolNames ? { toolNames } : {}),
@@ -61,9 +56,7 @@ export async function POST(req: Request) {
       ...(explicitThinkingLevel ? { thinkingLevel: explicitThinkingLevel } : {}),
     });
 
-    // Keep the files-route allowed-roots cache (see app/api/files/[...path]/route.ts)
-    // in sync so the new cwd is immediately readable via /api/files. Without this,
-    // a file request under a brand-new cwd would 403 for up to the cache TTL.
+    // intent: DEC-530 — files-route の allow-list cache に新規 cwd を即反映して 403 を回避
     allowFileRoot(cwd);
     invalidateSessionListCache();
 

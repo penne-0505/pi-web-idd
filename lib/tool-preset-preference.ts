@@ -36,6 +36,6 @@ export function setPreferredToolPreset(
   try {
     storage.setItem(STORAGE_KEY, preset);
   } catch {
-    // Browser storage is best-effort.
+    // intent: DEC-246 — localStorage は private mode / quota / SSR で throw する、UI 状態のためユーザ操作は止めない
   }
 }

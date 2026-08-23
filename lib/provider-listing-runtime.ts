@@ -1,10 +1,6 @@
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { ProviderCredentialType, ProviderListingInput } from "@/lib/provider-listing";
 
-/**
- * Adapter between `ModelRuntime` and the pure listing helpers in
- * `lib/provider-listing.ts`.
- */
 export async function collectProviderListingInputs(
   modelRuntime: ModelRuntime,
 ): Promise<ProviderListingInput[]> {
@@ -18,8 +14,7 @@ export async function collectProviderListingInputs(
       }
     }
   } catch {
-    // A damaged auth.json must not empty the provider list; fall back to the
-    // per-provider auth status only.
+    // intent: DEC-177 — auth.json 破損時でも provider list を空にしない
   }
 
   return modelRuntime.getProviders().map((provider) => ({

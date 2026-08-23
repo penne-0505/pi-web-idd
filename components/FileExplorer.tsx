@@ -83,7 +83,7 @@ async function fetchEntries(dirPath: string): Promise<FileNode[]> {
       const data = await res.json() as { error?: string };
       if (data.error) message = data.error;
     } catch {
-      // ignore non-JSON error bodies
+      // intent: DEC-304 — 非 JSON error body は無視して HTTP status ベースの既定文言を使う
     }
     throw new Error(message);
   }
@@ -256,13 +256,13 @@ function TreeNode({
       setChildren(entries);
       setLoaded(true);
     } catch {
-      // ignore
+      // intent: DEC-304 — 子読み込み失敗は tree 上では黙って無視、上位で個別 fetch 時に露出させる
     } finally {
       setLoading(false);
     }
   }, [loaded, node.fullPath]);
 
-  // Re-fetch children when the tree refreshes and the directory is open.
+  // intent: DEC-304 — refreshToken 更新時、既に開いているディレクトリのみ再 fetch する
   useEffect(() => {
     if (open && loaded) {
       loadChildren(true);
@@ -674,7 +674,7 @@ export const FileExplorer = forwardRef<FileExplorerHandle, Props>(function FileE
     const cwdChanged = prevCwdRef.current !== cwd;
     prevCwdRef.current = cwd;
 
-    // Reset expanded state only when cwd changes, not on refreshKey bumps
+    // intent: DEC-304 — expanded/highlighted state のリセットは cwd 切替時のみ、refreshKey では保つ
     if (cwdChanged) {
       setExpandedPaths(new Set());
       setHighlightedPaths(new Set());

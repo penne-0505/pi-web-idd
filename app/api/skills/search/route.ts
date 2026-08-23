@@ -40,7 +40,7 @@ function parseSearchOutput(raw: string): SkillSearchResult[] {
   const lines = clean.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    // package line: "owner/repo@skill  NNK installs"
+    // intent: DEC-538 — fallback は npx skills find の line format に依存
     const pkgMatch = line.match(/^([\w.\-]+\/[\w.\-@:]+)\s+([\d.,]+[KMB]?\s+installs)$/);
     if (pkgMatch) {
       const urlLine = lines[i + 1]?.trim().replace(/^└\s*/, "");
@@ -87,7 +87,6 @@ function parseInstallCount(installs: string): number {
   return value * multiplier;
 }
 
-// POST /api/skills/search  body: { query: string, limit?: number }
 export async function POST(req: Request) {
   try {
     const { query, limit: rawLimit } = await req.json() as { query?: string; limit?: unknown };

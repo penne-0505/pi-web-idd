@@ -2,9 +2,7 @@ import { getRunningRpcSessionIds, subscribeRunningSessions } from "@/lib/rpc-man
 
 export const dynamic = "force-dynamic";
 
-// GET /api/agent/running/events - SSE stream of the set of currently-running
-// session ids. Pushes an update whenever any session starts or stops working,
-// so the sidebar never has to poll.
+// intent: DEC-529 — running session ids を SSE で push、sidebar は idle 時に poll しない
 export async function GET(req: Request) {
   const stream = new ReadableStream({
     start(controller) {
@@ -14,33 +12,31 @@ export async function GET(req: Request) {
         controller.enqueue(encoder.encode(text));
       };
 
-      // Subscribe BEFORE taking the initial snapshot so no state change can slip
-      // through the gap between snapshot and subscription.
+      // intent: DEC-529 — subscribe を snapshot より先にして gap を塞ぐ
       const unsubscribe = subscribeRunningSessions((ids) => {
         try {
           encode({ type: "running", runningSessionIds: ids });
         } catch {
-          // controller already closed
+          // intent: DEC-523 — controller 既 close 時の enqueue エラーは握り潰す
         }
       });
 
-      // Initial snapshot so the client renders the correct state immediately.
-      // (A duplicate frame here is harmless: the client just sets the same set.)
+      // intent: DEC-529 — initial snapshot で接続直後の UI 空白を防ぐ（duplicate は client 側で同一化）
       encode({ type: "running", runningSessionIds: getRunningRpcSessionIds() });
 
-      // Heartbeat to keep the connection alive through proxies/timeouts.
+      // intent: DEC-529 — proxy の idle close 対策 heartbeat
       const heartbeat = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(":\n\n"));
         } catch {
-          // controller already closed
+          // intent: DEC-523 — controller 既 close 時の enqueue エラーは握り潰す
         }
       }, 30_000);
 
       const cleanup = () => {
         clearInterval(heartbeat);
         unsubscribe();
-        try { controller.close(); } catch { /* already closed */ }
+        try { controller.close(); } catch {}
       };
 
       req.signal?.addEventListener("abort", cleanup);

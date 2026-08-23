@@ -2,13 +2,11 @@ import type { SessionInfo } from "./types";
 import { workspaceKeyOf } from "./workspace-memory";
 
 export interface RecentProject {
-  /** Stable server-provided identity used for comparison and Map keys. */
   key: string;
-  /** Original project path used for display and filesystem operations. */
   root: string;
 }
 
-/** Projects sorted by most recent activity and deduplicated by stable key. */
+// intent: DEC-240 — 比較・Map key は stable な server key、表示・FS 操作は元 root を保持する二重表現
 export function getRecentProjects(sessions: readonly SessionInfo[]): RecentProject[] {
   const latestByProject = new Map<string, { root: string; modified: string }>();
   for (const session of sessions) {

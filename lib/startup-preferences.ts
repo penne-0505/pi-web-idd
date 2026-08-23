@@ -12,13 +12,7 @@ export interface EffectiveStartupPreferences {
   supportsThinking: boolean;
 }
 
-/**
- * Persist explicit browser selections without re-running AgentSession setters.
- *
- * The session constructor already records the effective model and thinking
- * level. Calling setModel()/setThinkingLevel() again would append duplicate
- * session entries and emit duplicate extension events.
- */
+// intent: DEC-248 — session コンストラクタが effective 値を既に記録済み、setModel/setThinkingLevel の再呼び出しは重複 event を生む
 export async function persistExplicitStartupPreferences(
   settingsManager: SettingsManager,
   explicit: ExplicitStartupPreferences,

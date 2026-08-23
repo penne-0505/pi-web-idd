@@ -4,10 +4,8 @@ export interface ModelsData {
   defaultModel: { provider: string; modelId: string } | null;
   thinkingLevels: Record<string, string[]>;
   thinkingLevelMaps: Record<string, Record<string, string | null>>;
-  /** `provider/modelId` → thinking level pinned by an `enabledModels` `:level` suffix. */
   thinkingLevelPins: Record<string, string>;
   modelError?: string;
-  /** Warnings from resolving the `enabledModels` scope (e.g. a pattern matched nothing). */
   modelScopeWarnings?: string[];
 }
 
@@ -23,7 +21,7 @@ declare global {
 
 const MODELS_CACHE_TTL_MS = 60_000;
 const MAX_MODELS_CACHE_ENTRIES = 32;
-// Never interpolate the caught error here; SDK errors can contain paths and provider details.
+// intent: DEC-183 — model load 失敗のエラー文言は path/provider を含めず、SDK error 由来の内部情報を UI に漏らさない
 const SAFE_MODEL_LOAD_FAILURE_MESSAGE = "Model list is temporarily unavailable. Check your configuration and try again.";
 
 function getModelsCacheState(): ModelsCacheState {

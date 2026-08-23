@@ -29,11 +29,7 @@ function hasFocusedEditableElement(): boolean {
     || activeElement.tagName === "TEXTAREA";
 }
 
-/**
- * Keep the app height aligned with the visual viewport while a mobile keyboard
- * is open. iOS standalone PWAs can leave 100dvh at the layout viewport height,
- * which puts the composer behind the keyboard and may scroll the page itself.
- */
+// intent: DEC-522 — mobile keyboard 開時に app height を visualViewport に合わせる
 export function useViewportHeight(): void {
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -63,10 +59,7 @@ export function useViewportHeight(): void {
       }
     };
 
-    // WebKit can dispatch the resize event before visualViewport.height has
-    // settled, especially when an installed PWA dismisses the keyboard. Reading
-    // it on the next animation frame prevents the keyboard-height CSS value
-    // from remaining after the keyboard has closed.
+    // intent: DEC-522 — WebKit の resize 遅延を rAF で回避
     const scheduleUpdate = () => {
       if (frameId !== null) window.cancelAnimationFrame(frameId);
       frameId = window.requestAnimationFrame(update);

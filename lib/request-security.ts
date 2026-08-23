@@ -68,11 +68,7 @@ function isUserInitiatedSessionExportNavigation(request: Request): boolean {
   }
 }
 
-/**
- * Only trust local names, IP literals, or the hostname explicitly selected by
- * the operator. IP literals preserve LAN access but cannot be DNS-rebound
- * because the browser keeps the literal address in the Host header.
- */
+// intent: DEC-243 — API host は loopback / IP literal / 明示配置 hostname に限定し、DNS rebind を封じる
 export function isApiRequestHostAllowed(
   request: Request,
   configuredHostnames = configuredHostnamesFromEnvironment(),
@@ -87,7 +83,7 @@ export function isApiRequestHostAllowed(
   );
 }
 
-/** Reject browser cross-site API requests while preserving non-browser clients. */
+// intent: DEC-243 — ブラウザの cross-site fetch は拒否、sec-fetch-* を送らない非ブラウザ client は素通し
 export function isApiRequestOriginAllowed(request: Request): boolean {
   const origin = request.headers.get("origin");
   const fetchSite = request.headers.get("sec-fetch-site");

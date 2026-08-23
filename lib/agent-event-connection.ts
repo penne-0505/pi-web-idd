@@ -44,7 +44,7 @@ export interface AgentEventConnectionOptions {
 
 const EVENT_SOURCE_OPEN = 1;
 
-/** Owns the EventSource, agent-readiness handshake, and passive reconnect. */
+// intent: DEC-214 — EventSource / readiness handshake / passive reconnect を 1 オブジェクトで所有し呼び手を state 管理から解放する
 export class AgentEventConnection {
   private current: Connection | null = null;
   private retry: { sessionId: string; timer: ReturnType<typeof setTimeout> } | null = null;
@@ -90,7 +90,7 @@ export class AgentEventConnection {
       }
       if (connection.source.readyState === EVENT_SOURCE_OPEN) return;
 
-      // A once-ready EventSource may otherwise remain CONNECTING indefinitely.
+      // intent: DEC-215 — 一度 ready になった EventSource が CONNECTING に張り付き続ける事態を避けるため discard して張り直す
       this.discard(connection, new AgentEventConnectionError("closed"));
     }
   }

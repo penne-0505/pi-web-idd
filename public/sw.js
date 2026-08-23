@@ -41,7 +41,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Session data and live agent traffic must always come from the local server.
+  // intent: DEC-544 — /api/ と /sw.js は cache に載せず常に local server から取る (stale session/agent traffic を出さないため)
   if (url.pathname.startsWith("/api/") || url.pathname === "/sw.js") return;
 
   if (request.mode === "navigate") {
@@ -73,9 +73,7 @@ self.addEventListener("notificationclick", (event) => {
   try {
     const candidate = new URL(requestedUrl, self.location.origin);
     if (candidate.origin === self.location.origin) targetUrl = candidate;
-  } catch {
-    // Keep the root URL when notification data is malformed.
-  }
+  } catch {}
 
   event.waitUntil(focusOrOpenWindow(targetUrl.href));
 });
@@ -98,7 +96,7 @@ async function focusOrOpenWindow(targetUrl) {
       await targetClient.focus();
       return;
     } catch {
-      // The window may have closed between matchAll and focus; try the next one.
+      // intent: DEC-545 — matchAll と focus の間に window が閉じる race を許容し、次の candidate に進む
     }
   }
 

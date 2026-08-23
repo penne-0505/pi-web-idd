@@ -67,12 +67,11 @@ async function updateStoredCredentials<T>(
     try {
       await release();
     } catch {
-      // The compromised-lock error above is more useful than an unlock error.
+      // intent: DEC-178 — release 失敗より compromised-lock error のほうが原因診断に役立つので握り潰す
     }
   }
 }
 
-/** Store a provider credential without triggering a model-catalog refresh. */
 export function storeProviderCredential(
   providerId: string,
   credential: Credential,
@@ -84,12 +83,7 @@ export function storeProviderCredential(
   });
 }
 
-/**
- * Removes a provider credential only when its current stored type matches.
- *
- * The comparison and write share the same proper-lockfile lock used by pi's
- * AuthStorage, so a concurrent login cannot be deleted by a stale UI request.
- */
+// intent: DEC-178 — pi の AuthStorage と同じ proper-lockfile を共有し、並行ログインが stale UI 要求で消えないようにする
 export async function removeStoredCredentialIfType(
   providerId: string,
   expectedType: ProviderCredentialType,

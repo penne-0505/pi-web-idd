@@ -4,7 +4,6 @@ import { getRpcSession, startRpcSession } from "@/lib/rpc-manager";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/agent/[id]/events - SSE stream of agent events
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -12,7 +11,7 @@ export async function GET(
   const { id } = await params;
   if (req.signal.aborted) return new Response(null, { status: 204 });
 
-  // Fast path: already-running session
+  // intent: DEC-536 — in-memory session を優先し file 再解釈のコストを避ける
   const session = getRpcSession(id);
   let sessionPromise;
   if (session?.isAlive()) {

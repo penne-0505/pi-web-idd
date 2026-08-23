@@ -17,7 +17,7 @@ interface MarkdownBodyProps {
 
 export function MarkdownBody({ children, className, isStreaming, cwd, onOpenFile }: MarkdownBodyProps) {
   const normalizedMarkdown = useMemo(() => normalizeDisplayMath(children), [children]);
-  // Stable renderer identities keep stateful blocks mounted across message hover updates.
+  // intent: DEC-302 — renderer identities を useMemo で安定化、hover 更新等での再マウント抑止
   const components = useMemo<Components>(() => ({
     code({ className, children, ...props }) {
       const lang = className?.replace("language-", "").toLowerCase() ?? "";
@@ -42,7 +42,7 @@ export function MarkdownBody({ children, className, isStreaming, cwd, onOpenFile
       return <>{children}</>;
     },
     a({ href, children, ...props }) {
-      // `node` is react-markdown metadata, not a DOM attribute.
+      // intent: DEC-302 — react-markdown が付与する `node` は DOM 属性ではないので剥がす
       delete props.node;
       const filePath = onOpenFile ? resolveLocalFileHref(href, cwd) : null;
       const openFile = onOpenFile;
@@ -75,7 +75,7 @@ export function MarkdownBody({ children, className, isStreaming, cwd, onOpenFile
       const imageSrc = filePath
         ? `/api/files/${encodeFilePathForApi(filePath)}?type=read`
         : src;
-      // Dynamic local paths are served directly by the file API.
+      // intent: DEC-302 — ローカルファイル画像は file API 経由で serve、next/image は使えない
       // eslint-disable-next-line @next/next/no-img-element
       return <img src={imageSrc} alt={alt ?? ""} loading="lazy" {...props} />;
     },

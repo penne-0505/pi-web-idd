@@ -26,10 +26,6 @@ import type {
 } from "./types";
 import { createHeadlessCustomUiTui, DEFAULT_CUSTOM_UI_COLUMNS, type HeadlessCustomUiTui } from "./custom-ui-terminal";
 
-// ============================================================================
-// Types
-// ============================================================================
-
 export interface AgentEvent {
   type: string;
   [key: string]: unknown;
@@ -116,7 +112,7 @@ export interface RpcSessionStartOptions {
 
 const CODING_TOOL_NAMES = ["read", "bash", "edit", "write", "grep", "find", "ls"];
 
-// Extensions require a complete Theme, while the web UI applies its own styling.
+// intent: DEC-100 — 拡張は完全な Theme を要求するが Pi Web は独自スタイリングを使うため no-op Theme を用意
 class PlainTextTheme extends Theme {
   constructor() {
     super(
@@ -155,11 +151,6 @@ function withExtensionTools(session: AgentSessionLike, toolNames: string[]): str
 
   return [...new Set([...toolNames, ...extensionToolNames])];
 }
-
-// ============================================================================
-// AgentSessionWrapper
-// Wraps AgentSession with the same interface the rest of the app expects
-// ============================================================================
 
 export class AgentSessionWrapper {
   private listeners: EventListener[] = [];
@@ -378,9 +369,7 @@ export class AgentSessionWrapper {
       .join("\n") + "\n";
     writeFileSync(sessionFile, content, { encoding: "utf8", flag: "wx" });
 
-    // Pi normally delays the first flush until an assistant message exists.
-    // A leading shell command has no assistant message, so mark this SDK
-    // manager as flushed after writing its own generated entries.
+    // intent: DEC-102 — pi は assistant message まで flush を遅延させるが bash-only session はそれを持たない
     (manager as unknown as { flushed: boolean }).flushed = true;
     cacheSessionPath(this.inner.sessionId, sessionFile);
   }
@@ -410,9 +399,7 @@ export class AgentSessionWrapper {
 
     switch (type) {
       case "prompt": {
-        // Serialize only admission. Once the preceding prompt has either
-        // passed or failed preflight, the SDK can atomically decide whether
-        // this submission starts a run or joins its streaming queue.
+        // intent: DEC-101 — preflight 通過まで admission を直列化、実行順は SDK に atomic に決めさせる
         const releaseAdmission = await this.acquirePromptAdmission();
         try {
           if (this.inner.isBashRunning) {
@@ -454,8 +441,7 @@ export class AgentSessionWrapper {
               ...(promptImages?.length ? { images: promptImages } : {}),
               ...(streamingBehavior ? { streamingBehavior } : {}),
               source: "rpc",
-              // Match pi's RPC contract: acknowledge only after synchronous prompt
-              // validation and extension preflight have accepted the submission.
+              // intent: DEC-101 — preflight 承認まで ack を遅延させる pi RPC contract の一致
               preflightResult: (success) => {
                 if (success) acceptPreflight();
               },
@@ -466,8 +452,7 @@ export class AgentSessionWrapper {
           }
 
           void prompt.then(() => {
-            // Compatibility fallback if a future SDK resolves without invoking
-            // the internal callback. This waits for the run, but never acks early.
+            // intent: DEC-101 — SDK が callback を呼ばない未来版に対する fallback、承認だけは必ず行う
             acceptPreflight();
             finishPrompt();
             if (!streamingBehavior) this.emit({ type: "prompt_done" });
@@ -475,8 +460,7 @@ export class AgentSessionWrapper {
             rejectPreflight(error);
             finishPrompt();
             invalidateSessionListCache();
-            // A preflight rejection is returned by the POST itself. Only an
-            // unexpected failure after acceptance needs the asynchronous event.
+            // intent: DEC-101 — 承認前の失敗は POST 応答で返す、承認後の失敗のみ非同期 event
             if (preflightAccepted) {
               this.emit({
                 type: "prompt_error",
@@ -563,12 +547,10 @@ export class AgentSessionWrapper {
         let newSessionFile: string;
 
         if (!entry.parentId) {
-          // Fork before the first message: create an empty session linked to this one
           const newManager = SessionManager.create(sessionManager.getCwd(), sessionDir);
           newManager.newSession({ parentSession: currentSessionFile });
           newSessionFile = newManager.getSessionFile() as string;
         } else {
-          // Fork after some history: copy path up to (but not including) the fork point
           const sourceManager = SessionManager.open(currentSessionFile, sessionDir);
           const forkedPath = sourceManager.createBranchedSession(entry.parentId);
           if (!forkedPath) throw new Error("Failed to create forked session");
@@ -593,9 +575,7 @@ export class AgentSessionWrapper {
       case "set_thinking_level": {
         const level = command.level as string;
         this.inner.setThinkingLevel(level);
-        // setThinkingLevel clamps xhigh→high for models where supportsXhigh()===false.
-        // If the model has DeepSeek thinking compat (reasoningEffortMap maps xhigh→max),
-        // force the state back so the compat layer can use it correctly.
+        // intent: DEC-103 — setThinkingLevel が xhigh→high に clamp するため DeepSeek compat では state を書き戻す
         if (level === "xhigh" && (this.inner.model as { compat?: { thinkingFormat?: string } } | null)?.compat?.thinkingFormat === "deepseek" && this.inner.agent?.state) {
           this.inner.agent.state.thinkingLevel = "xhigh";
         }
@@ -638,8 +618,7 @@ export class AgentSessionWrapper {
       }
 
       case "clear_queue": {
-        // Full clear only: pi has no single-item dequeue, and clear+requeue
-        // races against the agent loop pulling messages mid-flight.
+        // intent: DEC-104 — pi に単一 dequeue が無く、clear+requeue は agent loop と競合するため全消しのみ
         return this.inner.clearQueue();
       }
 
@@ -843,7 +822,7 @@ export class AgentSessionWrapper {
     try {
       dispose.call(component);
     } catch {
-      // Ignore dispose errors from extension widgets.
+      // deno-lint-ignore no-empty
     }
   }
 
@@ -883,8 +862,7 @@ export class AgentSessionWrapper {
     try {
       const factoryKeys = [...this.activeExtensionWidgets.keys()];
       for (const key of factoryKeys) this.clearExtensionWidget(key);
-      // Keep the existing array-widget reload behavior: snapshots are reset and
-      // the next extension session_start repopulates them.
+      // intent: DEC-105 — array widget snapshot はクリアし、次の session_start に再取得させる
       this.extensionWidgets.clear();
     } finally {
       this.extensionWidgetsResetting = false;
@@ -1062,7 +1040,7 @@ export class AgentSessionWrapper {
     try {
       custom.component.dispose?.();
     } catch {
-      // Ignore dispose errors from extension UI components.
+      // deno-lint-ignore no-empty
     }
     this.emit({
       type: "extension_ui_request",
@@ -1129,7 +1107,7 @@ export class AgentSessionWrapper {
             try {
               (component as CustomUiComponent | undefined)?.dispose?.();
             } catch {
-              // Ignore dispose errors from a component completed before mounting.
+              // deno-lint-ignore no-empty
             }
             return;
           }
@@ -1363,10 +1341,6 @@ export class AgentSessionWrapper {
   }
 }
 
-// ============================================================================
-// Session registry
-// ============================================================================
-
 declare global {
   var __piSessions: Map<string, AgentSessionWrapper> | undefined;
   var __piStartLocks: Map<string, Promise<{ session: AgentSessionWrapper; realSessionId: string }>> | undefined;
@@ -1436,11 +1410,7 @@ function runtimeMessageActivityMs(entry: SessionMessageEntry): number | undefine
   return Number.isNaN(timestamp) ? undefined : timestamp;
 }
 
-/**
- * Return live sessions that should be visible in the session list. Pi delays
- * the first JSONL flush until an assistant message exists, so an accepted new
- * prompt must temporarily be described from its in-memory SessionManager.
- */
+// intent: DEC-107 — pi の flush 遅延仕様のため、prompt 承認直後は in-memory SessionManager から記述する
 export function getRpcSessionInfos(): SessionInfo[] {
   const sessions: SessionInfo[] = [];
   for (const session of getRegistry().values()) {
@@ -1456,8 +1426,7 @@ export function getRpcSessionInfos(): SessionInfo[] {
     const sessionFile = manager.getSessionFile() ?? session.sessionFile;
     const persisted = Boolean(sessionFile && existsSync(sessionFile));
 
-    // An ensure_session call creates an idle, empty runtime while the composer
-    // loads commands. Do not leak it into history before a prompt is accepted.
+    // intent: DEC-106 — composer 準備中の空 session を prompt 承認前に history に見せない
     if (!persisted && (!session.isRunning() || !firstUserMessage)) continue;
 
     const created = header?.timestamp
@@ -1510,21 +1479,12 @@ export function getRunningRpcSessionIds(): string[] {
   return [...ids];
 }
 
-// ----------------------------------------------------------------------------
-// Running-status broadcaster
-//
-// Pushes the current set of running session ids to subscribers whenever any
-// session's running state may have changed. This lets the sidebar receive live
-// updates over SSE instead of polling. Listeners live on globalThis so they
-// survive Next.js hot-reload.
-// ----------------------------------------------------------------------------
-
+// intent: DEC-108 — running 状態を SSE で push、listener は Next.js hot-reload を越えて生存させる
 function getRunningListeners(): Set<(ids: string[]) => void> {
   if (!globalThis.__piRunningListeners) globalThis.__piRunningListeners = new Set();
   return globalThis.__piRunningListeners;
 }
 
-/** Subscribe to running-session-id changes. Returns an unsubscribe function. */
 export function subscribeRunningSessions(listener: (ids: string[]) => void): () => void {
   const listeners = getRunningListeners();
   listeners.add(listener);
@@ -1533,15 +1493,10 @@ export function subscribeRunningSessions(listener: (ids: string[]) => void): () 
 
 let lastRunningSnapshot = "";
 
-/**
- * Recompute the running-session-id set and, if it changed since the last
- * notification, broadcast it to subscribers.
- */
 export function notifyRunningChange(): void {
   const listeners = getRunningListeners();
   if (listeners.size === 0) {
-    // A future subscriber receives its own initial snapshot. Clear this one so
-    // its first state transition cannot match stale state from an old listener.
+    // intent: DEC-109 — 新 subscriber の initial snapshot が旧 listener の stale state と誤一致するのを防ぐ
     lastRunningSnapshot = "";
     return;
   }
@@ -1550,17 +1505,12 @@ export function notifyRunningChange(): void {
   if (snapshot === lastRunningSnapshot) return;
   lastRunningSnapshot = snapshot;
   for (const listener of listeners) {
-    try { listener(ids); } catch { /* ignore listener errors */ }
+    // deno-lint-ignore no-empty
+    try { listener(ids); } catch {}
   }
 }
 
-/**
- * Get or create an AgentSession for the given session.
- * For new sessions (sessionFile === ""), pi generates its own id.
- * New sessions resolve enabledModels before construction so the initial model,
- * thinking pin, and SDK scopedModels share one settings snapshot.
- * Pass options.toolNames to pre-configure active tools (empty = all disabled).
- */
+// intent: DEC-110 — 新規 session の model 解決は construction 前に一度だけ行い、initial model / thinking pin / scopedModels が同じ snapshot を共有する
 export async function startRpcSession(
   sessionId: string,
   sessionFile: string,
@@ -1587,28 +1537,17 @@ export async function startRpcSession(
   const sessionCwd = sessionManager.getCwd();
   const finishStartingSession = trackStartingSession(sessionCwd);
   const starting = (async () => {
-    // Some extensions access the SDK's global theme even outside the terminal UI.
+    // intent: DEC-111 — 拡張が terminal UI 外でも SDK global theme を参照するため初期化する
     initTheme();
     const agentDir = getAgentDir();
 
-    // Determine which tools to pass based on requested toolNames.
-    // Since v0.68.0, session creation expects string[] tool names instead of Tool[] instances.
     let toolsOption: string[] | undefined;
     if (toolNames !== undefined) {
-      // toolNames === [] -> "all off" (an empty allow-list disables every tool).
-      // Otherwise DO NOT pass a builtin-only allow-list: passing CODING_TOOL_NAMES
-      // set allowedToolNames to coding builtins only, which filtered every
-      // extension/package-provided tool (e.g. subagents, web access) out of the
-      // tool registry — so they were unavailable in Pi Web sessions even though the
-      // `pi` CLI keeps them. Leaving the allow-list unset lets the SDK register all
-      // tools (and activate extension tools); we narrow the ACTIVE set below.
+      // intent: DEC-112 — builtin だけの allow-list を渡すと extension tool が registry から消えるので、allow-list は「空」か「未指定」のどちらか
       toolsOption = toolNames.length === 0 ? [] : undefined;
     }
 
-    // Build services first so extension-registered providers are available
-    // before the SDK restores the saved model from the session file.
-    // Gate untrusted project extensions so opening a repository does not run
-    // its .pi/extensions code automatically (see lib/project-trust.ts, #236).
+    // intent: DEC-113 — extension 登録の provider を model 復元より前に用意し、untrusted project の .pi/extensions は自動実行しない
     const trustReloadOptions = projectTrustReloadOptions(sessionCwd, agentDir);
     const settingsManager = SettingsManager.create(sessionCwd, agentDir);
     const services = await createAgentSessionServices({
@@ -1667,17 +1606,13 @@ export async function startRpcSession(
     );
     if (persistedPreferences.modelDefaultChanged) invalidateModelsCache();
 
-    // If specific tool names were requested (non-empty), set the active tools to the
-    // requested builtin coding tools PLUS all extension/package tools, so installed
-    // extensions stay usable in Pi Web just like in the `pi` CLI.
+    // intent: DEC-112 — allow-list 未指定で全 tool を register し、ACTIVE は builtin + extension tool に narrow する
     if (toolNames && toolNames.length > 0) {
       inner.setActiveToolsByName(withExtensionTools(inner, toolNames));
     }
 
     const wrapper = new AgentSessionWrapper(inner);
-    // When all tools are disabled, clear the system prompt entirely.
-    // pi's buildSystemPrompt always produces a non-empty prompt even with no tools;
-    // keep this forced after extension resource discovery and reloads as well.
+    // intent: DEC-114 — pi の buildSystemPrompt は tool 0 でも非空、reload/discovery 後も維持する必要
     if (toolNames?.length === 0) {
       wrapper.setForceEmptySystemPrompt(true);
     }

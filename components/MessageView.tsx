@@ -26,7 +26,7 @@ import type {
   ThinkingContent,
 } from "@/lib/types";
 
-// CJK chars ~1 token each (GLM/DeepSeek/GPT-o200k); other chars ~4 chars/token.
+// intent: DEC-455 — 主要トークナイザ(GLM/DeepSeek/GPT-o200k)の実測比に合わせCJKと非CJKで係数を分ける
 const CJK_PATTERN = /[\u3000-\u30ff\u3400-\u9fff\uf900-\ufaff\u{20000}-\u{2fa1f}\uac00-\ud7af]/u;
 function estimateTokens(text: string): number {
   let cjk = 0;
@@ -63,8 +63,7 @@ function estimateUpdatedTokens(previous: TokenEstimateCacheEntry | undefined, te
 
   let baseTokens = previous.tokens;
   let suffixStart = previous.text.length;
-  // A streamed delta can complete a surrogate pair that was counted as two
-  // non-CJK code points in the previous update.
+  // intent: DEC-455 — 直前更新までに二つの非CJKとして数えたサロゲート対がデルタで完成した場合の重複計上を戻す
   if (
     suffixStart > 0
     && suffixStart < text.length
@@ -80,9 +79,7 @@ function estimateUpdatedTokens(previous: TokenEstimateCacheEntry | undefined, te
 const MAX_THINKING_CACHE_ENTRIES = 100;
 const thinkingContentCache = new Map<string, Promise<string>>();
 
-// Messages larger than this skip markdown rendering entirely. react-markdown +
-// KaTeX + syntax highlighting on multi-hundred-KB payloads (e.g. pasted HAR or
-// log dumps) freezes the browser main thread.
+// intent: DEC-456 — react-markdown+KaTeX+syntax highlightingは数百KB級の貼り付けでメインスレッドを固めるため上限を切ってプレーン表示へ落とす
 const MAX_MARKDOWN_CHARS = 100_000;
 
 function formatMessageBytes(n: number): string {
@@ -91,10 +88,7 @@ function formatMessageBytes(n: number): string {
   return `${n} B`;
 }
 
-/**
- * MarkdownBody with an oversized-content guard: huge messages render as a
- * click-to-reveal plain-text <pre> instead of running the markdown pipeline.
- */
+// intent: DEC-456 — 大きいメッセージはクリックで開くプレーンpreに退避しmarkdownパイプラインを走らせない
 function SafeMarkdownBody({ children, className, ...props }: React.ComponentProps<typeof MarkdownBody>) {
   const { t } = useI18n();
   const [showRaw, setShowRaw] = useState(false);
@@ -142,8 +136,7 @@ function SafeMarkdownBody({ children, className, ...props }: React.ComponentProp
   );
 }
 
-// Cap the user "sent" bubble's height so an abnormally long message does not
-// push the conversation off screen; overflow scrolls inside the bubble.
+// intent: DEC-457 — 極端に長いユーザーメッセージで会話が画面外に押し流されるのを防ぐためバブル内にスクロールを閉じ込める
 const USER_BUBBLE_MAX_HEIGHT = 300;
 
 function loadThinkingContent(sessionId: string, entryId: string, blockIndex: number): Promise<string> {
@@ -191,12 +184,7 @@ interface Props {
   showTimestamp?: boolean;
   prevTimestamp?: number;
   sessionId?: string;
-  /**
-   * Files this turn wrote, derived by the caller from the whole turn's
-   * successful write/edit tool calls. ChatWindow computes this because the
-   * saved-message path splits tool calls into their own entries, leaving the
-   * final answer text-only.
-   */
+  // intent: DEC-458 — 保存経路がツール呼び出しを別entryに切り出すため、ターン全体を持つ呼び出し側でしか正しく集計できない
   writtenFiles?: WrittenFile[];
 }
 
@@ -254,7 +242,7 @@ export const MessageView = memo(function MessageView({ message, isStreaming, too
     return <AssistantMessageView message={message as AssistantMessage} isStreaming={isStreaming} toolResults={toolResults} modelNames={modelNames} cwd={cwd} onOpenFile={onOpenFile} showTimestamp={showTimestamp} prevTimestamp={prevTimestamp} sessionId={sessionId} entryId={entryId} writtenFiles={writtenFiles} />;
   }
   if (message.role === "toolResult") {
-    // Rendered inline under its toolCall — skip standalone rendering if paired
+    // intent: DEC-459 — toolResultは対応するtoolCallの下にインライン描画するので単独描画は抑止する
     return null;
   }
   if (message.role === "custom") {
@@ -331,8 +319,7 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
   const imageBlocksNode = imageBlocks.length > 0 && (
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: content ? 8 : 0 }}>
       {imageBlocks.map((img, i) => {
-        // lib/types.ts ImageContent uses {source:{type,data,media_type,url}}
-        // pi-ai on-disk format uses flat {data, mimeType} — handle both
+        // intent: DEC-460 — 型定義のsource入れ子形式とpi-aiオンディスクのフラット{data,mimeType}が混在するので両方から取り出せるようにする
         const flat = img as unknown as { data?: string; mimeType?: string };
         const src = img.source
           ? img.source.type === "base64"
@@ -455,7 +442,6 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
 
       </div>
 
-      {/* Bottom row: action buttons + timestamp */}
       {(time || canFork || canNavigate || true) && (
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "flex-end",
@@ -625,21 +611,17 @@ function AssistantMessageView({
   const estimatedTokensRef = useRef(estimatedTokens);
   estimatedTokensRef.current = estimatedTokens;
 
-  // Streaming-based timing for thinking blocks
   const blockStartTimesRef = useRef<Map<number, number>>(new Map());
   const [streamingDurations, setStreamingDurations] = useState<Map<number, number>>(new Map());
 
-  // Thinking duration derived from file timestamps: time from prev message end to this message end
-  // This is the total generation time (thinking + any text before first tool call)
+  // intent: DEC-461 — 保存済みメッセージにはブロック単位の時刻がないので、前メッセージ終端から本メッセージ終端までを生成時間の近似として採る
   const thinkingDurationFromFile = useMemo<number | undefined>(() => {
     if (!message.timestamp || !prevTimestamp) return undefined;
     const secs = Math.round((message.timestamp - prevTimestamp) / 1000);
     return secs > 0 ? secs : undefined;
   }, [message.timestamp, prevTimestamp]);
 
-  // Tool call durations derived from session file timestamps (accurate for completed messages)
-  // assistant message timestamp = when generation ended = when tools started running
-  // toolResult timestamp = when tool execution finished
+  // intent: DEC-461 — assistantメッセージ時刻を「生成終了＝ツール起動時刻」、toolResult時刻を「実行終了」として差分をツール所要時間とみなす
   const toolCallDurations = useMemo<Map<string, number>>(() => {
     const map = new Map<string, number>();
     if (!toolResults || !message.timestamp) return map;
@@ -666,7 +648,6 @@ function AssistantMessageView({
 
   useEffect(() => {
     if (!isStreaming) {
-      // Finalise any un-finished thinking block durations on stream end
       const now = new Date().getTime();
       setStreamingDurations((prev: Map<number, number>) => {
         const next = new Map(prev);
@@ -683,12 +664,10 @@ function AssistantMessageView({
       const items = blockItemsRef.current;
       const now = Date.now();
 
-      // Record start time for each block the first time we see it
       items.forEach(({ originalIndex }) => {
         if (!blockStartTimesRef.current.has(originalIndex)) blockStartTimesRef.current.set(originalIndex, now);
       });
 
-      // When a non-last block has a successor already started, finalise its duration
       setStreamingDurations((prev: Map<number, number>) => {
         let changed = false;
         const next = new Map(prev);
@@ -723,7 +702,6 @@ function AssistantMessageView({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Model label */}
       <div
         style={{
           fontSize: 11,
@@ -956,7 +934,6 @@ function ToolCallBlock({ block, result, duration }: { block: ToolCallContent; re
   const isEditTool = isEditToolName(block.toolName);
   const resultDiff = result && !result.isError ? getResultDiff(result) : null;
 
-  // Result display
   const resultText = result
     ? result.content.filter((b): b is { type: "text"; text: string } => b.type === "text").map((b) => b.text).join("\n")
     : null;
@@ -973,7 +950,6 @@ function ToolCallBlock({ block, result, duration }: { block: ToolCallContent; re
         background: isError ? "rgba(248,113,113,0.05)" : "rgba(34,197,94,0.04)",
       }}
     >
-      {/* ── Tool call header ── */}
       <button
         onClick={() => setExpanded((v) => !v)}
         style={{
@@ -1005,7 +981,6 @@ function ToolCallBlock({ block, result, duration }: { block: ToolCallContent; re
         </svg>
       </button>
 
-      {/* ── Expanded: input args ── */}
       {expanded && (isStreamingInput || !isEditTool) && (
         <pre
           style={{
@@ -1025,7 +1000,6 @@ function ToolCallBlock({ block, result, duration }: { block: ToolCallContent; re
         </pre>
       )}
 
-      {/* ── Paired result — only shown when expanded ── */}
       {expanded && result && (
         resultDiff ? (
           <PairedDiffResult
@@ -1613,7 +1587,6 @@ function getToolPreview(block: ToolCallContent): string {
   const keys = Object.keys(input);
   if (keys.length === 0) return "";
 
-  // Common tool input patterns
   if ("command" in input) return String(input.command).slice(0, 120);
   if ("path" in input) return String(input.path).slice(0, 120);
   if ("file_path" in input) return String(input.file_path).slice(0, 120);
@@ -1672,9 +1645,7 @@ function BashExecutionView({ message, sessionId }: { message: BashExecutionMessa
     }
   }
 
-  // Reuse the existing ToolCallBlock so user-run bash looks identical to an
-  // agent-run bash tool call: same header, collapse behavior, result pane.
-  // Synthesize an equivalent ToolCallContent + ToolResultMessage pair.
+  // intent: DEC-462 — ユーザー実行bashをエージェント実行のtool callと同じ見た目にするためToolCallContent/ToolResultMessageを合成して既存のToolCallBlockに流す
   const toolName = message.excludeFromContext ? "bash (local)" : "bash";
   const block: ToolCallContent = {
     type: "toolCall",

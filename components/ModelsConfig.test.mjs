@@ -37,13 +37,9 @@ test("custom model config exposes provider-level request headers", () => {
 });
 
 test("custom model config exposes model headers and supportsDeveloperRole compat flag", () => {
-  // Model-level headers editor, wired to the model entry.
   assert.match(source, /headers=\{model\.headers\}/);
   assert.match(source, /set\("headers", headers\)/);
 
-  // Model-level compat toggle reads the effective (provider+model) value so
-  // hand-edited models.json settings are reflected, while writes stay on the
-  // model entry as an explicit per-model override.
   assert.match(source, /effectiveCompat\(provider, model\)\["supportsDeveloperRole"\] !== false/);
   assert.match(source, /setCompatBool\(model, "supportsDeveloperRole", v\)/);
 });

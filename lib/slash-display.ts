@@ -1,18 +1,7 @@
-/**
- * Display-only restoration for the exact envelope emitted by pi's
- * `_expandSkillCommand`. The expanded text remains the stored session input.
- */
+// intent: DEC-242 — pi の _expandSkillCommand が出した完全 envelope のみを表示上で縮約する
 const SKILL_EXPANSION_RE = /^<skill name="([^"\n]+)" location="([^"\n]+)">\nReferences are relative to [^\n]+\.\n\n([\s\S]*)\n<\/skill>(?:\n\n([\s\S]+))?$/;
 
-/**
- * Restore a complete SDK skill expansion to its compact command form.
- *
- * The expression intentionally requires the opening envelope, matching
- * base-directory reference, final closing tag, and an optional two-newline args
- * suffix. This avoids collapsing ordinary text that merely starts with a
- * skill-looking tag. The greedy body capture makes the final closing tag win
- * when a skill body contains an example `</skill>` tag.
- */
+// intent: DEC-242 — 開頭 envelope + base-dir + 末尾閉じタグ + optional args を全一致で要求、body は greedy で末尾閉じタグ優先
 export function skillExpansionToCommand(text: string): string | null {
   const match = text.match(SKILL_EXPANSION_RE);
   if (!match) return null;
