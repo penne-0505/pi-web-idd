@@ -97,8 +97,8 @@ related_prs: []
 
 ## Intent-derived Invariants
 
-- **INV-001 (from DEC-002)**: 本 repo 内で pi-web の既存 component の props 定義（TypeScript signature）と既存 API route の response shape は変更しない。破ると upstream cherry-pick 時の衝突面が壊れる、という結果を守る。
-- **INV-002 (from DEC-006)**: 1 button 押下 = 1 ledger event。UI の batch mode を後から追加する場合も、内部で N 回に分解して個別 event を書く。
+- INV-001 (from DEC-002): 本 repo 内で pi-web の既存 component の props 定義（TypeScript signature）と既存 API route の response shape は変更しない。破ると upstream cherry-pick 時の衝突面が壊れる、という結果を守る。
+- INV-002 (from DEC-006): 1 button 押下 = 1 ledger event。UI の batch mode を後から追加する場合も、内部で N 回に分解して個別 event を書く。
 
 ## Rollback / Follow-ups
 
