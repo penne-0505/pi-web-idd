@@ -15,7 +15,7 @@ related_prs: []
 
 ## Context
 
-本文書は agegr/pi-web v0.8.9 (SHA `2a6e537`, MIT) 由来の `lib/` 配下コードに埋まっていた散文コメントを、fork の IDD 化過程で decision として抽出したものである（Workspace DEC-002 の additive 拡張境界と、DEC-001 の完全固定派生方針に従う）。ここに列挙する DEC は「pi-web 上流で採用され、fork でもそのまま維持している設計判断」の目録であり、fork 側で新規に加えた判断ではない。fork 独自の判断は他の `_docs/intent/*/decision.md` に置く。
+本文書は agegr/pi-web v0.8.9 (SHA `2a6e537`, MIT) 由来の `lib/` 配下コードに埋まっていた散文コメントを、fork の IDD 化過程で decision として抽出したものである（Workspace DEC-001 の完全固定派生方針に従う）。ここに列挙する DEC は「pi-web 上流で採用され、fork でもそのまま維持している設計判断」の目録であり、fork 側で新規に加えた判断ではない。fork 独自の判断は他の `_docs/intent/*/decision.md` に置く。
 
 lib/idd/ 配下は既に IDD-native なので本文書の対象外。
 

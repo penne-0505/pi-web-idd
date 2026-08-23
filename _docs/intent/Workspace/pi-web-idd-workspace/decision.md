@@ -33,20 +33,6 @@ related_prs: []
 - **Revisit when**: pi-web の runtime が本 repo の目的に対して致命的に不足するようになり、かつ pi-web v0.8.10+ でその欠陥が解消された場合。その場合も cherry-pick ではなく、必要部分のコード転記 + DEC で由来を明記する形を取る。
 - **Anchors**: `.git/config`（remote は upstream-frozen として reference 保持、fetch/merge の運用なし）
 
-### DEC-002: IDD 拡張は additive（pi-web 既存 UI を壊さない）
-
-- **What**: pi-web の session UI / worktree UI / provider config UI / skills API 等は無改変で残す。IDD 用機能は以下の prefix で独立に追加する:
-  - pages: `app/idd/*`
-  - API routes: `app/api/idd/*`
-  - components: `components/IDD*`
-  - lib: `lib/idd/*`
-  - hooks: `hooks/useIDD*`
-  既存 component の props 変更や shared state の書き換えは行わない。既存 API endpoint の response shape は変更しない。
-- **Why**: pi-web の UI をそのまま「worker 管理層」として使う設計。ここに手を入れると upstream cherry-pick 時の衝突面が広がり、DEC-001 の cost が跳ね上がる。additive なら upstream の内部変更に強く、いつでも IDD 分だけを rebase できる。
-- **Change freedom**: IDD 側の pages / components 構成、API endpoint 名は自由。additive の境界だけが不変。
-- **Why not**（既存 component に IDD 用 props を追加）: 一見小さい変更に見えるが、upstream の同 component 更新と衝突する経路を作る。
-- **Anchors**: `app/idd/`, `app/api/idd/`, `components/IDD*`, `lib/idd/`, `hooks/useIDD*`
-
 ### DEC-003: msync 系 overlay 機構は導入しない（client data 境界なし）
 
 - **What**: 本 repo は個人プロジェクトで client データを持たない。sync-tools 相当の overlay / export / propose / approve 機構は導入しない。git commit と push は直接行い、GitHub PR は通常の gh CLI で作る。
@@ -83,30 +69,27 @@ related_prs: []
 ### DEC-007: worker pool は role-aware な pi session registry として lib/idd/worker-pool.ts に実装
 
 - **What**: DEC-004 で宣言した「pi session = persistent worker」を実体化する薄い registry を `lib/idd/worker-pool.ts` に置く。pool の unit は `WorkerDescriptor { id, role, status, model, currentTask?, updatedAt }` で、id は pi 側 AgentSession の session id と 1:1 に対応する。pool state はプロセス内 in-memory Map で保持し、Next.js の hot-reload を跨ぐため `globalThis.__iddWorkerPool` に置く（pi-web の `globalThis.__piSessions` パターンと同型）。role は `planner` / `executor` の 2 種を初期集合とし、model は role ごとに設定する（planner=Kimi 想定、executor=v4 Flash 想定、ただし model 名は runtime で切替可能）。
-- **Why**: DEC-004 は方針の宣言であり、実装上は「どの session が誰の role で、いま何をしていて、次のタスクをどこに渡すか」の状態管理が必要になる。この責務を pi-web の `AgentSessionWrapper` に混ぜると upstream の内部変更に振り回されるので、addon layer として lib/idd/ 側に閉じ込める（DEC-002 の additive 境界と整合）。pool を registry として最小化し、実際の session 起動・prompt 送信は既存の `lib/rpc-manager.ts` の API に委譲する。
+- **Why**: DEC-004 は方針の宣言であり、実装上は「どの session が誰の role で、いま何をしていて、次のタスクをどこに渡すか」の状態管理が必要になる。この責務を pi-web の `AgentSessionWrapper` に混ぜると内部変更のたびに壊れやすくなるので、addon layer として lib/idd/ 側に閉じ込める。pool を registry として最小化し、実際の session 起動・prompt 送信は既存の `lib/rpc-manager.ts` の API に委譲する。
 - **Change freedom**: role の集合、model 割当、task 配布ポリシー（round-robin / priority / manual）、task queue の有無、`WorkerDescriptor` の追加フィールドは自由。「pool は AgentSession の id を鍵にして role/status を addon で持つ」「globalThis に置いて hot-reload を跨ぐ」「rpc-manager を書き換えず上に載る」の 3 点だけが不変。
-- **Why not**（pi-web の AgentSessionWrapper を継承して role 情報を持たせる）: 上流変更で prop / method の signature が動くたびに拡張側が壊れる。INV-001 も破る。
+- **Why not**（pi-web の AgentSessionWrapper を継承して role 情報を持たせる）: 内部 signature 変更のたびに拡張側が壊れる負担が上乗せされる。
 - **Revisit when**: role が 3 種以上に増える、task queue が単純な list より複雑な要件（priority, dependency graph）を持つ、または worker の物理配置が multi-machine に広がった時点で pool の設計を見直す。
 - **Anchors**: `lib/idd/worker-pool.ts`（本 DEC の実装本体）、`lib/rpc-manager.ts`（pi-web 側、無改変）、`app/api/idd/workers/route.ts`（pool の read 用 GET endpoint）
 
 ## Consequences / Impact
 
-- **upstream cherry-pick 経路**（DEC-001）: `.git/config` に `upstream-frozen` remote を保持、`git fetch upstream-frozen` で最新取得 → `git cherry-pick <sha>` で選択的取り込み。
-- **IDD 拡張の物理境界**（DEC-002）: file path prefix で機械的に境界を作る。CI で `app/idd/`, `app/api/idd/`, `components/IDD*`, `lib/idd/`, `hooks/useIDD*` 以外のファイルへの変更が入った場合に警告を出す運用が可能（初期は手動レビュー）。
+- **upstream 追従なし**（DEC-001）: `.git/config` の `upstream-frozen` remote は attribution 目的の reference のみで、fetch / merge の運用はしない。pi-web 由来ファイルの改変は自由。
 - **msync 不在**（DEC-003）: 通常の `git add`, `git commit`, `gh pr create` で運用。secret scan は個人 responsibility（gitleaks を任意で pre-commit hook として設置可）。
 - **worker pool 設計**（DEC-004）: `lib/idd/worker-pool.ts` に role 別 session 群を保持。planner 1 session, executor 2 session の 3 スロット初期構成想定。role 変更は再起動不要（session の model 切替で対応）。
 - **Python UI 承継**（DEC-005）: event 名 mismatch（Agent 3 UI と Agent 1 msync の食い違い、2026-08-23 発見）は本 repo の TypeScript 実装で msync 側に合わせることで解消する。
 
 ## Quality Implications
 
-- **DEC-001 が守る品質**: 本 repo の判断が pi-web upstream の判断に上書きされない。破ると: upstream merge conflict で IDD 側の意図が失われる、IDD 用機能が不意に消える。
-- **DEC-002 が守る品質**: upstream cherry-pick の cost が低い状態を維持。破ると: cherry-pick 時の衝突面が広がり、DEC-001 の実効性が崩れる。
+- **DEC-001 が守る品質**: 本 repo の判断が pi-web upstream の判断に上書きされない。破ると: 追跡 cost が発生し、fork の意図が上流に振り回される。
 - **DEC-004 が守る品質**: worker の live status が観測できる、cold-start による timeout 失敗が起きない。破ると: fan-out.py 時代の 2 件失敗が再発する。
 - **DEC-005/006 が守る品質**: Meltly 側の承認境界を本 repo の UI が正しく代替する。破ると: 対外操作の per-action 承認が抜けて client 側の履歴に予期せぬ操作が入り得る（Meltly 契約リスク）。
 
 ## Intent-derived Invariants
 
-- INV-001 (from DEC-002): 本 repo 内で pi-web の既存 component の props 定義（TypeScript signature）と既存 API route の response shape は変更しない。破ると UI 表示と API endpoint の contract が崩れる、という結果を守る（cherry-pick は行わない — DEC-001 参照 — が、内部整合を守るための不変）。
 - INV-002 (from DEC-006): 1 button 押下 = 1 ledger event。UI の batch mode を後から追加する場合も、内部で N 回に分解して個別 event を書く。
 
 ## Rollback / Follow-ups

@@ -13,9 +13,9 @@ related_prs: []
 
 ## Context
 
-本文書は pi-web v0.8.9 (SHA `2a6e537`, MIT) から本 repo に取り込んだ `components/` 配下ファイルの設計判断を集約する台帳。これらの DEC は元コードのインラインコメントに含まれていた「なぜこう書いたか」を、fork の IDD 化作業（Workspace DEC-002 additive extension 境界、Workspace DEC-001 fully-fixed fork）にあわせて抽出したもの。抽出前は自由文コメントとして各所に散っていた判断を、`validate-comments` の許容形式（`// intent: DEC-XXX — <one-line reason>`）に置き換えるためにここへ集めた。
+本文書は pi-web v0.8.9 (SHA `2a6e537`, MIT) から本 repo に取り込んだ `components/` 配下ファイルの設計判断を集約する台帳。これらの DEC は元コードのインラインコメントに含まれていた「なぜこう書いたか」を、fork の IDD 化作業（Workspace DEC-001 fully-fixed fork）にあわせて抽出したもの。抽出前は自由文コメントとして各所に散っていた判断を、`validate-comments` の許容形式（`// intent: DEC-XXX — <one-line reason>`）に置き換えるためにここへ集めた。
 
-DEC ID は本ファイル用に **DEC-300..DEC-499** の範囲を予約する。判断内容そのものは pi-web 由来のため、原則として本 repo で「変える」対象ではないが、DEC-002 の additive 境界を越えない範囲では自由に改変してよい（Workspace DEC-001 参照）。
+DEC ID は本ファイル用に **DEC-300..DEC-499** の範囲を予約する。判断内容そのものは pi-web 由来のため、原則として本 repo で「変える」対象ではないが、Workspace DEC-001（完全固定派生）の下では改変は自由。
 
 ## Decisions
 
@@ -656,7 +656,7 @@ DEC ID は本ファイル用に **DEC-300..DEC-499** の範囲を予約する。
 ## Intent-derived Invariants
 
 None
-<!-- 本 DEC 群の不変条件は Workspace/pi-web-idd-workspace/decision.md の INV-001 に集約している (from Workspace DEC-002)。本ファイル固有 INV は None。 -->
+<!-- 本ファイル固有 INV は None。判断内容そのものは pi-web 由来なので、fork 側で「破ってはいけない結果」を新規に立てる場面がない。 -->
 
 ## Rollback / Follow-ups
 

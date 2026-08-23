@@ -1,4 +1,3 @@
-// intent: DEC-002 — IDD button endpoint、pi-web 既存に触れず additive
 // intent: DEC-006 — button push は per-action 承認、UI 側 batch 化しない。ledger 書き込みは authoritative の msync CLI 経由 (TS 側で flock を reimplement しない)
 
 import { NextResponse } from "next/server";

@@ -343,7 +343,7 @@ related_prs: []
 
 ## Consequences / Impact
 
-- **範囲**: 本 DEC 群は hooks / app / bin / top-level TS の pi-web-inherited なコードに閉じている。IDD-native な `app/idd/**` / `app/api/idd/**` / `hooks/useIDD*` / `lib/idd/**` は Workspace 側の DEC-002 が支配する（additive 拡張、既存 UI 無改変）。
+- **範囲**: 本 DEC 群は hooks / app / bin / top-level TS の pi-web-inherited なコードに閉じている。IDD-native な `app/api/idd/**` / `lib/idd/**` の判断は Workspace decision.md 側で管理する。
 - **cherry-pick 経路**: Workspace DEC-001 により upstream pi-web からの取り込みは行わないので、本 DEC 群と upstream の DEC id の衝突を心配しなくてよい。
 - **DEC 更新**: 本 DEC が指す挙動が変わる場合、対応する intent pointer コメントも同 DEC を差し続けるか、新 DEC を採番して差し替える。
 - **テスト landmark**: `hooks/useAgentSession.test.mjs` と `app/api/files/watch-route.test.mjs` は元々 pi-web のコメント文字列を landmark に使っていた。本 DEC-化に合わせて test 側も intent pointer / 構造キーワードに書き換えた。

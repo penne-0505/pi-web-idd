@@ -1,5 +1,3 @@
-// intent: DEC-002 — IDD 追加 API は `app/api/idd/*` prefix、pi-web 既存 endpoint と分離
-
 import { NextResponse } from "next/server";
 import { join } from "node:path";
 
