@@ -24,14 +24,14 @@ related_prs: []
 
 ## Decisions
 
-### DEC-001: pi-web v0.8.9 の独立 fork（cherry-pick 型 upstream 追従）
+### DEC-001: pi-web v0.8.9 の完全固定派生（upstream 追従なし）
 
-- **What**: 派生元 pi-web v0.8.9 を固定 base とし、upstream（agegr/pi-web）の変更を自動追従しない。特定 fix / 機能が必要になった時のみ手動で cherry-pick する。upstream は `upstream-frozen` remote として保持し、fetch は可能・auto tracking は無効。
-- **Why**: pi-web の設計トレードオフは本 repo の IDD 目的とは独立に進化する。auto merge は「pi-web の判断がこちらの判断を上書きする」状態を作り、IDD 側改修との衝突対応コストが高くなる。cherry-pick は必要な粒度で自分で判断できる。
-- **Change freedom**: 追従頻度、cherry-pick の判断基準、upstream-frozen の rename は自由。「upstream の HEAD を自動 merge しない」だけが不変。
-- **Why not**（upstream 定期 merge）: pi-web 開発が速いと merge conflict の頻度が高く、IDD 側改修の設計判断が pi-web の内部変更に振り回される。
-- **Revisit when**: pi-web の update 頻度が四半期以下に減った場合、または upstream 追従の cost が cherry-pick の cost を明らかに下回った場合。
-- **Anchors**: `.git/config`（remote は upstream-frozen として存在、tracking なし）
+- **What**: 派生元 pi-web v0.8.9（SHA `2a6e537`, MIT）を固定 base とし、以降 upstream（agegr/pi-web）の変更は一切取り込まない。auto merge も cherry-pick も行わない。`upstream-frozen` remote は MIT attribution 目的の reference として保持するが、fetch も基本行わない（clone 直後の状態から動かさない）。
+- **Why**: 本 repo は「pi-web の runtime を借りて IDD dashboard + worker 管理層を作る」目的であって、pi-web 本体の開発を追随する意味がない。追随を選択肢として残すと、本 repo 内での pi-web ファイルの改変（例: comment の IDD 化）を将来の cherry-pick 衝突コストで縛ることになり、IDD 化の自由度を失う。「取り込まないことを最初から約束する」方が判断の一貫性が高い。
+- **Change freedom**: pi-web 由来ファイルの改変は自由（comment の IDD スタイル化、DEC 化、削除等）。「upstream の HEAD を merge / cherry-pick しない」だけが不変。
+- **Why not**（cherry-pick 経路を残す）: 上記 Why の通り、選択肢を残すこと自体がコストになる。真に必要な upstream fix が出た場合は、その時点で本 repo に独立に実装する（cherry-pick せず自分の判断で書く）。
+- **Revisit when**: pi-web の runtime が本 repo の目的に対して致命的に不足するようになり、かつ pi-web v0.8.10+ でその欠陥が解消された場合。その場合も cherry-pick ではなく、必要部分のコード転記 + DEC で由来を明記する形を取る。
+- **Anchors**: `.git/config`（remote は upstream-frozen として reference 保持、fetch/merge の運用なし）
 
 ### DEC-002: IDD 拡張は additive（pi-web 既存 UI を壊さない）
 
@@ -97,7 +97,7 @@ related_prs: []
 
 ## Intent-derived Invariants
 
-- INV-001 (from DEC-002): 本 repo 内で pi-web の既存 component の props 定義（TypeScript signature）と既存 API route の response shape は変更しない。破ると upstream cherry-pick 時の衝突面が壊れる、という結果を守る。
+- INV-001 (from DEC-002): 本 repo 内で pi-web の既存 component の props 定義（TypeScript signature）と既存 API route の response shape は変更しない。破ると UI 表示と API endpoint の contract が崩れる、という結果を守る（cherry-pick は行わない — DEC-001 参照 — が、内部整合を守るための不変）。
 - INV-002 (from DEC-006): 1 button 押下 = 1 ledger event。UI の batch mode を後から追加する場合も、内部で N 回に分解して個別 event を書く。
 
 ## Rollback / Follow-ups
