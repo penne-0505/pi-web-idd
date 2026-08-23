@@ -1,0 +1,111 @@
+---
+title: pi-web-idd workspace 判断（正本）
+status: active
+intent_schema: 3
+created_at: 2026-08-23
+updated_at: 2026-08-23
+references: []
+related_issues: []
+related_prs: []
+---
+
+<!-- Canonical path: _docs/intent/Workspace/pi-web-idd-workspace/decision.md -->
+
+# pi-web-idd workspace DEC（正本）
+
+本 repo は agegr/pi-web v0.8.9 からの独立 fork に IDD template を載せて、Meltly IDD pipeline の pi worker 管理層 + web UI を構築する場所である。本文書は repo 全体を横断する判断の台帳として維持する。
+
+## Context
+
+- 派生元: [agegr/pi-web](https://github.com/agegr/pi-web) v0.8.9 (SHA `2a6e537`)。MIT ライセンス。Next.js 16 + React 19 + TypeScript の localhost web UI。
+- IDD template: penne-0505/intent_driven_dev_template（本 repo の初期構造）
+- 起点となる痛み: Meltly の IDD fan-out（`~/dev/00_meltly/sync-tools/fan-out/`）で pi を 1 タスク 1 spawn する cold-start パターンを試したところ、GLM 5.3:xhigh の推論が 5 分 timeout に収まらず 2 件連続失敗（2026-08-23 09:54 観測）。pi-web を調査した結果、AgentSessionWrapper が既に「1 session = 1 in-process pi 実体」を実装しており、これを persistent worker として使えることが判明した。
+- 従来設計との対応: sync-tools/ui/（Python + FastAPI、Agent 3 が構築）は本 repo が同等機能を持った時点で廃止（DEC-005）。lifecycle event 名の contract（msync 側の naming: `lane_open`, `s1_ready`, `s2_result`, ...）を本 repo が承継する。
+
+## Decisions
+
+### DEC-001: pi-web v0.8.9 の独立 fork（cherry-pick 型 upstream 追従）
+
+- **What**: 派生元 pi-web v0.8.9 を固定 base とし、upstream（agegr/pi-web）の変更を自動追従しない。特定 fix / 機能が必要になった時のみ手動で cherry-pick する。upstream は `upstream-frozen` remote として保持し、fetch は可能・auto tracking は無効。
+- **Why**: pi-web の設計トレードオフは本 repo の IDD 目的とは独立に進化する。auto merge は「pi-web の判断がこちらの判断を上書きする」状態を作り、IDD 側改修との衝突対応コストが高くなる。cherry-pick は必要な粒度で自分で判断できる。
+- **Change freedom**: 追従頻度、cherry-pick の判断基準、upstream-frozen の rename は自由。「upstream の HEAD を自動 merge しない」だけが不変。
+- **Why not**（upstream 定期 merge）: pi-web 開発が速いと merge conflict の頻度が高く、IDD 側改修の設計判断が pi-web の内部変更に振り回される。
+- **Revisit when**: pi-web の update 頻度が四半期以下に減った場合、または upstream 追従の cost が cherry-pick の cost を明らかに下回った場合。
+- **Anchors**: `.git/config`（remote は upstream-frozen として存在、tracking なし）
+
+### DEC-002: IDD 拡張は additive（pi-web 既存 UI を壊さない）
+
+- **What**: pi-web の session UI / worktree UI / provider config UI / skills API 等は無改変で残す。IDD 用機能は以下の prefix で独立に追加する:
+  - pages: `app/idd/*`
+  - API routes: `app/api/idd/*`
+  - components: `components/IDD*`
+  - lib: `lib/idd/*`
+  - hooks: `hooks/useIDD*`
+  既存 component の props 変更や shared state の書き換えは行わない。既存 API endpoint の response shape は変更しない。
+- **Why**: pi-web の UI をそのまま「worker 管理層」として使う設計。ここに手を入れると upstream cherry-pick 時の衝突面が広がり、DEC-001 の cost が跳ね上がる。additive なら upstream の内部変更に強く、いつでも IDD 分だけを rebase できる。
+- **Change freedom**: IDD 側の pages / components 構成、API endpoint 名は自由。additive の境界だけが不変。
+- **Why not**（既存 component に IDD 用 props を追加）: 一見小さい変更に見えるが、upstream の同 component 更新と衝突する経路を作る。
+- **Anchors**: `app/idd/`, `app/api/idd/`, `components/IDD*`, `lib/idd/`, `hooks/useIDD*`
+
+### DEC-003: msync 系 overlay 機構は導入しない（client data 境界なし）
+
+- **What**: 本 repo は個人プロジェクトで client データを持たない。sync-tools 相当の overlay / export / propose / approve 機構は導入しない。git commit と push は直接行い、GitHub PR は通常の gh CLI で作る。
+- **Why**: msync は Meltly の client repo に対する「先方に見せない overlay」を安全に運用するための機構（Meltly-side DEC-006 参照）。client boundary が存在しない本 repo では overhead だけが増える。
+- **Change freedom**: 通常の git 運用の詳細は自由。「msync/overlay 機構を本 repo 内に持ち込まない」だけが不変。
+- **Why not**（msync を再利用）: 「client boundary 無しの msync」は概念上意味を持たない（unused overlay の管理コストだけが残る）。
+- **Anchors**: `.gitignore`（通常構成、overlay 用の追加 exclude なし）
+
+### DEC-004: pi session = persistent worker（cold-start 廃止）
+
+- **What**: Meltly の IDD fan-out は pi プロセスを 1 タスク 1 spawn の cold-start パターンで動かしていた。本 repo の IDD 拡張は、pi-web の AgentSessionWrapper（`lib/rpc-manager.ts`、`globalThis.__piSessions` に keyed）が既に「1 session = 1 in-process pi 実体」を実現しているため、これを persistent worker として使い、fan-out 相当の処理を「N session を open のまま保ち、タスクを enqueue する」形に置き換える。
+- **Why**: cold-start コスト（毎回数秒 × N lane）を消し、live worker status を pi-web 上で観測できる。従来の Python fan-out.py は subprocess 起動を毎回行うため、5 分 timeout に GLM 5.3:xhigh の深い推論が収まらないケースを 2 件観測（2026-08-23）。persistent session であれば timeout の意味自体が変わる（session は生きたまま、prompt 完了を待つだけ）。加えて pi-web の既存 idle timeout（10 分）と `globalThis.__piStartLocks` の並行制御をそのまま活用できる。
+- **Change freedom**: worker pool のサイズ、role 割当（planner / executor / verifier 等）、session 割当ポリシーは自由。「session を使い捨てない」だけが不変。
+- **Why not**（fan-out.py の subprocess 方式を維持）: cold-start のコストと timeout 逼迫が実測で問題化している。既に pi-web に persistent session 基盤があるのに二重の実装を並走させる合理性がない。
+- **Anchors**: `lib/rpc-manager.ts`（pi-web 既存、無改変）、これから追加する `lib/idd/worker-pool.ts`、`app/api/idd/workers/*`
+
+### DEC-005: Meltly 側 sync-tools/ui/（Python）は deprecated 予定
+
+- **What**: `~/dev/00_meltly/sync-tools/ui/` にある Python + FastAPI の IDD dashboard は、本 repo の pi-web 拡張が同等以上の機能を持った時点で廃止する。廃止までは並存させ、以下を本 repo が承継する:
+  - lifecycle event 名の contract（msync 側の naming: `lifecycle_lane_open`, `lifecycle_s1_ready`, `lifecycle_s1_go`, `lifecycle_s1_defer`, `lifecycle_s2_start`, `lifecycle_s2_blocked`, `lifecycle_s2_result`, `lifecycle_s3_ready`, `lifecycle_s3_ok`, `lifecycle_s3_reject`, `lifecycle_s4_submitted`, `lifecycle_s4_merged`, `lifecycle_lane_close`）
+  - state machine（21 states across S0-S4、cross-lane surface として integration matrix / DEC ID collision）
+  - button 集合と各 state における承認境界（DEC-006 系: S1 GO / S3 OK / S4 approval が per-action 承認）
+- **Why**: 単一の IDD dashboard を持つ方が保守負担・混乱が少ない。pi-web 拡張は worker 管理層と一体化しているため、Python 側で二重に持つ意味がなくなる。ただし承継が完了するまでは Python 側が生きていた方が観測を絶やさずに済む。
+- **Change freedom**: 廃止のタイミング（本 repo のどの機能が揃った時点か）は自由。「lifecycle event 名と state machine と承認境界の contract を承継する」だけが不変。
+- **Anchors**: `~/dev/00_meltly/sync-tools/ui/`（承継元、この repo 外）、`~/dev/00_meltly/sync-tools/lib/lifecycle.py`（schema SSOT）、本 repo の `lib/idd/lifecycle-schema.ts`（承継先、これから作成）
+
+### DEC-006: 承認境界は pi-web の per-action button と一致させる（Meltly 側 DEC-006 の承継）
+
+- **What**: 対外境界（Meltly repo への push / PR / レビュー依頼 / export 承認）は per-action の人間承認を通す。本 repo の IDD dashboard では button 押下 = 承認発行として扱い、button 押下 event を承継元の msync ledger に `lifecycle_*` として記録する。auto batch approval は行わない。
+- **Why**: Meltly-side DEC-006 の直接承継。承認の per-action 性は Meltly の client-facing 制約であり、UI が pi-web に載っても本質は変わらない。
+- **Change freedom**: 承認 UI（button の見た目、confirm dialog の有無）は自由。「1 button 押下 = 1 承認、batch 化しない」だけが不変。
+- **Anchors**: これから作成する `components/IDDLaneButtons.tsx`、`app/api/idd/lifecycle/route.ts`（msync CLI を shell 経由で叩く endpoint）
+
+## Consequences / Impact
+
+- **upstream cherry-pick 経路**（DEC-001）: `.git/config` に `upstream-frozen` remote を保持、`git fetch upstream-frozen` で最新取得 → `git cherry-pick <sha>` で選択的取り込み。
+- **IDD 拡張の物理境界**（DEC-002）: file path prefix で機械的に境界を作る。CI で `app/idd/`, `app/api/idd/`, `components/IDD*`, `lib/idd/`, `hooks/useIDD*` 以外のファイルへの変更が入った場合に警告を出す運用が可能（初期は手動レビュー）。
+- **msync 不在**（DEC-003）: 通常の `git add`, `git commit`, `gh pr create` で運用。secret scan は個人 responsibility（gitleaks を任意で pre-commit hook として設置可）。
+- **worker pool 設計**（DEC-004）: `lib/idd/worker-pool.ts` に role 別 session 群を保持。planner 1 session, executor 2 session の 3 スロット初期構成想定。role 変更は再起動不要（session の model 切替で対応）。
+- **Python UI 承継**（DEC-005）: event 名 mismatch（Agent 3 UI と Agent 1 msync の食い違い、2026-08-23 発見）は本 repo の TypeScript 実装で msync 側に合わせることで解消する。
+
+## Quality Implications
+
+- **DEC-001 が守る品質**: 本 repo の判断が pi-web upstream の判断に上書きされない。破ると: upstream merge conflict で IDD 側の意図が失われる、IDD 用機能が不意に消える。
+- **DEC-002 が守る品質**: upstream cherry-pick の cost が低い状態を維持。破ると: cherry-pick 時の衝突面が広がり、DEC-001 の実効性が崩れる。
+- **DEC-004 が守る品質**: worker の live status が観測できる、cold-start による timeout 失敗が起きない。破ると: fan-out.py 時代の 2 件失敗が再発する。
+- **DEC-005/006 が守る品質**: Meltly 側の承認境界を本 repo の UI が正しく代替する。破ると: 対外操作の per-action 承認が抜けて client 側の履歴に予期せぬ操作が入り得る（Meltly 契約リスク）。
+
+## Intent-derived Invariants
+
+- **INV-001 (from DEC-002)**: 本 repo 内で pi-web の既存 component の props 定義（TypeScript signature）と既存 API route の response shape は変更しない。破ると upstream cherry-pick 時の衝突面が壊れる、という結果を守る。
+- **INV-002 (from DEC-006)**: 1 button 押下 = 1 ledger event。UI の batch mode を後から追加する場合も、内部で N 回に分解して個別 event を書く。
+
+## Rollback / Follow-ups
+
+- **Rollback（全体）**: 本 repo の実装が意図通り動かなかった場合、`~/dev/00_meltly/sync-tools/fan-out/` + `~/dev/00_meltly/sync-tools/ui/`（Python 版）の 2 系統に戻す。fan-out.py 側の GLM 5.3:xhigh は使わず、`IDD_FAN_OUT_PREP_MODEL` を `ollama-cloud/deepseek-v4-flash:0731` などの高速 model に fallback させる（timeout 問題の緩和）。Rollback の判断は本 repo の稼働 1 週間で「pi session の安定性 / dashboard の使い勝手」の 2 軸で行う。
+- **Follow-ups**:
+  - pi-web の AGENTS.md / CONTEXT.md を本 repo の README / AGENTS.md へ 派生 attribution 付きで手動 merge
+  - `lib/idd/lifecycle-schema.ts` の作成（Meltly 側 `lib/lifecycle.py` の TypeScript 移植）
+  - `app/api/idd/lifecycle/route.ts` の作成（msync CLI shell out）
+  - `lib/idd/worker-pool.ts` の設計と DEC 追加（DEC-007 想定）
+  - Meltly 側 Python UI の停止条件を DEC-005 の内訳として明文化
