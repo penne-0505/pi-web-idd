@@ -4,11 +4,78 @@
 // 進捗を別に持たない — 進捗とは「契約のどこまで満たしたか」でしかない。
 
 import { useState } from "react";
-import type { LaneDetailView } from "@/lib/idd-ui/types";
+import type { LaneDetailView, TimelineEntry } from "@/lib/idd-ui/types";
 import { ActionButton, Chip, Icon, IconButton, LiveDot, RefChip } from "./primitives";
 import { IdList, SectionHead } from "./LaneDetailParts";
 import type { DecideHandler } from "./cards";
 import { FS, SIZE } from "@/lib/idd-ui/scale";
+
+/** 経過の 1 行。畳まれている行は件数を持ち、押すと中身が同じ rail 上に開く。 */
+function TimelineRow({ entry, last, open, onToggle }: {
+  entry: TimelineEntry;
+  last: boolean;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const marker = (kind: TimelineEntry["kind"]) => (
+    <span style={{ position: "relative", width: 12, flexShrink: 0 }}>
+      <span style={{ position: "absolute", left: 5.5, top: 0, bottom: 0, width: 1, background: "var(--border)" }} />
+      <span
+        style={{
+          position: "absolute", left: kind === "user" ? 1 : 2, top: 8,
+          width: kind === "user" ? 10 : 8, height: kind === "user" ? 9 : 8,
+          borderRadius: kind === "warn" ? 1 : kind === "user" ? 0 : "50%",
+          clipPath: kind === "user" ? "polygon(50% 0, 100% 100%, 0 100%)" : undefined,
+          background: kind === "agent" ? "var(--bg)" : "var(--accent)",
+          border: kind === "agent" ? "1.5px solid var(--text-muted)" : undefined,
+        }}
+      />
+    </span>
+  );
+
+  if (entry.folded && !open) {
+    return (
+      <button
+        onClick={onToggle}
+        style={{
+          display: "flex", alignItems: "stretch", gap: 10, width: "100%",
+          padding: "0 8px 0 4px", background: "transparent", border: "none",
+          textAlign: "left", cursor: "pointer",
+        }}
+      >
+        <span style={{ width: 34, flexShrink: 0, paddingTop: 5, fontSize: FS.xs, color: "var(--text-dim)" }}>{entry.time}</span>
+        {marker("agent")}
+        <span style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 0 9px" }}>
+          <span style={{ fontSize: FS.sm, color: "var(--text-muted)" }}>{entry.folded} 件</span>
+          <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>▾</span>
+        </span>
+      </button>
+    );
+  }
+
+  const rows = entry.folded && entry.items ? entry.items : [entry];
+  return (
+    <>
+      {rows.map((r, i) => (
+        <div
+          key={`${r.time}-${r.title}-${i}`}
+          style={{
+            display: "flex", alignItems: "stretch", gap: 10,
+            padding: "0 8px 0 4px", borderRadius: 4,
+            background: last && i === rows.length - 1 ? "var(--bg-panel)" : "transparent",
+          }}
+        >
+          <span style={{ width: 34, flexShrink: 0, paddingTop: 5, fontSize: FS.xs, color: "var(--text-dim)" }}>{r.time}</span>
+          {marker(r.kind)}
+          <span style={{ display: "flex", flexDirection: "column", gap: 1, padding: "5px 0 9px" }}>
+            <span style={{ fontSize: FS.sm, fontWeight: r.kind === "agent" ? 400 : 600, color: r.kind === "agent" ? "var(--text-muted)" : "var(--text)" }}>{r.title}</span>
+            {r.detail ? <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{r.detail}</span> : null}
+          </span>
+        </div>
+      ))}
+    </>
+  );
+}
 
 export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpeak }: {
   lane: LaneDetailView;
@@ -18,6 +85,9 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
   onSpeak?: (message: string) => void;
 }) {
   const [message, setMessage] = useState("");
+  const [openAll, setOpenAll] = useState(false);
+  const [opened, setOpened] = useState<Set<number>>(() => new Set());
+  const rows = lane.timeline;
 
   return (
     <div className="idd" style={{ height: "100%", overflowY: "auto", background: "var(--bg)" }}>
@@ -52,6 +122,34 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
           </div>
         </div>
 
+        {/* 経過 — 節目と自分の判断だけ。間の agent の動きは畳み、押したときだけ開く */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <SectionHead label="経過" right={
+            <button
+              className="idd-link"
+              onClick={() => setOpenAll((v) => !v)}
+              style={{ background: "none", border: "none", padding: 0, fontSize: FS.xs, color: "var(--text-dim)", cursor: "pointer" }}
+            >
+              {openAll ? "畳む ▴" : "すべて表示 ▾"}
+            </button>
+          } />
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {rows.map((e, i) => (
+              <TimelineRow
+                key={`${e.time}-${i}`}
+                entry={e}
+                last={i === rows.length - 1}
+                open={openAll || opened.has(i)}
+                onToggle={() => setOpened((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(i)) next.delete(i); else next.add(i);
+                  return next;
+                })}
+              />
+            ))}
+          </div>
+        </div>
+
         {/* 契約 */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <IdList
@@ -69,6 +167,41 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
           {lane.contract.invariants?.length ? (
             <IdList label="壊してはいけないもの" items={lane.contract.invariants} />
           ) : null}
+        </div>
+
+        {lane.references?.length ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <SectionHead label="下調べで見たもの" right={<span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{lane.references.length} 件すべて ▾</span>} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {lane.references.map((r) => (
+                <div key={r.path} style={{ display: "flex", alignItems: "center", gap: 10, padding: "3px 8px" }}>
+                  <span style={{ width: 260, flexShrink: 0, fontSize: FS.sm, color: "var(--text)" }}>{r.path}</span>
+                  <span style={{ flex: 1, fontSize: FS.sm, color: "var(--text-dim)" }}>{r.why}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {/* agent */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <SectionHead label="この lane の agent" />
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {lane.agents.map((a) => (
+              <button
+                key={a.sessionId}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "8px 12px", borderRadius: 5,
+                  background: "var(--bg)", border: "1px solid var(--border)", cursor: "pointer",
+                }}
+              >
+                <span style={{ fontSize: FS.sm, fontWeight: 600, color: "var(--text)" }}>{a.role}</span>
+                <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{a.sessionId}</span>
+                <span style={{ fontSize: FS.xs, color: "var(--text-muted)" }}>{a.state}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* 現物 — 実装中なら触っているファイルと stream、GO 待ちなら下調べで見たもの */}
@@ -118,73 +251,6 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
             </div>
           </div>
         ) : null}
-
-        {lane.references?.length ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <SectionHead label="下調べで見たもの" right={<span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{lane.references.length} 件すべて ▾</span>} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {lane.references.map((r) => (
-                <div key={r.path} style={{ display: "flex", alignItems: "center", gap: 10, padding: "3px 8px" }}>
-                  <span style={{ width: 260, flexShrink: 0, fontSize: FS.sm, color: "var(--text)" }}>{r.path}</span>
-                  <span style={{ flex: 1, fontSize: FS.sm, color: "var(--text-dim)" }}>{r.why}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {/* 経過 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <SectionHead label="経過" right={<span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>すべて表示 ▾</span>} />
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {lane.timeline.map((e, i) => {
-              const last = i === lane.timeline.length - 1;
-              return (
-                <div key={`${e.time}-${i}`} style={{ display: "flex", alignItems: "stretch", gap: 10, padding: "0 8px 0 4px", borderRadius: 4, background: last ? "var(--bg-panel)" : "transparent" }}>
-                  <span style={{ width: 34, flexShrink: 0, paddingTop: 5, fontSize: FS.xs, color: "var(--text-dim)" }}>{e.time}</span>
-                  <span style={{ position: "relative", width: 12, flexShrink: 0 }}>
-                    <span style={{ position: "absolute", left: 5.5, top: 0, bottom: 0, width: 1, background: "var(--border)" }} />
-                    <span
-                      style={{
-                        position: "absolute", left: e.kind === "user" ? 1 : 2, top: 8,
-                        width: e.kind === "user" ? 10 : 8, height: e.kind === "user" ? 9 : 8,
-                        borderRadius: e.kind === "warn" ? 1 : e.kind === "user" ? 0 : "50%",
-                        clipPath: e.kind === "user" ? "polygon(50% 0, 100% 100%, 0 100%)" : undefined,
-                        background: e.kind === "agent" ? "var(--bg)" : "var(--accent)",
-                        border: e.kind === "agent" ? "1.5px solid var(--text-muted)" : undefined,
-                      }}
-                    />
-                  </span>
-                  <span style={{ display: "flex", flexDirection: "column", gap: 1, padding: "5px 0 9px" }}>
-                    <span style={{ fontSize: FS.sm, fontWeight: 600, color: "var(--text)" }}>{e.title}</span>
-                    <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{e.detail}</span>
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* agent */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <SectionHead label="この lane の agent" />
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {lane.agents.map((a) => (
-              <button
-                key={a.sessionId}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "8px 12px", borderRadius: 5,
-                  background: "var(--bg)", border: "1px solid var(--border)", cursor: "pointer",
-                }}
-              >
-                <span style={{ fontSize: FS.sm, fontWeight: 600, color: "var(--text)" }}>{a.role}</span>
-                <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{a.sessionId}</span>
-                <span style={{ fontSize: FS.xs, color: "var(--text-muted)" }}>{a.state}</span>
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* 判断が待っているときだけ、末尾に出す */}
         {lane.pending === "go" ? (
