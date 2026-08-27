@@ -88,6 +88,8 @@ export interface GoItem extends InboxBase {
   decisions: { id: string; text: string }[];
   criteria: { id: string; text: string }[];
   priorityTop?: boolean;
+  // intent: DEC-674 — 契約が空のとき、どこが空かを示せるように出所を持たせる
+  intentPath?: string;
 }
 
 export type CriterionState = "done" | "doing" | "todo";

@@ -4,7 +4,7 @@
 // intent: DEC-625 — 主題は識別に属する
 // intent: DEC-629 — 重複確認は「関係」を形で示す
 
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import type { CriterionState, DiffLine, SourceRef, StateFact } from "@/lib/idd-ui/types";
 import { CardFrame, Chip, CriterionMark, Icon, RefChip, StageBar } from "../primitives";
@@ -219,6 +219,25 @@ export function Meter({ value, label, width = 110 }: { value: number; label: str
   );
 }
 
+// intent: DEC-674 — 契約が空の GO は判断材料が無い。空欄ではなく、どこが空かを示して GO を止める
+export function MissingContract({ path }: { path: string }) {
+  return (
+    <div
+      style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "12px 14px", borderRadius: 5,
+        background: "var(--bg-panel)", border: "1px solid var(--border-strong)",
+      }}
+    >
+      <Icon name="warn" size={15} color="var(--text)" weight={1.5} />
+      <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <span style={{ fontSize: FS.md, fontWeight: 600, color: "var(--text)" }}>下調べの成果物が無い</span>
+        <span style={{ fontSize: FS.sm, color: "var(--text-muted)", fontFamily: "var(--font-mono, monospace)" }}>{path}</span>
+      </span>
+    </div>
+  );
+}
+
 export function FactTable({ facts }: { facts: StateFact[] }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -234,22 +253,32 @@ export function FactTable({ facts }: { facts: StateFact[] }) {
   );
 }
 
-export function CollapsedFacts({ count, primary, onOpen }: { count: number; primary?: SourceRef; onOpen?: () => void }) {
+export function CollapsedFacts({ count, primary, facts }: {
+  count: number;
+  primary?: SourceRef;
+  facts?: StateFact[];
+}) {
+  const [open, setOpen] = useState(false);
+  const openable = Boolean(facts?.length);
   return (
-    <button
-      onClick={onOpen}
-      style={{
-        display: "inline-flex", alignItems: "center", gap: 6, alignSelf: "flex-start",
-        padding: "6px 10px", borderRadius: 4,
-        background: "var(--bg-panel)", border: "1px solid var(--border)",
-        cursor: onOpen ? "pointer" : "default",
-      }}
-    >
-      <span style={{ fontSize: FS.xs, color: "var(--text-muted)" }}>▸</span>
-      <span style={{ fontSize: FS.sm, fontWeight: 600, color: "var(--text)" }}>現状</span>
-      <span style={{ fontSize: FS.sm, color: "var(--text-muted)" }}>{count}</span>
-      {primary ? <RefChip source={primary} /> : null}
-    </button>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, alignSelf: "flex-start", maxWidth: "100%" }}>
+      <button
+        onClick={openable ? () => setOpen((v) => !v) : undefined}
+        className={openable ? "idd-btn idd-btn-quiet" : undefined}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6, alignSelf: "flex-start",
+          padding: "6px 10px", borderRadius: 4,
+          background: "var(--bg-panel)", border: "1px solid var(--border)",
+          cursor: openable ? "pointer" : "default",
+        }}
+      >
+        <span style={{ fontSize: FS.xs, color: "var(--text-muted)" }}>{open ? "▾" : "▸"}</span>
+        <span style={{ fontSize: FS.sm, fontWeight: 600, color: "var(--text)" }}>現状</span>
+        <span style={{ fontSize: FS.sm, color: "var(--text-muted)" }}>{count}</span>
+        {primary ? <RefChip source={primary} /> : null}
+      </button>
+      {open && facts?.length ? <FactTable facts={facts} /> : null}
+    </div>
   );
 }
 

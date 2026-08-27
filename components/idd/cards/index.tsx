@@ -11,7 +11,7 @@ import {
   ActionButton, Card, ConfirmGate, Field, IconButton, OptionRow, SegmentedPair,
 } from "../primitives";
 import {
-  Actions, CollapsedFacts, Comparison, DuplicatePair, FactTable, Identity, IdList, InfoBlocks, DiffView, Meter, SharedItems, Subject,
+  Actions, CollapsedFacts, Comparison, DuplicatePair, FactTable, Identity, IdList, InfoBlocks, DiffView, Meter, MissingContract, SharedItems, Subject,
 } from "./parts";
 import { FS } from "@/lib/idd-ui/scale";
 
@@ -75,7 +75,7 @@ export function QuestionCard({ item, onDecide, compact }: CardProps<QuestionItem
       />
       <Subject text={item.question} />
       <InfoBlocks>
-        <CollapsedFacts count={item.facts.length} primary={item.primaryRef} />
+        <CollapsedFacts count={item.facts.length} primary={item.primaryRef} facts={item.facts} />
       </InfoBlocks>
       <div style={{ display: "flex", flexDirection: "column", gap: compact ? 10 : 6 }}>
         {item.options.map((o) => (
@@ -138,12 +138,18 @@ export function GoCard({ item, onDecide, onAsk, compact }: CardProps<GoItem>) {
         refs={item.source ? [item.source] : undefined}
       />
       <InfoBlocks>
-        <IdList label="やること (方針)" items={item.decisions.map((d) => ({ id: d.id, text: d.text }))} />
-        <IdList label="満たすべき条件" items={item.criteria.map((c) => ({ id: c.id, text: c.text }))} />
+        {item.intentPath ? (
+          <MissingContract path={item.intentPath} />
+        ) : (
+          <>
+            <IdList label="やること (方針)" items={item.decisions.map((d) => ({ id: d.id, text: d.text }))} />
+            <IdList label="満たすべき条件" items={item.criteria.map((c) => ({ id: c.id, text: c.text }))} />
+          </>
+        )}
       </InfoBlocks>
       <Actions compact={compact}>
         <span style={{ display: "flex", gap: 12, width: compact ? "100%" : undefined }}>
-          <ActionButton icon="go" label="GO" variant="primary" minWidth={92} fullWidth={compact} onClick={() => onDecide("s1_go", { iddId: item.iddId })} />
+          <ActionButton icon="go" label="GO" variant="primary" minWidth={92} fullWidth={compact} disabled={Boolean(item.intentPath)} onClick={() => onDecide("s1_go", { iddId: item.iddId })} />
           <ActionButton icon="abort" label="中止" minWidth={92} fullWidth={compact} onClick={() => onDecide("s1_defer", { iddId: item.iddId })} />
         </span>
         <span style={{ flex: compact ? undefined : 1 }} />

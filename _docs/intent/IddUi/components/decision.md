@@ -174,6 +174,20 @@ view / state 層の判断は `_docs/intent/IddUi/lib/decision.md`。
 - **Change freedom**: 閾値、リセット時間は自由。「札の中と外で意味が衝突しない」だけが不変。
 - **Anchors**: `components/idd/InboxDeck.tsx`
 
+### DEC-674: 契約が空の GO は止める。空欄ではなく、どこが空かを出す
+
+- **What**: GO 待ちの card で「やること」「満たすべき条件」が両方空のとき、空の見出しを並べる代わりに「下調べの成果物が無い」と探した場所（`_docs/intent/<Area>/<slug>/`）を出し、GO ボタンを押せなくする。中止と問い合わせは残す。
+- **Why**: 契約が空の GO は、executor に何も指示しないまま実装を始めさせる。空欄のまま押せる UI は「見落とした人間」の責任にするが、実際には planner が書いていないか slug がずれているかのどちらかで、原因は場所を出せば分かる。
+- **Change freedom**: 見せ方は自由。「判断材料が無い判断を押させない」「なぜ無いかを追える情報を出す」の 2 点が不変。
+- **Anchors**: `components/idd/cards/parts.tsx`（MissingContract）、`components/idd/cards/index.tsx`（GoCard）、`lib/idd-ui/server/state.ts`
+
+### DEC-675: 畳んだ現状は開ける
+
+- **What**: 質問 card の「▸ 現状 n」は押すと事実の表が開く。事実が無いときは押せない見た目にする。
+- **Why**: 畳まれた記号（▸）は開くことを約束する。開かないなら、その記号を出してはいけない。context は planner が書く自由文で、判断の材料になりうるので捨てずに全文を持つ。
+- **Change freedom**: 開き方、表の形は自由。「開ける記号は開く」だけが不変。
+- **Anchors**: `components/idd/cards/parts.tsx`（CollapsedFacts）、`lib/idd-ui/server/state.ts`
+
 ## Consequences / Impact
 
 - 札束（DEC-620）により、一覧で全件を俯瞰する手段は sidebar の lane 一覧だけになる。Inbox 側に一覧表示は持たない。

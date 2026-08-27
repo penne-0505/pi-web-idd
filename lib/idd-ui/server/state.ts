@@ -101,7 +101,7 @@ export function buildState(): IddState {
     const q = b.questions[0];
     if (!q) continue;
     const facts: StateFact[] = q.context
-      ? [{ label: "context", value: q.context.slice(0, 120) }]
+      ? [{ label: "context", value: q.context }]
       : [];
     items.push({
       kind: "question",
@@ -129,6 +129,9 @@ export function buildState(): IddState {
         source: sourceOf(rec),
         decisions: intent.decisions,
         criteria: intent.criteria,
+        intentPath: intent.decisions.length || intent.criteria.length
+          ? undefined
+          : `_docs/intent/${rec.area.split("/").pop() ?? rec.area}/${slugOf(rec)}/`,
       });
     }
     if (d.decision === "review") {
