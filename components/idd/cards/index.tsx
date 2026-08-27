@@ -8,7 +8,7 @@ import type {
   DuplicateItem, GoItem, InboxItem, QuestionItem, ReviewItem, ShipItem,
 } from "@/lib/idd-ui/types";
 import {
-  ActionButton, Card, Field, IconButton, OptionRow, SegmentedPair,
+  ActionButton, Card, ConfirmGate, Field, IconButton, OptionRow, SegmentedPair,
 } from "../primitives";
 import {
   Actions, CollapsedFacts, Comparison, DuplicatePair, FactTable, Identity, IdList, InfoBlocks, DiffView, Meter, SharedItems, Subject,
@@ -45,8 +45,15 @@ export function DuplicateCard({ item, onDecide, onAsk, compact }: CardProps<Dupl
         />
         <span style={{ flex: compact ? undefined : 1 }} />
         <span style={{ display: "flex", gap: 8, justifyContent: compact ? "flex-end" : undefined }}>
-          <IconButton icon="discard" title="起票を取り消す (Linear / GitHub も閉じる)" tone="var(--text-muted)" size={compact ? 44 : 34} onClick={() => onDecide("delete", { reviewId: item.reviewId })} />
-          <IconButton icon="chat" title="重複の内容を聞く" size={compact ? 44 : 34} onClick={onAsk} />
+          <ConfirmGate
+            trigger={{ icon: "discard", label: "起票を取り消す (Linear / GitHub も閉じる)", iconOnly: true, size: compact ? 44 : 34 }}
+            consequences={[item.incoming.ref.label, "起票を閉じる"]}
+            confirmLabel="取り消す"
+            compact={compact}
+            onConfirm={() => onDecide("delete", { reviewId: item.reviewId })}
+          >
+            <IconButton icon="chat" title="重複の内容を聞く" size={compact ? 44 : 34} onClick={onAsk} />
+          </ConfirmGate>
         </span>
       </Actions>
     </Card>
@@ -187,7 +194,13 @@ export function ReviewCard({ item, onDecide, onAsk, compact }: CardProps<ReviewI
         <IdList label="満たすべき条件" items={item.criteria} />
       </InfoBlocks>
       <Actions compact={compact}>
-        <ActionButton icon="approve" label="承認" variant="primary" minWidth={110} fullWidth={compact} onClick={() => onDecide("s3_ok", { iddId: item.iddId })} />
+        <ConfirmGate
+          trigger={{ icon: "approve", label: "承認", minWidth: 110 }}
+          consequences={[item.target.title, "提出へ進む"]}
+          confirmLabel="承認"
+          compact={compact}
+          onConfirm={() => onDecide("s3_ok", { iddId: item.iddId })}
+        >
         {compact ? null : <span style={{ width: 1, alignSelf: "stretch", background: "var(--bg-hover)" }} />}
         <div style={{ display: "flex", flexDirection: compact ? "row" : "column", gap: compact ? 12 : 8 }}>
           <ActionButton icon="back" label="実装へ戻す" variant="quiet" minWidth={128} fullWidth={compact} onClick={() => onDecide("s3_reject", { iddId: item.iddId, nextStage: "s2_retry", feedback: instruction })} />
@@ -206,6 +219,7 @@ export function ReviewCard({ item, onDecide, onAsk, compact }: CardProps<ReviewI
           }}
         />
         <IconButton icon="chat" title="衝突の内容を聞く" onClick={onAsk} />
+        </ConfirmGate>
       </Actions>
     </Card>
   );
@@ -262,7 +276,13 @@ export function ShipCard({ item, onDecide, onAsk, compact }: CardProps<ShipItem>
         />
       </InfoBlocks>
       <Actions compact={compact}>
-        <ActionButton icon="approve" label="このまま出す" variant="primary" minWidth={150} fullWidth={compact} onClick={() => onDecide("s4_verify_clean", { iddId: item.iddId })} />
+        <ConfirmGate
+          trigger={{ icon: "approve", label: "このまま出す", minWidth: 150 }}
+          consequences={[item.branch.repo, `${item.branch.to} ← ${item.branch.from}`, "PR を作成", `commit ${item.pr.commits.length}`]}
+          confirmLabel="出す"
+          compact={compact}
+          onConfirm={() => onDecide("s4_verify_clean", { iddId: item.iddId })}
+        >
         {compact ? null : <span style={{ width: 1, alignSelf: "stretch", background: "var(--bg-hover)" }} />}
         <div style={{ display: "flex", flexDirection: compact ? "row" : "column", gap: compact ? 12 : 8 }}>
           <ActionButton icon="back" label="直させる" variant="quiet" minWidth={124} fullWidth={compact} onClick={() => onDecide("s4_revise", { iddId: item.iddId, instruction })} />
@@ -280,6 +300,7 @@ export function ShipCard({ item, onDecide, onAsk, compact }: CardProps<ShipItem>
           }}
         />
         <IconButton icon="chat" title="指摘の内容を聞く" onClick={onAsk} />
+        </ConfirmGate>
       </Actions>
     </Card>
   );

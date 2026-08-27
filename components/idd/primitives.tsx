@@ -3,7 +3,7 @@
 // intent: Figma `00 foundation` の語彙をそのまま実装したもの。ここに無い見た目は使わない。
 // 濃度は pi-web の CSS 変数へ写している (無彩色化済み)。
 
-import { Children, createContext, isValidElement, useContext } from "react";
+import { Children, createContext, isValidElement, useContext, useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { CriterionState, SourceRef } from "@/lib/idd-ui/types";
 import { FS } from "@/lib/idd-ui/scale";
@@ -212,6 +212,89 @@ export function ActionButton({ icon, label, variant = "secondary", disabled, min
       {icon ? <Icon name={icon} size={quiet ? 14 : 18} color={fg} weight={primary ? 1.4 : 1.3} /> : null}
       {label}
     </button>
+  );
+}
+
+/** 取り返しのつかない判断の前に挟む確認。undo を持たない代わりの緩衝材。
+    popup にはしない (別の面に見えると「最終確認」の重さが出て、判断そのものを歪める)。
+    操作面をその場で差し替え、外に出るものだけを値で見せて、確定 / やめる の 2 択にする。 */
+export function ConfirmGate({ trigger, consequences, confirmLabel, onConfirm, compact, children }: {
+  trigger: { icon?: IconName; label: string; variant?: ButtonVariant; minWidth?: number; iconOnly?: boolean; size?: number };
+  /** 押した結果、外に出るもの。文章にしない。 */
+  consequences: string[];
+  confirmLabel?: string;
+  onConfirm: () => void;
+  compact?: boolean;
+  /** 平常時に並ぶ他の操作。確認中は隠す (2 択に絞る)。 */
+  children?: ReactNode;
+}) {
+  const [armed, setArmed] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!armed) return;
+    box.current?.querySelector("button")?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setArmed(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [armed]);
+
+  if (!armed) {
+    return (
+      <>
+        {trigger.iconOnly && trigger.icon ? (
+          <IconButton icon={trigger.icon} title={trigger.label} size={trigger.size} tone="var(--text-muted)" onClick={() => setArmed(true)} />
+        ) : (
+          <ActionButton
+            icon={trigger.icon}
+            label={trigger.label}
+            variant={trigger.variant ?? "primary"}
+            minWidth={trigger.minWidth}
+            fullWidth={compact}
+            onClick={() => setArmed(true)}
+          />
+        )}
+        {children}
+      </>
+    );
+  }
+
+  return (
+    <div
+      ref={box}
+      className="idd-enter-next"
+      style={{
+        display: "flex", alignItems: "center", gap: 12, width: "100%",
+        flexDirection: compact ? "column" : "row", alignSelf: "stretch",
+      }}
+    >
+      <span style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", flex: 1 }}>
+        <Icon name="up" size={13} color="var(--text-muted)" />
+        {consequences.map((c) => (
+          <span
+            key={c}
+            style={{
+              padding: "4px 10px", borderRadius: 4,
+              background: "var(--bg-panel)", border: "1px solid var(--border)",
+              fontSize: FS.sm, color: "var(--text)", whiteSpace: "nowrap",
+            }}
+          >
+            {c}
+          </span>
+        ))}
+      </span>
+      <span style={{ display: "flex", gap: 10, width: compact ? "100%" : undefined }}>
+        <ActionButton
+          icon={trigger.icon}
+          label={confirmLabel ?? trigger.label}
+          variant="primary"
+          minWidth={trigger.minWidth}
+          fullWidth={compact}
+          onClick={() => { setArmed(false); onConfirm(); }}
+        />
+        <ActionButton label="やめる" variant="quiet" minWidth={88} fullWidth={compact} onClick={() => setArmed(false)} />
+      </span>
+    </div>
   );
 }
 

@@ -56,7 +56,8 @@ wireframe と食い違う場合はそちらが優先。
 
 1. lane detail の `work.files` (git diff --stat 未読) / `agents` (planner-sessions.jsonl 未読) / 経過が生 event 名のまま
 2. `open-questions.md` 13-18 が未解決 (16 は実装側で先行して方針を決めた。`ui-findings.md` 参照)
-3. undo が無い。判断は押した瞬間に確定する。ledger が append-only なので打ち消し event の設計が要る
+3. undo は当面持たない (2026-08-27 決定)。代わりに取り返しのつかない 4 つの判断にだけ確認を 1 段挟む。
+   経緯と作法は `ui-findings.md` の「undo は持たない」節
 4. 実 state の lane が 1 本しかなく、10-20 本規模での破綻は未検証 (それまでは fixture 表示で確認している)
 
 **次 session 開始時の推奨 prompt**:

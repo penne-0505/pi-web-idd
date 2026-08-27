@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import type { LaneDetailView, TimelineEntry } from "@/lib/idd-ui/types";
-import { ActionButton, Chip, Icon, IconButton, LiveDot, RefChip } from "./primitives";
+import { ActionButton, Chip, ConfirmGate, Icon, IconButton, LiveDot, RefChip } from "./primitives";
 import { IdList, SectionHead } from "./LaneDetailParts";
 import type { DecideHandler } from "./cards";
 import { FS, SIZE } from "@/lib/idd-ui/scale";
@@ -118,7 +118,12 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
               variant="quiet"
               onClick={() => onDecide(lane.priorityTop ? "priority_reset" : "priority_elevated", { iddId: lane.iddId })}
             />
-            <ActionButton icon="abort" label="中止" variant="quiet" onClick={() => onDecide("lane_abort", { iddId: lane.iddId })} />
+            <ConfirmGate
+              trigger={{ icon: "abort", label: "中止", variant: "quiet" }}
+              consequences={[lane.iddId, lane.branch, "lane を閉じる"]}
+              confirmLabel="中止"
+              onConfirm={() => onDecide("lane_abort", { iddId: lane.iddId })}
+            />
           </div>
         </div>
 
