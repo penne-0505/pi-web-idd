@@ -302,6 +302,20 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: 順序、tick の契機（cron / 手動）は自由。「判断の手前で止まる」だけが不変。
 - **Anchors**: `packages/idd-core/src/plan/tick.ts`、`app/api/idd/tick/route.ts`、`packages/idd-cli/bin/idd.ts`
 
+### DEC-701: 記号の採番は engine が lane ごとに帯で割り当てる
+
+- **What**: prep の時点で lane ごとに DEC の帯（20 個）と INV の開始番号を決め、brief に「この帯を使え。自分で最大値を数えるな」と書く。帯の計算は repo と**切ってある全 lane worktree の両方**を走査した最大値から行い、同じ tick で起こす lane 同士はさらにずらす。
+- **Why**: 並列に走った planner がそれぞれ repo の最大値を読むと、**全員が同じ番号から採番する**（実際に IDD-903 と IDD-904 が DEC-701〜705 を二重に取った）。ファイルが別なので git の衝突にはならず、意味の衝突だけが残る — merge 後にコードのポインタ `// intent: DEC-701` がどちらを指すか決められなくなる。未 commit の lane worktree も走査対象に含めないと、同じ穴が残る。
+- **Change freedom**: 帯の幅、割り当ての契機は自由。「採番を並列 agent の観測に任せない」だけが不変。
+- **Anchors**: `packages/idd-core/src/intent/numbering.ts`、`packages/idd-core/src/plan/prep.ts`
+
+### DEC-702: GO を押したら executor が起きる
+
+- **What**: `s1_go` の記録に続けて `runExec()` を呼ぶ。tick を待たない。
+- **Why**: GO は「実装を始めてよい」という判断そのもので、押したのに何も始まらないなら判断が宙に浮く（実際に IDD-903 / 904 が GO 済みのまま停止した）。回答を押した時点で配信する（DEC-676）のと同じ理由。
+- **Change freedom**: 起動の場所は自由。「判断と実行の間に手動の一手を挟まない」だけが不変。
+- **Anchors**: `app/api/idd/decide/route.ts`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。

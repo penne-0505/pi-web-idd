@@ -47,3 +47,4 @@ export { lanesAwaitingMerge, removeLaneWorktree, runClose } from "./plan/close.t
 export type { CloseResult } from "./plan/close.ts";
 export { runTick } from "./plan/tick.ts";
 export type { TickResult } from "./plan/tick.ts";
+export { allocateBlock, highestIds } from "./intent/numbering.ts";
