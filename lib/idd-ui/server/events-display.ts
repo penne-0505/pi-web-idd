@@ -1,10 +1,4 @@
-// intent: lifecycle event (41 種) を経過の 1 行に写す。event 名をそのまま出さない。
-//
-// 表示の粒度は 3 段構え:
-//   1. 対応表で見出しを動詞ひとつにする (文章にしない)
-//   2. kind で形を分ける (節目 / 自分の判断 / agent の動き / 失敗) — 読まずに拾えるのは形の方
-//   3. 節目と自分の判断だけを既定で出し、間の agent の動きは畳む
-// lane detail を開く動機は「今どうなっているか」なので、既定は畳む側に置く。
+// intent: DEC-608 — event 名を露出せず、動詞ひとつの見出しと形に写して既定で畳む
 
 import type { TimelineEntry } from "../types";
 
@@ -13,24 +7,20 @@ type Kind = TimelineEntry["kind"];
 interface EventMeta {
   label: string;
   kind: Kind;
-  /** true = 節目。畳まれず必ず出る。 */
   keep?: boolean;
 }
 
 export const EVENT_META: Record<string, EventMeta> = {
-  // S0
   lane_open: { label: "起票", kind: "mark", keep: true },
   pending_review_open: { label: "重複疑い", kind: "agent" },
   pending_review_resolved: { label: "重複を判定", kind: "user", keep: true },
 
-  // S1
   question_batch_asked: { label: "質問", kind: "mark", keep: true },
   question_batch_answered: { label: "回答", kind: "user", keep: true },
   s1_ready: { label: "下調べ 完了", kind: "mark", keep: true },
   s1_go: { label: "GO", kind: "user", keep: true },
   s1_defer: { label: "中止", kind: "user", keep: true },
 
-  // S2
   s2_start: { label: "実装 開始", kind: "mark", keep: true },
   blocked_by_dependency: { label: "依存待ち", kind: "warn", keep: true },
   s2_blocked: { label: "停止", kind: "warn", keep: true },
@@ -39,7 +29,6 @@ export const EVENT_META: Record<string, EventMeta> = {
   s2_result: { label: "実装 完了", kind: "mark", keep: true },
   s2_interjection: { label: "伝えた", kind: "user", keep: true },
 
-  // S3
   s3_ready: { label: "衝突確認 待ち", kind: "agent" },
   s3_check_in_progress: { label: "衝突確認", kind: "agent" },
   s3_check_clean: { label: "衝突なし", kind: "agent" },
@@ -53,7 +42,6 @@ export const EVENT_META: Record<string, EventMeta> = {
   s3_reject: { label: "差し戻し", kind: "user", keep: true },
   s3_defer: { label: "保留", kind: "user", keep: true },
 
-  // S4 Phase A
   s4_submit_started: { label: "提出 開始", kind: "mark", keep: true },
   s4_verify_started: { label: "検査", kind: "agent" },
   s4_verify_clean: { label: "検査 通過", kind: "agent" },
@@ -63,7 +51,6 @@ export const EVENT_META: Record<string, EventMeta> = {
   s4_pushed: { label: "push", kind: "agent" },
   s4_pr_created: { label: "PR 作成", kind: "mark", keep: true },
 
-  // S4 Phase B
   s4_ci_failed: { label: "CI 失敗", kind: "warn", keep: true },
   s4_review_comment_received: { label: "指摘", kind: "mark", keep: true },
   s4_change_pushed: { label: "修正を push", kind: "agent" },
@@ -71,7 +58,6 @@ export const EVENT_META: Record<string, EventMeta> = {
   s4_merged: { label: "merge", kind: "mark", keep: true },
   lane_close: { label: "終了", kind: "mark", keep: true },
 
-  // 共通
   priority_elevated: { label: "最優先", kind: "user", keep: true },
   priority_reset: { label: "最優先 解除", kind: "user", keep: true },
 };
@@ -79,7 +65,6 @@ export const EVENT_META: Record<string, EventMeta> = {
 const list = (v: unknown): string[] => (Array.isArray(v) ? v.map(String) : []);
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
 
-/** 添える値は 1 つまで。文章にはしない。 */
 function detailOf(event: string, attrs: Record<string, unknown> = {}): string | undefined {
   switch (event) {
     case "lane_open": return str(attrs.area) || undefined;
@@ -127,7 +112,6 @@ function entryOf(e: RawEvent): TimelineEntry & { keep: boolean } {
   };
 }
 
-/** 節目と自分の判断だけを残し、その間の agent の動きは 1 行に畳む。 */
 export function buildTimeline(events: RawEvent[]): TimelineEntry[] {
   const out: TimelineEntry[] = [];
   let run: TimelineEntry[] = [];

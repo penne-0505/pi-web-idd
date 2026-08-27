@@ -5,6 +5,7 @@ import type { BranchPreview, SessionEntry, SessionTreeNode } from "@/lib/types";
 import { useI18n } from "@/hooks/useI18n";
 
 // intent: DEC-465 — インラインモードは別コンポーネントがトリガー・開閉状態・幅を制御する組み込みシナリオを想定しており、propsで外部制御と表示切替の両輪を受ける
+
 interface Props {
   tree: SessionTreeNode[];
   activeLeafId: string | null;
@@ -40,6 +41,7 @@ function isMessageEntry(entry: SessionEntry): boolean {
 }
 
 // intent: DEC-466 — 一本道の分岐なし区間を先頭ノードに畳んでツリーの視覚ノイズを減らし、branchPreviewはサーバ配信の要約を優先しつつlabelEntryで未射影・テスト形状のフォールバックを保つ
+
 export function compressChain(node: SessionTreeNode): {
   node: SessionTreeNode;
   skipped: number;
@@ -60,6 +62,7 @@ export function compressChain(node: SessionTreeNode): {
 }
 
 // intent: DEC-467 — 複数root(最初のメッセージから分岐した場合)はroot群自体をブランチ行とし、単一rootなら最初の分岐点の子をブランチ行として扱うルール差を吸収する
+
 export function selectTopLevelBranches(tree: SessionTreeNode[]): SessionTreeNode[] {
   if (tree.length > 1) return tree;
   if (tree.length === 0) return [];

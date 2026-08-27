@@ -1,7 +1,7 @@
 "use client";
 
-// intent: sidebar の Lanes mode。lane の索引に徹し、判断そのものは main (Inbox / lane タブ) で行う。
-// 状態は語ではなく section と stage bar とアイコンで示す。上限は section 見出しの n / cap が兼ねる。
+// intent: DEC-631 — 1 行 1 入口。群ごとに重みを単調に落とす
+// intent: DEC-638 — 状態は語ではなく section と stage bar とアイコンで示す
 
 import type { DecisionKind, LaneRow, LaneSection } from "@/lib/idd-ui/types";
 import { Icon, StageBar, type IconName } from "./primitives";
@@ -15,8 +15,6 @@ const DECISION_ICON: Record<DecisionKind, IconName> = {
   ship: "approve",
 };
 
-/* 視線の入口は 1 行につき 1 つ (= 題名) にする。他はすべて従で、
-   群ごとに従の濃度を変えて「いま見るべき群」を先に拾えるようにする。 */
 type Attention = "act" | "live" | "idle" | "done";
 
 function attentionOf(lane: LaneRow): Attention {
@@ -49,7 +47,6 @@ function Row({ lane, selected, onSelect }: { lane: LaneRow; selected?: boolean; 
         border: "none", textAlign: "left", cursor: "pointer",
       }}
     >
-      {/* 判断を待っている行だけ、左端に印を置く。群を跨いで一目で拾える */}
       {attn === "act" ? (
         <span aria-hidden style={{ position: "absolute", left: 0, top: 9, bottom: 9, width: 3, borderRadius: 2, background: "var(--accent)" }} />
       ) : null}
@@ -66,7 +63,6 @@ function Row({ lane, selected, onSelect }: { lane: LaneRow; selected?: boolean; 
         {lane.decision ? <Icon name={DECISION_ICON[lane.decision]} size={13} color="var(--text-muted)" /> : null}
       </span>
 
-      {/* 従の列。濃度は群に従い、判断待ち以外では背景に近づく */}
       <span style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", opacity: attn === "act" ? 1 : attn === "done" ? 0.5 : 0.75 }}>
         <StageBar done={lane.stageDone} current={lane.stageCurrent} halted={halted} faded={lane.faded} />
         <span style={{ flex: 1 }} />
@@ -89,7 +85,6 @@ export function LaneList({ sections, lanes, selectedId, areaLabel, onSelect, onI
 }) {
   return (
     <div className="idd" style={{ display: "contents" }}>
-      {/* 絞り込み。単一 area で運用している間は触らない */}
       <div style={{ flexShrink: 0, padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>
         <button
           style={{
@@ -127,7 +122,6 @@ export function LaneList({ sections, lanes, selectedId, areaLabel, onSelect, onI
         })}
       </div>
 
-      {/* 取り込みは lane 一覧そのものを増やす操作なので、一覧の器である sidebar に属する */}
       <div style={{ flexShrink: 0, borderTop: "1px solid var(--border)", padding: "10px 12px 12px" }}>
         <button
           onClick={onIntake}
@@ -146,7 +140,6 @@ export function LaneList({ sections, lanes, selectedId, areaLabel, onSelect, onI
   );
 }
 
-/** Sessions ⇄ Lanes。既存 UI への追加はこの 1 行だけ。 */
 export function SidebarModeSwitch({ mode, laneBadge, onChange }: {
   mode: "sessions" | "lanes";
   laneBadge?: number;

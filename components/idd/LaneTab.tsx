@@ -1,6 +1,6 @@
 "use client";
 
-// intent: lane タブ 1 枚。API から取り、まだ state file が無い環境では fixture に落ちる。
+// intent: DEC-603 — state file が無い間は fixture に落ちる
 
 import { useEffect, useState } from "react";
 import { MOCK_LANE_DETAIL } from "@/lib/idd-ui/fixtures";
@@ -21,7 +21,6 @@ export function LaneTab({ iddId, onDecide }: { iddId: string; onDecide: DecideHa
         const data = await res.json();
         if (!cancelled && data?.iddId) setLane(data as LaneDetailView);
       } catch {
-        // state file が無い間は fixture のまま
       }
     })();
     return () => { cancelled = true; };

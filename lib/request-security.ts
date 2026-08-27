@@ -69,6 +69,7 @@ function isUserInitiatedSessionExportNavigation(request: Request): boolean {
 }
 
 // intent: DEC-243 — API host は loopback / IP literal / 明示配置 hostname に限定し、DNS rebind を封じる
+
 export function isApiRequestHostAllowed(
   request: Request,
   configuredHostnames = configuredHostnamesFromEnvironment(),
@@ -84,6 +85,7 @@ export function isApiRequestHostAllowed(
 }
 
 // intent: DEC-243 — ブラウザの cross-site fetch は拒否、sec-fetch-* を送らない非ブラウザ client は素通し
+
 export function isApiRequestOriginAllowed(request: Request): boolean {
   const origin = request.headers.get("origin");
   const fetchSite = request.headers.get("sec-fetch-site");

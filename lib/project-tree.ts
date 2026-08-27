@@ -1,6 +1,7 @@
 import type { BranchPreview } from "@/lib/types";
 
 // intent: DEC-244 — client 側 BranchNavigator が再帰走査するため response tree は必ず浅く保つ
+
 export const MAX_PROJECTED_TREE_DEPTH = 200;
 const MAX_BRANCH_PREVIEW_LENGTH = 40;
 
@@ -70,6 +71,7 @@ function previewForEntry(entry: ProjectableEntry): BranchPreview | undefined {
 }
 
 // intent: DEC-244 — root・分岐点・葉のみ残し、単一子鎖は圧縮した entry ID を次残存ノードに載せる
+
 export function projectTreeForResponse<T extends ProjectableTreeNode<T>>(
   nodes: T[]
 ): T[] {

@@ -1,8 +1,9 @@
 "use client";
 
-// intent: 1 画面 = 1 判断。判断キューを一覧ではなく重ねた札として持ち、いま処理してほしい 1 件だけを前面に置く。
-// 軸は縦で統一する — 残りは下に積まれ、下へめくると次が来る。器の高さは札の中身に依らず固定し、
-// めくっても枠と操作の位置が動かないようにする (動くのは中身だけ)。
+// intent: DEC-620 — 判断キューは一覧ではなく札束 (1 画面 = 1 判断)
+// intent: DEC-621 — 軸は縦。次は下から入り、判断済みは手前へ抜ける
+// intent: DEC-622 — 残りは種類だけを距離減衰で示す
+// intent: DEC-623 — 記録中は焦点を動かさない
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DecisionKind, InboxItem } from "@/lib/idd-ui/types";
@@ -18,7 +19,6 @@ const KIND_ICON: Record<DecisionKind, IconName> = {
   ship: "approve",
 };
 
-/** 札の見出し。tip にしか使わないので、種類ごとの主題を一つ取り出せれば足りる。 */
 function itemLabel(item: InboxItem): string {
   switch (item.kind) {
     case "duplicate": return item.incoming.title;
@@ -28,14 +28,11 @@ function itemLabel(item: InboxItem): string {
   }
 }
 
-/* 前面から離れるほど小さくなる。減衰なので下限へ漸近し、遠い札どうしの差は潰れる
-   — 「あと何枚か」ではなく「近いか遠いか」だけが読める大きさにする。 */
 const MARKER_MAX = 40;
 const MARKER_MIN = 20;
 const MARKER_DECAY = 0.55;
 const MARKER_ICON = 22;
 
-/** 残りの札。上から下が処理順で、札束の積み方向と同じ縦に並べる。 */
 function Remaining({ items, index, onJump, row, locked }: {
   items: InboxItem[];
   index: number;
@@ -70,7 +67,6 @@ function Remaining({ items, index, onJump, row, locked }: {
               cursor: locked ? "default" : "pointer", flexShrink: 0,
             }}
           >
-            {/* 寸法ではなく倍率で変える。大きさの変化がそのまま動きになる */}
             <span style={{ display: "inline-flex", transform: `scale(${(box * 0.56) / MARKER_ICON})` }}>
               <Icon name={KIND_ICON[item.kind]} size={MARKER_ICON} color="currentColor" weight={on ? 1.6 : 1.2} />
             </span>
@@ -91,7 +87,6 @@ function Remaining({ items, index, onJump, row, locked }: {
   );
 }
 
-/** めくる操作。上が前、下が次 — 札束の積み方向にそのまま重ねる。 */
 function Flip({ icon, label, disabled, onClick, showLabel }: {
   icon: IconName;
   label: string;
@@ -123,11 +118,8 @@ function Flip({ icon, label, disabled, onClick, showLabel }: {
   );
 }
 
-/** 器の高さ。画面には追従するが、札の中身では変わらない。
-    下限 360 は「識別 + 操作 + 情報が最低限」入る前提 (mobile は器を持たない)。 */
 const FRAME_HEIGHT = "clamp(400px, 60vh, 700px)";
 
-/** 無地の部分を送るときの閾値。1 回の弾みで 1 枚だけ動かす。 */
 const WHEEL_THRESHOLD = 90;
 
 export function InboxDeck({ items, onDecide, onAsk, compact, variant = "frame", pendingId, decidedId, failure }: {
@@ -135,23 +127,19 @@ export function InboxDeck({ items, onDecide, onAsk, compact, variant = "frame", 
   onDecide: DecideHandler;
   onAsk?: (item: InboxItem) => void;
   compact?: boolean;
-  /** 記録中 / 記録できて抜けていく最中 / 記録できなかった札 */
   pendingId?: string | null;
   decidedId?: string | null;
   failure?: { id: string; message: string } | null;
-  /** frame = 器の高さ固定・縦軸 (今) / flow = 中身なりの高さ・横軸 (前) */
   variant?: "frame" | "flow";
 }) {
   const [index, setIndex] = useState(0);
-  // 入ってくる向きは、直前の操作が「次」か「戻る」かで決まる
   const [dir, setDir] = useState<"next" | "prev">("next");
 
-  // 判断が済んだ札は list から消える。末尾を処理した直後は 1 枚戻る
   const last = Math.max(0, items.length - 1);
   const at = Math.min(index, last);
   useEffect(() => { if (index > last) setIndex(last); }, [index, last]);
 
-  // 記録中は焦点を動かさない。結果が返る場所から目を離させないため
+  // intent: DEC-623 — 結果が返る場所から目を離させない
   const locked = Boolean(pendingId);
 
   const move = useCallback((d: number) => {
@@ -176,10 +164,10 @@ export function InboxDeck({ items, onDecide, onAsk, compact, variant = "frame", 
     return () => window.removeEventListener("keydown", onKey);
   }, [move]);
 
-  // 無地の部分でのスクロールは「めくる」。札の中は札自身のスクロールなので触らない
   const wheelRef = useRef({ acc: 0, at: 0 });
   useEffect(() => {
     if (variant !== "frame") return;
+  // intent: DEC-640 — 札の外のホイールはめくる。札の中は札自身のスクロール
     const onWheel = (e: WheelEvent) => {
       const t = e.target as HTMLElement | null;
       if (t?.closest?.("[data-idd-card]")) return;
@@ -244,15 +232,12 @@ export function InboxDeck({ items, onDecide, onAsk, compact, variant = "frame", 
       <Remaining items={items} index={at} onJump={jump} locked={locked} />
 
       <div style={{ flex: 1, minWidth: 0, position: "relative", height: FRAME_HEIGHT, paddingBottom: behind * 8 }}>
-        {/* 背後の札。次は下で待っていて、↓ で手前に来る */}
         {Array.from({ length: behind }, (_, i) => behind - i).map((n) => (
           <div
             key={n}
             aria-hidden
             className="idd-behind"
             style={{
-              // 下端だけが覗く紙束。左右は前面の角丸の内側へ入れる
-              // (縁を揃えると、前面の丸角の外側の隙間から背面の角が三角に覗いてしまう)
               position: "absolute",
               left: 7, right: 7, top: n * 8, bottom: (behind - n) * 8,
               borderRadius: 6,
@@ -277,13 +262,11 @@ export function InboxDeck({ items, onDecide, onAsk, compact, variant = "frame", 
               />
             </CardFrame>
           </div>
-          {/* 記録中。待たされていることを縁を走る線だけで示す */}
           {recording ? (
             <span aria-hidden style={{ position: "absolute", left: 0, right: 0, top: 0, height: 2, overflow: "hidden", borderRadius: 6 }}>
               <span className="idd-recording" style={{ position: "absolute", top: 0, height: 2, background: "var(--accent)" }} />
             </span>
           ) : null}
-          {/* 記録できなかったとき。押した場所の近くで申告し、札は queue に残す */}
           {failedHere ? (
             <div
               className="idd-failed"

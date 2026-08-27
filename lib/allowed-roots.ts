@@ -7,6 +7,7 @@ declare global {
 }
 
 // intent: DEC-132 — slash に揃えるのは Set key の一貫性のため、containment の正しさは isPathWithinRoots 側で担保
+
 export function normalizeSlashes(filePath: string): string {
   return toSlashPath(filePath);
 }

@@ -1,6 +1,4 @@
-// intent: lane が「いま何を触っているか」を実物から取る。
-// executor-progress の recent_activity は自然文なので file 一覧の代わりにならない (あれは stream 側で使う)。
-// worktree の場所は planner/executor-sessions.jsonl が持っているので、そこで git を叩く。
+// intent: DEC-607 — 触っているファイルは worktree の git から取り、起点が無ければ空を返す
 
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -25,21 +23,14 @@ function git(cwd: string, args: string[]): string | null {
   }
 }
 
-/** worktree_path は state file からの相対で書かれうる。 */
 export function resolveWorktree(path: string): string | null {
   const abs = isAbsolute(path) ? path : resolve(stateDir(), path);
   return existsSync(abs) ? abs : null;
 }
 
-/* lane detail を開くたびに git を叩かないよう、短く memo 化する。
-   実装中の lane は数秒で変わるので、長く持つと嘘になる。 */
 const cache = new Map<string, { at: number; files: { path: string; delta: string }[] }>();
 const TTL_MS = 5000;
 
-/**
- * 起点からの差分。起点は s2_start の started_from_commit があればそれ、
- * 無ければ既定ブランチとの分岐点。どちらも取れなければ空を返す (嘘を出さない)。
- */
 export function changedFiles(worktreePath: string, fromCommit?: string): { path: string; delta: string }[] {
   const cwd = resolveWorktree(worktreePath);
   if (!cwd) return [];
@@ -57,7 +48,6 @@ export function changedFiles(worktreePath: string, fromCommit?: string): { path:
   }
   if (!base) return [];
 
-  // 未 commit の変更も含めたいので working tree との比較 (--numstat は名前と増減だけ)
   const out = git(cwd, ["diff", "--numstat", base]);
   if (out === null) return [];
 

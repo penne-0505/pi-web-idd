@@ -1,5 +1,4 @@
-// intent: 判断の書き込み口。1 押下 = 1 件の記録。書けなければ ok:false を返し、
-// UI は「押した状態」にしない (楽観更新しない)。
+// intent: DEC-605 — 書けなければ ok:false。UI は押した状態にしない
 
 import { NextResponse } from "next/server";
 import { applyDecision } from "@/lib/idd-ui/server/write";

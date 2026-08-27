@@ -27,6 +27,7 @@ import type {
 } from "@/lib/types";
 
 // intent: DEC-455 — 主要トークナイザ(GLM/DeepSeek/GPT-o200k)の実測比に合わせCJKと非CJKで係数を分ける
+
 const CJK_PATTERN = /[\u3000-\u30ff\u3400-\u9fff\uf900-\ufaff\u{20000}-\u{2fa1f}\uac00-\ud7af]/u;
 function estimateTokens(text: string): number {
   let cjk = 0;
@@ -80,6 +81,7 @@ const MAX_THINKING_CACHE_ENTRIES = 100;
 const thinkingContentCache = new Map<string, Promise<string>>();
 
 // intent: DEC-456 — react-markdown+KaTeX+syntax highlightingは数百KB級の貼り付けでメインスレッドを固めるため上限を切ってプレーン表示へ落とす
+
 const MAX_MARKDOWN_CHARS = 100_000;
 
 function formatMessageBytes(n: number): string {
@@ -137,6 +139,7 @@ function SafeMarkdownBody({ children, className, ...props }: React.ComponentProp
 }
 
 // intent: DEC-457 — 極端に長いユーザーメッセージで会話が画面外に押し流されるのを防ぐためバブル内にスクロールを閉じ込める
+
 const USER_BUBBLE_MAX_HEIGHT = 300;
 
 function loadThinkingContent(sessionId: string, entryId: string, blockIndex: number): Promise<string> {

@@ -1,15 +1,11 @@
 "use client";
 
-// intent: 拡張 IDD の state を 1 本の endpoint から取る。state file がまだ無い環境では
-// fixture に落として UI を動かし続ける (どちらで動いているかは source で判別できる)。
+// intent: DEC-603 — state file が無い環境では source を明示して fixture に落ちる
+// intent: DEC-639 — fixture 表示の切替を localStorage に持ち、同じ画面の全 hook が同時に切り替わる
 
 import { useCallback, useEffect, useState } from "react";
 import { MOCK_CRON, MOCK_INBOX, MOCK_LANES, MOCK_SECTIONS } from "@/lib/idd-ui/fixtures";
 import type { CronRun, InboxItem, LaneRow, LaneSection } from "@/lib/idd-ui/types";
-
-/* ── mock 表示の切替 ──────────────────────────────────────────
-   state file が薄いうちは fixture で見たい。localStorage に持ち、
-   同じ page 内の複数 hook (sidebar と Inbox) が同時に切り替わるようにする。 */
 
 const MOCK_KEY = "idd-mock-view";
 const listeners = new Set<() => void>();
@@ -20,7 +16,7 @@ export function isIddMock(): boolean {
 }
 
 export function setIddMock(on: boolean) {
-  try { window.localStorage.setItem(MOCK_KEY, on ? "1" : "0"); } catch { /* 保存できなくても切替は効かせる */ }
+  try { window.localStorage.setItem(MOCK_KEY, on ? "1" : "0"); } catch {  }
   listeners.forEach((fn) => fn());
 }
 
@@ -68,7 +64,6 @@ export function useIddState(pollMs = 15000): IddStateView {
           items: data.items ?? [],
         });
       } else {
-        // state file がまだ無い。fixture で動かす
         setState({ source: "mock", ...MOCK });
       }
     } catch {

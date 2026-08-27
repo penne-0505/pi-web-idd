@@ -806,13 +806,11 @@ export function AppShell() {
   useLayoutEffect(() => {
     activeNewSessionDraftKeyRef.current = newSessionDraftKey;
   }, [newSessionDraftKey]);
-  // intent: 拡張 IDD — main に何を出すか。Inbox は常設タブで、Chat と切り替える。
-  // ?view=inbox で直接開ける (出先の端末から判断キューへ 1 手で入るため)
   const initialView = searchParams.get("view") ?? "";
+  // intent: DEC-633 — 既存 shell への追加点その 2: main の表示切替と lane タブ
   const [mainView, setMainView] = useState<MainView>(
     () => (initialView === "inbox" || initialView.startsWith("lane:") ? initialView : "chat"),
   );
-  // 開いている lane タブ。file タブと同じく複数開けて閉じられる
   const [openLanes, setOpenLanes] = useState<string[]>(
     () => (initialView.startsWith("lane:") ? [initialView.slice(5)] : []),
   );

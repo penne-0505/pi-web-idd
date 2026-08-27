@@ -367,6 +367,7 @@ export function ModelErrorBanner({ error }: { error?: string | null }) {
 }
 
 // intent: DEC-382 — `enabledModels` で 0 件マッチのパターンをタイポ検知のために UI に可視化する (#307)
+
 export function ModelScopeWarningBanner({ warnings }: { warnings?: string[] }) {
   if (!warnings || warnings.length === 0) return null;
   return (

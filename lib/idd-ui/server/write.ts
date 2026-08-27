@@ -1,19 +1,16 @@
-// intent: 判断の書き込み。1 押下 = 1 件の記録なので、append が失敗したら UI に成功を返さない。
-// envelope は「作って outbox に積む」までを担い、agent への注入は別 layer
-// (open-questions #1 が未検証のため、記録と送信を分けておく)。
+// intent: DEC-605 — 1 押下 = 1 append。lock 下で書き、失敗を成功として返さない
+// intent: DEC-606 — envelope は outbox に積むまで。送信は別 layer
+// intent: DEC-611 — handoff に無い event 名は暫定で置き、決まり次第 rename する
 
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import lockfile from "proper-lockfile";
 import { readBacklog, stateDir } from "./state";
 
-/* ── 追記 ─────────────────────────────────────────────────── */
-
 function ensureDir(dir: string) {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
 
-/** 同じ file への同時 append を避ける (pi-web の他機能と同じ proper-lockfile を使う)。 */
 async function appendJsonl(path: string, record: unknown): Promise<void> {
   ensureDir(join(path, ".."));
   if (!existsSync(path)) writeFileSync(path, "");
@@ -37,7 +34,6 @@ function laneArea(iddId: string): string {
   return readBacklog().find((b) => b.idd_id === iddId)?.area ?? "default";
 }
 
-/** lifecycle-<repo>.jsonl へ 1 件。repo は lane の area に対応する。 */
 export async function appendLifecycle(event: string, iddId: string, attrs: Record<string, unknown> = {}): Promise<string> {
   const path = join(stateDir(), `lifecycle-${laneArea(iddId)}.jsonl`);
   await appendJsonl(path, { event, idd_id: iddId, at: nowIso(), attrs });
@@ -65,11 +61,8 @@ export async function appendAnswer(rec: {
   return path;
 }
 
-/* ── envelope ─────────────────────────────────────────────── */
-
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-/** envelope.md の XML-like 形式。self-containment 原則により選ばれなかった選択肢も echo する。 */
 export function buildEnvelope(type: string, iddId: string, body: string): string {
   return [
     "<idd-system-message>",
@@ -120,7 +113,6 @@ export function questionAnsweredEnvelope(iddId: string, batchId: string, pairs: 
   return buildEnvelope("question_batch_answered", iddId, body);
 }
 
-/** 送信は別 layer。ここでは outbox に積み、未達を UI が隠さないようにする。 */
 export async function queueEnvelope(iddId: string, type: string, xml: string): Promise<string> {
   const dir = join(stateDir(), "outbox");
   ensureDir(dir);
@@ -136,8 +128,6 @@ export async function queueEnvelope(iddId: string, type: string, xml: string): P
   return id;
 }
 
-/* ── 判断 → 書き込み ──────────────────────────────────────── */
-
 export interface DecideResult {
   ok: boolean;
   wrote: string[];
@@ -145,7 +135,6 @@ export interface DecideResult {
   error?: string;
 }
 
-/** 04 の対応表と 1:1。ここに無い action は受け付けない。 */
 export async function applyDecision(action: string, payload: Record<string, unknown>): Promise<DecideResult> {
   const iddId = String(payload.iddId ?? payload.reviewId ?? "");
   if (!iddId) return { ok: false, wrote: [], error: "iddId が空" };
@@ -178,7 +167,6 @@ export async function applyDecision(action: string, payload: Record<string, unkn
         reason: payload.reason as string | undefined,
         notes: payload.notes as string | undefined,
       }));
-      // batch 内の全問が揃ったかは reader 側で判定する。ここでは envelope を積むだけ
       const id = await queueEnvelope(iddId, "question_batch_answered",
         questionAnsweredEnvelope(iddId, batchId, [{
           questionId,
@@ -214,8 +202,6 @@ export async function applyDecision(action: string, payload: Record<string, unkn
       wrote.push(await appendLifecycle("s4_verify_clean", iddId, {}));
       return { ok: true, wrote };
 
-    // open-questions #13 — S4 の態度 3 の「回答」を記録する event が handoff に無い。
-    // 暫定で s4_verify_user_judgment_answered を使い、決まり次第 rename する。
     case "s4_revise":
     case "s4_sub_todo": {
       wrote.push(await appendLifecycle("s4_verify_user_judgment_answered", iddId, {
@@ -236,7 +222,6 @@ export async function applyDecision(action: string, payload: Record<string, unkn
       return { ok: true, wrote };
     }
 
-    // open-questions #15 — agent への発言を記録するかは未決。暫定で残す
     case "speak": {
       wrote.push(await appendLifecycle("s2_interjection", iddId, { message: String(payload.message ?? "") }));
       const id = await queueEnvelope(iddId, "info_update",

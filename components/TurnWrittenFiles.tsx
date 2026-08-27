@@ -6,6 +6,7 @@ import type { WrittenFile } from "@/lib/turn-written-files";
 import { getFileIcon } from "./FileIcons";
 
 // intent: DEC-300 — 書いたファイル一覧は tool call 結果からのみ導出、返答本文の path 抽出はしない
+
 export function TurnWrittenFiles({ files, onOpenFile }: {
   files: WrittenFile[];
   onOpenFile?: (filePath: string) => void;

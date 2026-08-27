@@ -71,7 +71,6 @@ export default function RootLayout({
       <body translate="no" className="notranslate" suppressHydrationWarning>
         {children}
         <PwaRegistration />
-        {/* intent: 出先の端末で最新 build を見ているか判別するための刻印 (source の最終更新時刻) */}
         <div
           aria-hidden
           style={{

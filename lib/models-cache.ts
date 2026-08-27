@@ -22,6 +22,7 @@ declare global {
 const MODELS_CACHE_TTL_MS = 60_000;
 const MAX_MODELS_CACHE_ENTRIES = 32;
 // intent: DEC-183 — model load 失敗のエラー文言は path/provider を含めず、SDK error 由来の内部情報を UI に漏らさない
+
 const SAFE_MODEL_LOAD_FAILURE_MESSAGE = "Model list is temporarily unavailable. Check your configuration and try again.";
 
 function getModelsCacheState(): ModelsCacheState {

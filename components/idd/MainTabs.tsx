@@ -1,14 +1,13 @@
 "use client";
 
-// intent: main の上に置く薄いタブ帯。既存 pi-web の右 file panel の TabBar とは別物で、
-// こちらは「今 main に何を出すか」(Inbox / Chat / lane) を切り替える。
-// Inbox は常設 (閉じられない)、lane は file タブと同じく開閉できる。
+// intent: DEC-633 — 既存 shell への追加点その 1: main に何を出すかのタブ帯
+// intent: DEC-639 — fixture 表示の切替を UI に持つ
 
 import { FS } from "@/lib/idd-ui/scale";
 import { isIddMock, setIddMock } from "@/hooks/useIddState";
 import { useEffect, useState } from "react";
 
-export type MainView = string; // "inbox" | "chat" | `lane:${iddId}`
+export type MainView = string;
 
 export function laneView(iddId: string): MainView {
   return `lane:${iddId}`;
@@ -18,7 +17,6 @@ export function laneIdOf(view: MainView): string | null {
   return view.startsWith("lane:") ? view.slice(5) : null;
 }
 
-/** state file が薄いうちは fixture で見たい。切替は localStorage に持つ。 */
 function MockToggle() {
   const [on, setOn] = useState(false);
   useEffect(() => { setOn(isIddMock()); }, []);

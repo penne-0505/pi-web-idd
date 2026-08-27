@@ -17,6 +17,7 @@ function readToolPath(input: Record<string, unknown> | undefined): string | null
 }
 
 // intent: DEC-236 — 書き込みの真実は write/edit ツール結果のみ、reply text の言及は無視
+
 export function extractTurnWrittenFiles(
   content: AssistantContentBlock[],
   toolResults: Map<string, ToolResultMessage> | undefined,

@@ -1,14 +1,14 @@
 "use client";
 
-// intent: Figma `00 foundation` の語彙をそのまま実装したもの。ここに無い見た目は使わない。
-// 濃度は pi-web の CSS 変数へ写している (無彩色化済み)。
+// intent: DEC-638 — 状態は語ではなく形と濃度で示す
+// intent: DEC-637 — 固定ラベルの操作はアイコン付きボタン、主と対は同寸
+// intent: DEC-636 — 選択は枠の濃度のみ。地は hover が使う channel
+// intent: DEC-624 — 器つきの card は上 (識別+主題) / 中 (流れる) / 下 (操作) の 3 面
 
 import { Children, createContext, isValidElement, useContext, useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import type { CriterionState, SourceRef } from "@/lib/idd-ui/types";
 import { FS } from "@/lib/idd-ui/scale";
-
-/* ── アイコン ─────────────────────────────────────────────── */
 
 export const ICON_PATHS = {
   merge: "M 3 2 L 3 6 C 3 9 6 10 8 10 M 13 2 L 13 6 C 13 9 10 10 8 10 M 8 10 L 8 14",
@@ -46,9 +46,6 @@ export function Icon({ name, size = 16, color = "var(--text)", weight = 1.3 }: {
   );
 }
 
-/* ── chip ─────────────────────────────────────────────────── */
-
-/** phase は塗り、それ以外は線。 */
 export function Chip({ label, strong, title }: { label: string; strong?: boolean; title?: string }) {
   return (
     <span
@@ -67,7 +64,6 @@ export function Chip({ label, strong, title }: { label: string; strong?: boolean
   );
 }
 
-/** 外へ出る参照。↗ を必ず持つ。 */
 export function RefChip({ source, onOpen }: { source: SourceRef; onOpen?: (s: SourceRef) => void }) {
   return (
     <button
@@ -87,7 +83,6 @@ export function RefChip({ source, onOpen }: { source: SourceRef; onOpen?: (s: So
   );
 }
 
-/** 選択肢の番号。読む要素ではなく押す手段なので行の右端に置く。 */
 export function KeyChip({ n }: { n: number | string }) {
   return (
     <span
@@ -119,9 +114,6 @@ export function RequiredChip({ required }: { required?: boolean }) {
   );
 }
 
-/* ── 状態を示す部品 ────────────────────────────────────────── */
-
-/** 取り込み / 下調べ / 実装 / 確認 / 提出。止まっている lane は現在地が破線。 */
 export function StageBar({ done, current, halted, faded }: {
   done: number;
   current?: number | null;
@@ -149,7 +141,6 @@ export function StageBar({ done, current, halted, faded }: {
   );
 }
 
-/** 条件の状態。確認済みは沈め、進行中と未着手だけ立てる。 */
 export function CriterionMark({ state }: { state: CriterionState }) {
   if (state === "done") return <Icon name="approve" size={12} color="var(--text-dim)" />;
   if (state === "doing") {
@@ -172,11 +163,8 @@ export function LiveDot() {
   return <span aria-hidden style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--accent)", flexShrink: 0 }} />;
 }
 
-/* ── 操作 ─────────────────────────────────────────────────── */
-
 export type ButtonVariant = "primary" | "secondary" | "quiet";
 
-/** 主 = 塗り、対 = 同寸の線。押したら確定。 */
 export function ActionButton({ icon, label, variant = "secondary", disabled, minWidth, fullWidth, onClick }: {
   icon?: IconName;
   label: string;
@@ -215,17 +203,14 @@ export function ActionButton({ icon, label, variant = "secondary", disabled, min
   );
 }
 
-/** 取り返しのつかない判断の前に挟む確認。undo を持たない代わりの緩衝材。
-    popup にはしない (別の面に見えると「最終確認」の重さが出て、判断そのものを歪める)。
-    操作面をその場で差し替え、外に出るものだけを値で見せて、確定 / やめる の 2 択にする。 */
+// intent: DEC-628 — undo を持たない代わりの緩衝材。popup にせず操作面をその場で差し替える
+
 export function ConfirmGate({ trigger, consequences, confirmLabel, onConfirm, compact, children }: {
   trigger: { icon?: IconName; label: string; variant?: ButtonVariant; minWidth?: number; iconOnly?: boolean; size?: number };
-  /** 押した結果、外に出るもの。文章にしない。 */
   consequences: string[];
   confirmLabel?: string;
   onConfirm: () => void;
   compact?: boolean;
-  /** 平常時に並ぶ他の操作。確認中は隠す (2 択に絞る)。 */
   children?: ReactNode;
 }) {
   const [armed, setArmed] = useState(false);
@@ -298,7 +283,6 @@ export function ConfirmGate({ trigger, consequences, confirmLabel, onConfirm, co
   );
 }
 
-/** 判断ではない操作 (移動・問い合わせ)。ラベルは title に退避する。 */
 export function IconButton({ icon, title, onClick, tone = "var(--text)", size = 34 }: {
   icon: IconName;
   title: string;
@@ -324,7 +308,6 @@ export function IconButton({ icon, title, onClick, tone = "var(--text)", size = 
   );
 }
 
-/** 対等な二択。器を共有させ、隣接そのもので裏返しの関係を示す。 */
 export function SegmentedPair({ items, fullWidth }: {
   items: { icon: IconName; label: string; onClick?: () => void }[];
   fullWidth?: boolean;
@@ -353,7 +336,6 @@ export function SegmentedPair({ items, fullWidth }: {
   );
 }
 
-/** agent が生成した選択肢。選択は枠の濃度のみで示し、文字と地は動かさない。 */
 export function OptionRow({ label, index, selected, onClick, children }: {
   label: string;
   index?: number | string;
@@ -384,7 +366,6 @@ export function OptionRow({ label, index, selected, onClick, children }: {
   );
 }
 
-/** 入力欄。名前 + 必須/任意 + ⓘ を持ち、説明は title に退避する。 */
 export function Field({ label, required, hint, placeholder, rows = 1, value, onChange }: {
   label: string;
   required?: boolean;
@@ -417,8 +398,6 @@ export function Field({ label, required, hint, placeholder, rows = 1, value, onC
   );
 }
 
-/* ── 骨組み ───────────────────────────────────────────────── */
-
 export function SectionLabel({ label, right }: { label: string; right?: ReactNode }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -435,15 +414,10 @@ export function Divider({ vertical }: { vertical?: boolean }) {
     : <span aria-hidden style={{ height: 1, width: "100%", background: "var(--border)" }} />;
 }
 
-/** 判断 card の器。全周 1px、識別 → 状況 → 操作 の 3 群を 16 / 24 で切る。 */
-/** card の内側の余白。消え際の位置もここから引く (ずれると帯が見えてしまう)。 */
 const CARD_PAD = 20;
 
-/** 器の高さが外から決まっている場面 (札束) では card がその高さを満たす。 */
 export const CardFrame = createContext(false);
 
-/** 固定面へ回す子であることの目印。primitives → parts の import を作らずに識別する。
-    __head = 何の判断か (上に固定) / __hud = 何を押せるか (下に固定)。間だけが流れる。 */
 type Marked = { __head?: boolean; __hud?: boolean };
 
 export function Card({ children }: { children: ReactNode }) {
@@ -463,7 +437,6 @@ export function Card({ children }: { children: ReactNode }) {
     );
   }
 
-  // 器の高さが固定されている場面。情報は器の中で流れ、操作はその上に乗ったまま動かない。
   const all = Children.toArray(children);
   const mark = (c: unknown, key: keyof Marked) => isValidElement(c) && Boolean((c.type as Marked)?.[key]);
   const head = all.filter((c) => mark(c, "__head"));
@@ -485,7 +458,6 @@ export function Card({ children }: { children: ReactNode }) {
         </div>
       ) : null}
       <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", gap: 16, padding: head.length ? `0 ${CARD_PAD}px ${CARD_PAD}px` : CARD_PAD }}>
-        {/* 上へ消えていく側にも同じ消え際を置く */}
         {head.length ? (
           <div
             aria-hidden
@@ -498,13 +470,11 @@ export function Card({ children }: { children: ReactNode }) {
           />
         ) : null}
         {body}
-        {/* 続きがあることは、切れ目ではなく消え際で示す */}
         <div
           aria-hidden
           style={{
             position: "sticky", bottom: -CARD_PAD, flexShrink: 0,
             height: CARD_PAD + 8, marginTop: "auto",
-            // 左右の padding ぶんまで覆う。端に覆い残しの帯ができないようにする
             marginBottom: -CARD_PAD, marginLeft: -CARD_PAD, marginRight: -CARD_PAD,
             background: "linear-gradient(to bottom, transparent, var(--bg))",
             pointerEvents: "none",

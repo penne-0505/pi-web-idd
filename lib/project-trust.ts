@@ -21,6 +21,7 @@ export function trustProject(cwd: string, agentDir: string): ProjectTrustStatus 
 }
 
 // intent: DEC-249 — 未信頼 project の .pi/extensions・skills を trust store で dormant にし、開くだけでコードが走る事故 (#236) を防ぐ
+
 export function projectTrustReloadOptions(
   cwd: string,
   agentDir: string,

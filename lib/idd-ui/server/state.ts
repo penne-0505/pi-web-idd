@@ -1,8 +1,5 @@
-// intent: handoff の state file (backlog / lifecycle / pending-* / executor-progress / cron-run) を
-// 読んで UI の view model に畳む。DEC / QA は event ではなく intent の file から parse する
-// (open-questions #16 の B 案: event には数だけ、中身は file 側)。
-//
-// state file が無い環境では source: "empty" を返す。UI 側は mock に落として動き続ける。
+// intent: DEC-601 — state file 群を UI が描ける形へ fold する境界はここ 1 枚
+// intent: DEC-604 — DEC / QA の本文は event ではなく intent file から parse する
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -12,8 +9,6 @@ import type {
 import { intentRoot as intentRootPath, stateDir as stateDirPath } from "./state-paths";
 import { buildTimeline } from "./events-display";
 import { changedFiles, type SessionRecord } from "./lane-work";
-
-/* ── 置き場所 ─────────────────────────────────────────────── */
 
 export { intentRoot, stateDir } from "./state-paths";
 
@@ -32,8 +27,6 @@ function readJson<T>(path: string): T | null {
   if (!existsSync(path)) return null;
   try { return JSON.parse(readFileSync(path, "utf8")) as T; } catch { return null; }
 }
-
-/* ── 生 record ────────────────────────────────────────────── */
 
 interface BacklogRecord {
   idd_id: string;
@@ -97,8 +90,6 @@ interface CronRunRecord {
   failure_details: { idd_id?: string; reason?: string }[];
 }
 
-/* ── 読み取り ─────────────────────────────────────────────── */
-
 export function readBacklog(): BacklogRecord[] {
   return readJsonl<BacklogRecord>(join(stateDirPath(), "backlog.jsonl"));
 }
@@ -122,7 +113,6 @@ export function readOpenQuestions(): PendingQuestionBatch[] {
     readJsonl<PendingAnswer>(join(stateDirPath(), "pending-answers.jsonl"))
       .map((a) => `${a.idd_id}/${a.batch_id}/${a.question_id}`),
   );
-  // 全問揃った batch は resume 済みなので出さない
   return batches.filter((b) => b.questions.some((q) => !answered.has(`${b.idd_id}/${b.batch_id}/${q.question_id}`)));
 }
 
@@ -145,9 +135,6 @@ export function readLatestCronRun(): CronRunRecord | null {
   return readJson<CronRunRecord>(join(dir, newest.f));
 }
 
-/* ── 派生 ─────────────────────────────────────────────────── */
-
-/** events.md の対応表。最新 event から現在の状態を決める。 */
 export function deriveStage(events: LifecycleRecord[]): {
   group: LaneGroup;
   stageDone: number;
@@ -197,7 +184,6 @@ function sourceOf(rec: BacklogRecord): SourceRef | undefined {
   return undefined;
 }
 
-/** `3h` `12m` `昨日` に整形する。 */
 export function elapsedLabel(iso: string, now = Date.now()): string {
   const t = Date.parse(iso);
   if (Number.isNaN(t)) return "";
@@ -210,11 +196,8 @@ export function elapsedLabel(iso: string, now = Date.now()): string {
   return d === 1 ? "昨日" : `${d}d`;
 }
 
-/* ── intent の parse ──────────────────────────────────────── */
-
 const HEADING = /^#{2,3}\s*((?:DEC|QA|INV)-[\w.]+)\s*[—–:-]?\s*(.+?)\s*$/;
 
-/** `## DEC-1 — <一文>` のような見出しを拾う。書式が崩れていたら空で返す。 */
 export function parseIntent(area: string, slug: string): {
   decisions: { id: string; text: string }[];
   criteria: { id: string; text: string }[];

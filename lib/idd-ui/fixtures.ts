@@ -1,5 +1,4 @@
-// intent: pipeline (cron / planner / executor) が動く前に UI を完成させるための mock。
-// 内容は Figma の確定形と同じ。API 接続時にこの module ごと差し替える。
+// intent: DEC-603 — pipeline が動く前に UI を完成させるための fixture
 
 import type { CronRun, InboxItem, LaneDetailView, LaneRow, LaneSection } from "./types";
 

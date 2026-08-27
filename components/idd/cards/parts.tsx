@@ -1,7 +1,8 @@
 "use client";
 
-// intent: 判断 card の共通部位。識別 (2 行) / 対比 / 事実の表 / 条件の列 / 2 pane の差分。
-// 余白は Figma の階段に合わせる: 群の中 4-8 / 情報ブロック間 12 / 情報 → 操作 24。
+// intent: DEC-624 — 情報ブロックは card 側の 1 本のスクロールに乗る (入れ子にしない)
+// intent: DEC-625 — 主題は識別に属する
+// intent: DEC-629 — 重複確認は「関係」を形で示す
 
 import { useContext } from "react";
 import type { ReactNode } from "react";
@@ -9,7 +10,6 @@ import type { CriterionState, DiffLine, SourceRef, StateFact } from "@/lib/idd-u
 import { CardFrame, Chip, CriterionMark, Icon, RefChip, StageBar } from "../primitives";
 import { FS } from "@/lib/idd-ui/scale";
 
-/** 1 行目 = phase と状態、右に内部 ID と stage。2 行目 = 主題と参照。 */
 export function Identity({ phase, chips, iddId, stage, subject, subjectWeak, refs }: {
   phase: string;
   chips?: string[];
@@ -40,14 +40,10 @@ export function Identity({ phase, chips, iddId, stage, subject, subjectWeak, ref
   );
 }
 
-/** 情報ブロックの入れ物。ブロック同士は 12。 */
 export function InfoBlocks({ children }: { children: ReactNode }) {
-  // 流れる側は card 側の 1 本だけ。ここを入れ子のスクロールにすると、
-  // 兄弟が高いときに flex で 0 まで潰れ、中身へ到達できなくなる。
   return <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>{children}</div>;
 }
 
-/** 情報 → 操作 は 24 (Card の 16 + marginTop 8)。mobile では横に入らないので縦へ積む。 */
 export function Actions({ children, compact }: { children: ReactNode; compact?: boolean }) {
   const framed = useContext(CardFrame);
   return (
@@ -65,20 +61,15 @@ export function Actions({ children, compact }: { children: ReactNode; compact?: 
     </div>
   );
 }
-// 器つきの card では、操作は情報の上に乗る面へ回る (Card 側が拾う)
 Actions.__hud = true;
 
 Identity.__head = true;
 
-/** その card の主題そのもの。識別と同じく「何を判断するのか」に属するので上に固定する。 */
 export function Subject({ text }: { text: string }) {
   return <span style={{ fontSize: FS.lg, fontWeight: 600, color: "var(--text)" }}>{text}</span>;
 }
 Subject.__head = true;
 
-/** 主題が「関係」のときの 2 行対比。新しい側を白地、既存側を沈める。 */
-/* 2 つの題名の重なりは、文章で述べずに題名そのものへ印を付けて示す。
-   共通の部分文字列 (2 文字以上) を貪欲に取り、下線で marking する。 */
 function commonSpans(a: string, b: string): [number, number][] {
   const spans: [number, number][] = [];
   const walk = (as: number, ae: number, bs: number, be: number) => {
@@ -120,7 +111,6 @@ function Marked({ text, against }: { text: string; against?: string }) {
 
 export function Comparison({ rows, mark }: {
   rows: { label: string; title: string; ref: SourceRef; muted?: boolean }[];
-  /** true にすると 2 行の題名の共通部分に下線が付く (重なりを見るための印) */
   mark?: boolean;
 }) {
   const other = (i: number) => (mark && rows.length === 2 ? rows[1 - i].title : undefined);
@@ -147,8 +137,6 @@ export function Comparison({ rows, mark }: {
   );
 }
 
-/** 重複確認の主題は「関係」。来たものと、すでに動いているものを、形の差と合流の記号で示す。
-    来たもの = まだ実体がない (破線・stage を持たない) / 既存 = 実在して進んでいる (実線・stage を持つ)。 */
 export function DuplicatePair({ incoming, existing, similarity }: {
   incoming: { title: string; ref: SourceRef };
   existing: { title: string; ref: SourceRef; stage?: { done: number; current: number | null } };
@@ -169,7 +157,6 @@ export function DuplicatePair({ incoming, existing, similarity }: {
         <RefChip source={incoming.ref} />
       </div>
 
-      {/* 合流の記号そのものが「重ねるかどうかを決める場面」であることを示す */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 12px", height: 34 }}>
         <span style={{ position: "relative", width: 22, height: "100%", flexShrink: 0 }} aria-hidden>
           <span style={{ position: "absolute", left: 10.5, top: 0, bottom: 0, width: 1, background: "var(--border)" }} />
@@ -197,7 +184,8 @@ export function DuplicatePair({ incoming, existing, similarity }: {
   );
 }
 
-/** 両者に共通して現れた具体物。文章の代わりに、値そのものを並べる。 */
+// intent: DEC-630 — 根拠は文章ではなく共通する具体物の列で出す (自由文は ⓘ へ)
+
 export function SharedItems({ items, hint }: { items: string[]; hint?: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -220,7 +208,6 @@ export function SharedItems({ items, hint }: { items: string[]; hint?: string })
   );
 }
 
-/** 類似度など 0-1 の量。 */
 export function Meter({ value, label, width = 110 }: { value: number; label: string; width?: number }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -232,7 +219,6 @@ export function Meter({ value, label, width = 110 }: { value: number; label: str
   );
 }
 
-/** 現状の事実。項目名 / 値 / 参照 の 3 列。参照は右端で揃える。 */
 export function FactTable({ facts }: { facts: StateFact[] }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -248,7 +234,6 @@ export function FactTable({ facts }: { facts: StateFact[] }) {
   );
 }
 
-/** 畳んだ現状。4 件を超えたらこちらを既定にする。 */
 export function CollapsedFacts({ count, primary, onOpen }: { count: number; primary?: SourceRef; onOpen?: () => void }) {
   return (
     <button
@@ -268,7 +253,6 @@ export function CollapsedFacts({ count, primary, onOpen }: { count: number; prim
   );
 }
 
-/** 番号付きの並び (DEC / QA / INV)。状態があるときは marker を出し、済んだものは沈める。 */
 export function IdList({ label, right, items }: {
   label: string;
   right?: ReactNode;
@@ -310,8 +294,8 @@ export function IdList({ label, right, items }: {
   );
 }
 
-/** 2 pane の差分。衝突があるときだけ既定で開く。mobile では unified に落とす。 */
-/** 差分の器の高さ。行数が増えても card のレイアウトを動かさない。 */
+// intent: DEC-626 — 自前の枠を持つブロックは自分の器を持ち、card のスクロールで切られない
+
 const DIFF_MAX_HEIGHT = 220;
 
 export function DiffView({ file, fileIndex, fileTotal, before, after, unified, onOpenAll }: {
@@ -350,7 +334,6 @@ export function DiffView({ file, fileIndex, fileTotal, before, after, unified, o
         <span style={{ flex: 1, fontSize: FS.sm, fontWeight: 600, color: "var(--text)" }}>{file}</span>
         <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{fileIndex} / {fileTotal} ファイル</span>
       </div>
-      {/* 差分は自前の器を持つ。card 側のスクロールに巻き込まれて行の途中で切れないようにする */}
       <div style={{ maxHeight: DIFF_MAX_HEIGHT, overflowY: "auto" }}>
         {unified ? (
           <div>

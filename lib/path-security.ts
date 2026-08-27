@@ -3,6 +3,7 @@ import path from "path";
 import { isWindowsAbsolutePath } from "./paths";
 
 // intent: DEC-131 — target/root の canonical form を問わず containment 判定するため path.win32/posix で再解決し Windows は case-fold
+
 export function isPathWithinRoots(target: string, roots: Set<string>): boolean {
   for (const root of roots) {
     const useWindowsRules = isWindowsAbsolutePath(target) || isWindowsAbsolutePath(root);

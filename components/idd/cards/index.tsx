@@ -1,7 +1,7 @@
 "use client";
 
-// intent: 判断 card 5 種。Figma `02 morning inbox` の確定形。
-// 共通規約: 固定ラベルの操作はアイコン付きボタン / 押したら確定 / 無操作と同じ操作は置かない。
+// intent: DEC-637 — 固定ラベルの操作はボタン、可変内容はリスト。押したら確定
+// intent: DEC-628 — 取り返しのつかない 4 つにだけ確認を挟む
 
 import { useState } from "react";
 import type {
@@ -15,7 +15,6 @@ import {
 } from "./parts";
 import { FS } from "@/lib/idd-ui/scale";
 
-/** 押下 = 1 判断 = 1 件の記録。payload は 04 の対応表に対応する。 */
 export type DecideHandler = (action: string, payload?: Record<string, unknown>) => void;
 
 interface CardProps<T> {
@@ -24,8 +23,6 @@ interface CardProps<T> {
   onAsk?: () => void;
   compact?: boolean;
 }
-
-/* ── 重複確認 ─────────────────────────────────────────────── */
 
 export function DuplicateCard({ item, onDecide, onAsk, compact }: CardProps<DuplicateItem>) {
   return (
@@ -59,8 +56,6 @@ export function DuplicateCard({ item, onDecide, onAsk, compact }: CardProps<Dupl
     </Card>
   );
 }
-
-/* ── 質問 ─────────────────────────────────────────────────── */
 
 export function QuestionCard({ item, onDecide, compact }: CardProps<QuestionItem>) {
   const [selected, setSelected] = useState<number | null>(null);
@@ -131,8 +126,6 @@ export function QuestionCard({ item, onDecide, compact }: CardProps<QuestionItem
   );
 }
 
-/* ── GO 待ち ──────────────────────────────────────────────── */
-
 export function GoCard({ item, onDecide, onAsk, compact }: CardProps<GoItem>) {
   return (
     <Card>
@@ -161,8 +154,6 @@ export function GoCard({ item, onDecide, onAsk, compact }: CardProps<GoItem>) {
     </Card>
   );
 }
-
-/* ── 差分確認 ─────────────────────────────────────────────── */
 
 export function ReviewCard({ item, onDecide, onAsk, compact }: CardProps<ReviewItem>) {
   const [instruction, setInstruction] = useState("");
@@ -225,8 +216,6 @@ export function ReviewCard({ item, onDecide, onAsk, compact }: CardProps<ReviewI
   );
 }
 
-/* ── 提出前確認 ───────────────────────────────────────────── */
-
 export function ShipCard({ item, onDecide, onAsk, compact }: CardProps<ShipItem>) {
   const [instruction, setInstruction] = useState("");
   return (
@@ -246,7 +235,6 @@ export function ShipCard({ item, onDecide, onAsk, compact }: CardProps<ShipItem>
           <span style={{ flex: 1 }} />
           <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{item.branch.repo}</span>
         </div>
-        {/* 差分と同じく自前の器を持つ。card 側のスクロールで途中から切られない */}
         <div style={{ flexShrink: 0, borderRadius: 5, border: "1px solid var(--border)", overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--bg-panel)", borderBottom: "1px solid var(--border)" }}>
             <span style={{ flex: 1, fontSize: FS.sm, fontWeight: 600, color: "var(--text)" }}>提出される内容</span>
@@ -305,8 +293,6 @@ export function ShipCard({ item, onDecide, onAsk, compact }: CardProps<ShipItem>
     </Card>
   );
 }
-
-/* ── 振り分け ─────────────────────────────────────────────── */
 
 export function InboxCard({ item, onDecide, onAsk, compact }: CardProps<InboxItem>) {
   switch (item.kind) {

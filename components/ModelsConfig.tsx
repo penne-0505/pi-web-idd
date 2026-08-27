@@ -50,6 +50,7 @@ import ZAIIcon from "@lobehub/icons/es/ZAI/components/Mono";
 type IconComponent = React.ComponentType<{ size?: number | string; style?: React.CSSProperties }>;
 
 // intent: DEC-410 — hasColor=true は自己配色 SVG、false は currentColor でテーマ追従
+
 const PROVIDER_ICONS: Record<string, { Icon: IconComponent; hasColor: boolean }> = {
   "anthropic":              { Icon: AnthropicIcon,        hasColor: false },
   "openai":                 { Icon: OpenAIIcon,           hasColor: false },

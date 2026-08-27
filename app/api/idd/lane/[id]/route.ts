@@ -1,4 +1,4 @@
-// intent: lane タブ 1 枚分。契約 (intent の parse) と 現物 (executor-progress) と 経過 (lifecycle)。
+// intent: DEC-632 — lane detail の 3 primitive (契約 / 現物 / 経過) を 1 回で返す
 
 import { NextResponse } from "next/server";
 import { buildLaneDetail } from "@/lib/idd-ui/server/state";

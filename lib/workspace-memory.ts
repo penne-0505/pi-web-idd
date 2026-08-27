@@ -76,6 +76,7 @@ export function clearLastOpen(
 }
 
 // intent: DEC-218 — workspace identity は projectKey → projectRoot → cwd の順で決め、Windows path 差異や同一 repo の worktree 群を 1 slot にまとめる
+
 export function workspaceKeyOf(session: {
   cwd: string;
   projectRoot?: string | null;

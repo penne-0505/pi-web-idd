@@ -1,6 +1,6 @@
 "use client";
 
-// intent: lane detail の小部品。Inbox の card と同じ語彙 (番号付きリスト / section 見出し) を使う。
+// intent: DEC-632 — lane detail の小部品。Inbox の card と同じ語彙を使う
 
 import type { ReactNode } from "react";
 import type { CriterionState } from "@/lib/idd-ui/types";

@@ -1,7 +1,8 @@
 "use client";
 
-// intent: 朝の判断キュー。stage 別に分けず、種類を問わず 1 本の待ち行列にする。
-// 取り込みの結果は判断ではないので、札束の上に積まず見出し行の端に逃がす。失敗した日だけ開ける。
+// intent: DEC-620 — 種類を問わず 1 本の待ち行列にする
+// intent: DEC-635 — 取り込みの結果は判断ではないので見出し行の端へ逃がす
+// intent: DEC-634 — mobile では器を持たず素直に流す (variant の分岐)
 
 import { useState } from "react";
 import type { CronRun, InboxItem } from "@/lib/idd-ui/types";
@@ -10,7 +11,6 @@ import { type DecideHandler } from "./cards";
 import { InboxDeck } from "./InboxDeck";
 import { FS, SIZE } from "@/lib/idd-ui/scale";
 
-/** 取り込みの結果。平常時は 1 行の残り香で足り、失敗した日だけ実体を持つ。 */
 function CronStatus({ run, open, onToggle }: { run: CronRun; open: boolean; onToggle: () => void }) {
   const failed = run.failures.length > 0;
   return (
@@ -95,7 +95,6 @@ export function InboxPanel({ cron, items, onDecide, onAsk, compact, runningSumma
   decidedId?: string | null;
   failure?: { id: string; message: string } | null;
 }) {
-  // 失敗した日は最初から開いておく。畳まれた失敗は失敗として届かない
   const [openCron, setOpenCron] = useState(cron.failures.length > 0);
 
   return (
@@ -126,7 +125,6 @@ export function InboxPanel({ cron, items, onDecide, onAsk, compact, runningSumma
             pendingId={pendingId}
             decidedId={decidedId}
             failure={failure}
-            /* mobile では操作が縦に積まれて器を食い尽くすので、器を持たず素直に流す */
             variant={compact ? "flow" : "frame"}
           />
         )}

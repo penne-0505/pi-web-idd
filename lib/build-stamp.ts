@@ -1,8 +1,8 @@
+// intent: DEC-610 — 出先の端末で「いま見ているのが最新の build か」を判別する刻印
+
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-// intent: 出先の端末で「いま見ているのが最新の build か」を判別するための刻印。
-// dev では source の最終更新時刻、build 済みでは起動時刻に落ちる。
 const WATCHED = ["app", "components", "hooks", "lib"];
 const SKIP = new Set(["node_modules", ".next", ".git", "__pycache__"]);
 const EXT = /\.(tsx?|css|mjs)$/;
@@ -25,7 +25,6 @@ function newestMtime(dir: string, depth = 0): number {
       try {
         newest = Math.max(newest, statSync(full).mtimeMs);
       } catch {
-        // 読めないものは無視
       }
     }
   }
@@ -34,7 +33,6 @@ function newestMtime(dir: string, depth = 0): number {
 
 let cached: { at: number; value: string } | null = null;
 
-/** MMDD-HHmm 形式の刻印。5 秒間だけ memo 化する (毎 request の walk を避ける)。 */
 export function getBuildStamp(): string {
   const now = Date.now();
   if (cached && now - cached.at < 5000) return cached.value;

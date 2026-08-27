@@ -35,6 +35,7 @@ export interface RunNpxResult {
 }
 
 // intent: DEC-238 — shell を経由せず execFile することでユーザ引数をシェル構文として解釈させない
+
 export async function runNpx(args: string[], opts: RunNpxOptions = {}): Promise<RunNpxResult> {
   const npxCli = findNpxCli();
   const { command, commandArgs } = npxCli

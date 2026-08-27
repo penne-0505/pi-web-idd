@@ -228,6 +228,7 @@ interface CodeBlockProps {
 }
 
 // intent: DEC-303 — CodeBlock は memo 化＋ストリーム中はプレーン表示、Prism 再トークン化コストを抑える
+
 export const CodeBlock = memo(function CodeBlock({ code, lang, headerAction, isStreaming }: CodeBlockProps) {
   const { isDark } = useTheme();
   const { t } = useI18n();

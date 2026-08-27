@@ -12,6 +12,7 @@ function declaredContentLength(request: Request): number | null {
 }
 
 // intent: DEC-254 — chunked encoding では Content-Length が欠落/詐称され得るため、実際のワイヤバイト数を数えて上限判定する
+
 export async function parseFormDataWithinLimit(request: Request, maxBytes: number): Promise<FormData> {
   const declared = declaredContentLength(request);
   if (declared !== null && declared > maxBytes) {

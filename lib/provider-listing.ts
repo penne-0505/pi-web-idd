@@ -49,6 +49,7 @@ function dedupeById(providers: readonly ProviderListingInput[]): ProviderListing
 }
 
 // intent: DEC-176 — API-key list は models.json 由来と OAuth 認証中を外し、二重表示と cross-list 重複を避ける
+
 export function buildApiKeyProviderList(
   providers: readonly ProviderListingInput[],
 ): ApiKeyProviderListing[] {

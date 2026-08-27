@@ -214,6 +214,7 @@ export function isLifecycleEvent(value: unknown): value is LifecycleEventRecord 
 }
 
 // intent: DEC-005 — retired lane (last event = lifecycle_lane_close) は Python cmd_status と同じく active 一覧から除外
+
 export function foldLifecycleLedger(events: readonly unknown[]): Map<string, LaneState> {
   const full = foldLifecycleLedgerFull(events);
   const active = new Map<string, LaneState>();

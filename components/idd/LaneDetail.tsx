@@ -1,7 +1,7 @@
 "use client";
 
-// intent: lane を掘る面。primitive は 契約 (何をやると決めたか) / 現物 (いまどうなっているか) / 経過。
-// 進捗を別に持たない — 進捗とは「契約のどこまで満たしたか」でしかない。
+// intent: DEC-632 — 契約 / 現物 / 経過 の 3 primitive。進捗を別に持たない
+// intent: DEC-608 — 経過は節目と自分の判断だけを出し、間は畳む
 
 import { useState } from "react";
 import type { LaneDetailView, TimelineEntry } from "@/lib/idd-ui/types";
@@ -10,7 +10,6 @@ import { IdList, SectionHead } from "./LaneDetailParts";
 import type { DecideHandler } from "./cards";
 import { FS, SIZE } from "@/lib/idd-ui/scale";
 
-/** 経過の 1 行。畳まれている行は件数を持ち、押すと中身が同じ rail 上に開く。 */
 function TimelineRow({ entry, last, open, onToggle }: {
   entry: TimelineEntry;
   last: boolean;
@@ -93,7 +92,6 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
     <div className="idd" style={{ height: "100%", overflowY: "auto", background: "var(--bg)" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 28, padding: 24, width: "100%", maxWidth: SIZE.readWidth, margin: "0 auto", boxSizing: "border-box" }}>
 
-        {/* 識別 + lane 単位の操作 */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <Chip label={lane.phaseLabel} strong />
@@ -127,7 +125,6 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
           </div>
         </div>
 
-        {/* 経過 — 節目と自分の判断だけ。間の agent の動きは畳み、押したときだけ開く */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <SectionHead label="経過" right={
             <button
@@ -155,7 +152,6 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
           </div>
         </div>
 
-        {/* 契約 */}
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <IdList
             label="やること (方針)"
@@ -188,7 +184,6 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
           </div>
         ) : null}
 
-        {/* agent */}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <SectionHead label="この lane の agent" />
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -209,7 +204,6 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
           </div>
         </div>
 
-        {/* 現物 — 実装中なら触っているファイルと stream、GO 待ちなら下調べで見たもの */}
         {lane.work ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <SectionHead
@@ -233,7 +227,6 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
                   <span style={{ flex: 1, fontSize: FS.xs, fontWeight: s.live ? 600 : 400, color: s.live ? "var(--text)" : "var(--text-dim)" }}>{s.body}</span>
                 </div>
               ))}
-              {/* turn 境界で届く。envelope と同じ経路なので設計と矛盾しない */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
                 <input
                   value={message}
@@ -257,7 +250,6 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
           </div>
         ) : null}
 
-        {/* 判断が待っているときだけ、末尾に出す */}
         {lane.pending === "go" ? (
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <ActionButton icon="go" label="GO" variant="primary" minWidth={92} onClick={() => onDecide("s1_go", { iddId: lane.iddId })} />

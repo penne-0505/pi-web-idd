@@ -104,7 +104,6 @@ interface Props {
   // intent: DEC-320 — 未選択セッションの完走を親に伝え、ワークスペース跨ぎの完了音を鳴らせるようにする
   onBackgroundTaskDone?: () => void;
   onRunningSessionIdsChange?: (ids: Set<string>) => void;
-  // intent: 拡張 IDD — lane 行を押したら main に lane タブを開く
   onOpenLane?: (iddId: string) => void;
   selectedLaneId?: string | null;
 }
@@ -250,8 +249,6 @@ function AnimatedDropdown({ open, children, style }: { open: boolean; children: 
     </div>
   );
 }
-
-
 
 interface SessionTreeNode {
   session: SessionInfo;
@@ -429,9 +426,9 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const sessionRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const explorerRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileExplorerRef = useRef<FileExplorerHandle>(null);
-  // intent: 拡張 IDD — sidebar の mode。Sessions は既存のまま、Lanes は lane の索引
   const sidebarSearchParams = useSearchParams();
   const iddState = useIddState();
+  // intent: DEC-633 — 既存 shell への追加点その 3: sidebar の mode。Sessions は既存のまま
   const [sidebarMode, setSidebarMode] = useState<"sessions" | "lanes">(
     () => (sidebarSearchParams.get("sidebar") === "lanes" ? "lanes" : "sessions"),
   );

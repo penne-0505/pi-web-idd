@@ -15,6 +15,7 @@ interface UseGlobalKeyboardShortcutsOptions {
 }
 
 // intent: DEC-516 — global Esc は textarea/input 内では発火させず ChatInput の menu 制御に譲る
+
 export function useGlobalKeyboardShortcuts(
   options: UseGlobalKeyboardShortcutsOptions,
 ): void {

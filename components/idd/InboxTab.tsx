@@ -1,7 +1,6 @@
 "use client";
 
-// intent: Inbox タブの中身。いまは fixture で駆動し、slice 5 で API に差し替える。
-// 判断は 1 押下 = 1 件の記録なので、記録が成功するまで queue から消さない (楽観更新しない)。
+// intent: DEC-627 — 楽観更新しない。記録中 / 成功 / 失敗を札の上で示す
 
 import { useCallback, useEffect, useState } from "react";
 import { useIddState } from "@/hooks/useIddState";
@@ -17,7 +16,6 @@ export function InboxTab({ compact, onCountChange, onOpenLane }: {
 }) {
   const state = useIddState();
   const [items, setItems] = useState<InboxItem[]>(state.items);
-  // 記録できたかどうかは札ごとの状態。押した場所の近くで返す
   const [pending, setPending] = useState<string | null>(null);
   const [decided, setDecided] = useState<string | null>(null);
   const [failed, setFailed] = useState<{ id: string; message: string } | null>(null);
@@ -39,12 +37,11 @@ export function InboxTab({ compact, onCountChange, onOpenLane }: {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.ok) {
-        // 記録できていない。card は queue に残したまま、押した状態にもしない
         setPending(null);
+        // intent: DEC-627 — 記録できていない札は queue に残す
         setFailed({ id: target, message: data?.error ?? `HTTP ${res.status}` });
         return;
       }
-      // 記録できてから抜けていく。抜ける間だけ list に残す
       setPending(null);
       setDecided(target);
       window.setTimeout(() => {
@@ -67,7 +64,6 @@ export function InboxTab({ compact, onCountChange, onOpenLane }: {
       data-idd-pending={pending ?? undefined}
       style={{
         height: "100%", overflowY: "auto", background: "var(--bg)",
-        // 縦にも中央へ。margin:auto を使うので、画面より高いときも上が切れない
         display: "flex", flexDirection: "column",
       }}
     >

@@ -1,5 +1,5 @@
-// intent: 拡張 IDD の UI が 1 回で必要とするものをまとめて返す。
-// state file が無い環境では source: "empty" を返し、UI 側が mock に落ちる。
+// intent: DEC-601 — UI が 1 回で必要とするものをまとめて返す
+// intent: DEC-603 — state file が無い環境では source: "empty" を返す
 
 import { NextResponse } from "next/server";
 import { buildState } from "@/lib/idd-ui/server/state";

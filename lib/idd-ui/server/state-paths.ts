@@ -1,4 +1,4 @@
-// intent: state / intent の置き場所だけを持つ。state.ts と lane-work.ts の双方から参照されるため独立させる。
+// intent: DEC-609 — 根の解決だけを分けて state.ts と lane-work.ts の循環を避ける
 
 import { join } from "node:path";
 

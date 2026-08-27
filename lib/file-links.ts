@@ -121,6 +121,7 @@ export function resolveLocalFileHref(
 }
 
 // intent: DEC-210 — URL / source-location 構文を適用しない生 path 専用の resolver として href 側と役割を分ける
+
 export function resolveLocalFilePath(filePath: string | undefined, baseDir?: string): string | null {
   if (!filePath) return null;
 
