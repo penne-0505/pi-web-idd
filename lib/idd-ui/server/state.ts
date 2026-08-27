@@ -3,7 +3,7 @@
 
 import {
   areaSegment, buildSubmit, changedFiles, countUndelivered, deriveStage, elapsedLabel, laneActivity,
-  laneBase, laneDiff, parseIntent, readAnswers, readBacklog, readLatestCronRun, readLifecycle,
+  laneBase, laneDiff, laneDiffFiles, parseIntent, readAnswers, readBacklog, readLatestCronRun, readLifecycle,
   readOpenQuestions, readPendingReviews, readProgress, readSessions, slugOf,
 } from "@idd/core";
 import type { BacklogRecord, LaneGroup, LifecycleRecord, UndeliveredCount } from "@idd/core";
@@ -186,6 +186,7 @@ export function buildState(opts: { liveSessions?: Set<string> } = {}): IddState 
         conflictWith: conflictFiles.length
           ? { title: `${conflictFiles.length} ファイルが upstream と衝突`, ref: { kind: "file", label: conflictFiles[0] } }
           : undefined,
+        diffFiles: root && base ? laneDiffFiles(root, base) : undefined,
         diff: diff
           ? {
             file: diff.file,

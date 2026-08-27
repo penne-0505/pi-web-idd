@@ -39,9 +39,19 @@ export function ensureLaneWorktree(area: string, iddId: string): LaneWorktree | 
     }
   })();
 
+  // intent: DEC-705 — lane は既定ブランチから切る。切った時点の HEAD に居合わせた変更を巻き込まない
+  const local = cfg.local_path;
+  const from = ["main", "origin/main", "master"].find((ref) => {
+    try {
+      git(local, ["rev-parse", "--verify", ref]);
+      return true;
+    } catch {
+      return false;
+    }
+  });
   git(cfg.local_path, hasBranch
     ? ["worktree", "add", path, branch]
-    : ["worktree", "add", "-b", branch, path]);
+    : ["worktree", "add", "-b", branch, path, ...(from ? [from] : [])]);
   return { path, branch };
 }
 

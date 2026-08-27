@@ -316,6 +316,20 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: 起動の場所は自由。「判断と実行の間に手動の一手を挟まない」だけが不変。
 - **Anchors**: `app/api/idd/decide/route.ts`
 
+### DEC-704: PR の題名は lane が最初にやったこと
+
+- **What**: `git log --reverse` で古い順に取り、先頭の commit subject を PR の題名にする。
+- **Why**: 新しい順のままだと、後から足した修正が題名になる（実際に IDD-903 の PR が「DEC を 741-745 に振り直して…」になった。lane の主題は文章作法の skill 化）。lane が何をした lane かは、最初にやったことが表す。
+- **Change freedom**: 題名の作り方は自由。「後付けの修正が主題を隠さない」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/ship.ts`
+
+### DEC-705: lane の worktree は既定ブランチから切る
+
+- **What**: `git worktree add` の起点を明示的に `main`（無ければ `origin/main` / `master`）にする。repo の HEAD には従わない。
+- **Why**: HEAD から切ると、そのとき作業中だった branch の未 merge の変更ごと lane に入る（実際に IDD-903 / 904 が私の未 merge commit を抱え、差分確認 card が 29 ファイルを表示した）。lane の差分は lane の変更だけであるべきで、それは切る時点で決まる。
+- **Change freedom**: 既定ブランチの決め方は自由。「lane が切った時点の他人の作業を巻き込まない」だけが不変。
+- **Anchors**: `packages/idd-core/src/worktree/ensure.ts`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。

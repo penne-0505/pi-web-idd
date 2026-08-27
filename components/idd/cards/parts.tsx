@@ -7,7 +7,7 @@
 import { useContext, useState } from "react";
 import type { ReactNode } from "react";
 import type { CriterionState, DiffLine, SourceRef, StateFact } from "@/lib/idd-ui/types";
-import { CardFrame, Chip, CriterionMark, Icon, RefChip, StageBar } from "../primitives";
+import { CardFrame, Chip, CriterionMark, Icon, IconButton, RefChip, StageBar } from "../primitives";
 import { FS } from "@/lib/idd-ui/scale";
 
 export function Identity({ phase, chips, iddId, stage, subject, subjectWeak, refs }: {
@@ -327,7 +327,7 @@ export function IdList({ label, right, items }: {
 
 const DIFF_MAX_HEIGHT = 220;
 
-export function DiffView({ file, fileIndex, fileTotal, before, after, unified, onOpenAll }: {
+export function DiffView({ file, fileIndex, fileTotal, before, after, unified, onOpenAll, onStep }: {
   file: string;
   fileIndex: number;
   fileTotal: number;
@@ -335,6 +335,7 @@ export function DiffView({ file, fileIndex, fileTotal, before, after, unified, o
   after: DiffLine[];
   unified?: boolean;
   onOpenAll?: () => void;
+  onStep?: (delta: number) => void;
 }) {
   const row = (l: DiffLine, key: string) => (
     <div
@@ -360,8 +361,14 @@ export function DiffView({ file, fileIndex, fileTotal, before, after, unified, o
     <div style={{ flexShrink: 0, borderRadius: 5, border: "1px solid var(--border)", overflow: "hidden", background: "var(--bg)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "var(--bg-panel)", borderBottom: "1px solid var(--border)" }}>
         <Icon name="diff" size={13} color="var(--text-muted)" />
-        <span style={{ flex: 1, fontSize: FS.sm, fontWeight: 600, color: "var(--text)" }}>{file}</span>
-        <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{fileIndex} / {fileTotal} ファイル</span>
+        <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: FS.sm, fontWeight: 600, color: "var(--text)" }}>{file}</span>
+        <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{fileIndex} / {fileTotal}</span>
+        {onStep ? (
+          <span style={{ display: "flex", gap: 4 }}>
+            <IconButton icon="up" title="前のファイル" size={26} onClick={() => onStep(-1)} />
+            <IconButton icon="down" title="次のファイル" size={26} onClick={() => onStep(1)} />
+          </span>
+        ) : null}
       </div>
       <div style={{ maxHeight: DIFF_MAX_HEIGHT, overflowY: "auto" }}>
         {unified ? (
