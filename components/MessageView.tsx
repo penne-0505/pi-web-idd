@@ -334,7 +334,7 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
             <img
               src={src}
               alt=""
-              style={{ maxWidth: 240, maxHeight: 240, borderRadius: 6, objectFit: "contain", display: "block", border: "1px solid rgba(59,130,246,0.15)" }}
+              style={{ maxWidth: 240, maxHeight: 240, borderRadius: 6, objectFit: "contain", display: "block", border: "1px solid var(--border)" }}
             />
           </ImagePreview>
         );
@@ -362,7 +362,7 @@ function UserMessageView({ message, cwd, onOpenFile, entryId, onFork, forking, o
             flex: 1,
             minWidth: 0,
             background: "var(--user-bg)",
-            border: "1px solid rgba(59,130,246,0.2)",
+            border: "1px solid var(--border)",
             borderRadius: 12,
             padding: "8px 12px",
             fontSize: 14,
@@ -1189,7 +1189,7 @@ function PatchTextView({ text }: { text: string }) {
         const bg =
           kind === "added" ? "rgba(34,197,94,0.12)" :
           kind === "removed" ? "rgba(248,113,113,0.13)" :
-          kind === "hunk" ? "rgba(96,165,250,0.12)" :
+          kind === "hunk" ? "rgba(128,128,128,0.14)" :
           "transparent";
         const color =
           kind === "added" ? "#22c55e" :

@@ -2166,7 +2166,7 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
                              {m.id || t("i18n.newModel")}
                           </span>
                           {m.reasoning && (
-                            <span style={{ fontSize: 9, padding: "1px 4px", background: "rgba(99,102,241,0.12)", color: "rgba(99,102,241,0.8)", borderRadius: 3, flexShrink: 0 }}>T</span>
+                            <span style={{ fontSize: 9, padding: "1px 4px", background: "var(--bg-hover)", color: "var(--text-muted)", borderRadius: 3, flexShrink: 0 }}>T</span>
                           )}
                         </div>
                       );

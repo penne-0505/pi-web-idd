@@ -1842,7 +1842,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
                 : "color-mix(in srgb, var(--border) 70%, transparent)"}`,
               borderRadius: 14,
               padding: "10px 10px 10px 14px",
-              boxShadow: "0 1px 2px rgba(15,23,42,0.04), 0 8px 24px -12px rgba(15,23,42,0.10)",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.05), 0 8px 24px -12px rgba(0,0,0,0.10)",
               transition: "border-color 0.15s, background 0.15s, box-shadow 0.15s",
             } as React.CSSProperties}
           >
@@ -1932,7 +1932,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
                     background: canQueueStreamingMessage ? "rgba(129,140,248,0.12)" : "none",
                     border: "1px solid rgba(129,140,248,0.35)",
                     borderRadius: 8,
-                    color: canQueueStreamingMessage ? "rgba(99,102,241,1)" : "var(--text-dim)",
+                    color: canQueueStreamingMessage ? "var(--accent)" : "var(--text-dim)",
                     cursor: canQueueStreamingMessage ? "pointer" : "not-allowed",
                     fontSize: 13, fontWeight: 600, letterSpacing: "-0.01em",
                     transition: "background 0.12s",
@@ -1963,7 +1963,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
                 fontSize: 13,
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
-                boxShadow: (value.trim() || attachedImages.length) ? "0 1px 3px rgba(37,99,235,0.25)" : "none",
+                boxShadow: (value.trim() || attachedImages.length) ? "0 1px 3px rgba(0,0,0,0.18)" : "none",
                 transition: "background 0.15s, box-shadow 0.15s",
               }}
             >

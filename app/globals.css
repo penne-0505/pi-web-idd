@@ -11,6 +11,7 @@
   --color-text-dim: var(--text-dim);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
+  --color-border-strong: var(--border-strong);
   --color-user-bg: var(--user-bg);
   --color-assistant-bg: var(--assistant-bg);
   --color-tool-bg: var(--tool-bg);
@@ -18,37 +19,44 @@
   --font-mono-font: var(--font-mono);
 }
 
+/* 拡張 IDD の wireframe に合わせて無彩色化 (2026-08-26)。
+   青の accent は廃止し、判断・操作はすべて濃度で表す。
+   --border-strong は「選択された罫」で、既存 pi-web には無かった段。 */
 :root {
   --bg: #ffffff;
-  --bg-panel: #f5f5f5;
-  --bg-hover: #eeeeee;
-  --bg-selected: #e8e8e8;
-  --border: #e0e0e0;
-  --text: #1a1a1a;
-  --text-muted: #6b7280;
-  --text-dim: #9ca3af;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --user-bg: #eff6ff;
+  --bg-panel: #f6f6f6;
+  --bg-hover: #ededed;
+  --bg-selected: #e6e6e6;
+  --border: #d6d6d6;
+  --border-strong: #999999;
+  --text: #1f1f1f;
+  --text-muted: #737373;
+  --text-dim: #a8a8a8;
+  --accent: #262626;
+  --accent-hover: #000000;
+  --user-bg: #f2f2f2;
   --assistant-bg: #ffffff;
-  --tool-bg: #f9fafb;
+  --tool-bg: #fafafa;
   --bg-subtle: rgba(0,0,0,0.03);
 }
 
+/* dark も無彩色。accent は地に使われ文字が #fff 固定の箇所があるため、
+   明るくしすぎず中間の灰に留める。 */
 html.dark {
   --bg: #1a1a1a;
   --bg-panel: #242424;
   --bg-hover: #2e2e2e;
   --bg-selected: #383838;
-  --border: #3a3a3a;
+  --border: #414141;
+  --border-strong: #757575;
   --text: #e8e8e8;
-  --text-muted: #9ca3af;
-  --text-dim: #6b7280;
-  --accent: #60a5fa;
-  --accent-hover: #93c5fd;
-  --user-bg: #1e293b;
+  --text-muted: #a3a3a3;
+  --text-dim: #737373;
+  --accent: #595959;
+  --accent-hover: #6e6e6e;
+  --user-bg: #262626;
   --assistant-bg: #1a1a1a;
-  --tool-bg: #1f2937;
+  --tool-bg: #202020;
   --bg-subtle: rgba(255,255,255,0.04);
 }
 
@@ -106,7 +114,8 @@ html, body {
   background: var(--bg);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 14px;
+  /* rem の基準。IDD 側の文字はすべてここに追従する (WQHD で小さすぎたため 14 → 16) */
+  font-size: 16px;
   overscroll-behavior: none;
 }
 
@@ -1414,4 +1423,133 @@ span.token.table {
   select {
     font-size: 16px !important;
   }
+}
+
+/* ── 拡張 IDD の motion ────────────────────────────────────────
+   動きは状態変化の説明にだけ使う。位置が変わらないもの (器 / HUD / 識別) は動かさない。
+   動く向きは意味の向きと一致させる: 次の札は下から、戻る札は上から、判断済みは手前へ消える。
+   速さは 3 段 — 押下 90ms / 入れ替え 160ms / 面の転換 240ms。 */
+
+.idd {
+  --idd-fast: 90ms;
+  --idd-base: 160ms;
+  --idd-slow: 240ms;
+  --idd-ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.idd button,
+.idd input,
+.idd textarea {
+  transition:
+    background-color var(--idd-fast) var(--idd-ease),
+    border-color var(--idd-fast) var(--idd-ease),
+    color var(--idd-fast) var(--idd-ease),
+    opacity var(--idd-fast) var(--idd-ease),
+    transform var(--idd-fast) var(--idd-ease);
+}
+
+/* 押下は最速。押した実感だけを返し、意味は持たせない */
+.idd button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+/* 札の入れ替え。奥行き (大きさ) が「束から出てくる」を、向きが「次 / 戻る」を語る */
+.idd-enter-next { animation: idd-from-below var(--idd-base) var(--idd-ease) both; }
+.idd-enter-prev { animation: idd-from-above var(--idd-base) var(--idd-ease) both; }
+
+/* 主は大きさ (束の奥から手前へ出てくる)、従は向き (次 = 下から / 戻る = 上から) */
+@keyframes idd-from-below {
+  from { opacity: 0; transform: scale(0.975) translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes idd-from-above {
+  from { opacity: 0; transform: scale(0.975) translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 判断が済んだ札は手前へ抜ける。次が下から来るのと向きが衝突しない */
+.idd-leave {
+  animation: idd-to-front var(--idd-base) var(--idd-ease) both;
+  pointer-events: none;
+}
+@keyframes idd-to-front {
+  to { opacity: 0; transform: scale(1.03); }
+}
+
+/* 記録中。押した先で待たされていることを、札の縁を走る線だけで示す */
+.idd-recording { animation: idd-run 1100ms linear infinite; }
+@keyframes idd-run {
+  0% { left: -35%; right: 100%; }
+  60% { left: 20%; right: 0%; }
+  100% { left: 100%; right: 0%; }
+}
+
+/* 記録できなかったとき。押した場所の近くで、1 度だけ短く申告する */
+.idd-failed { animation: idd-shake 240ms var(--idd-ease) both; }
+@keyframes idd-shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  55% { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+}
+
+.idd-marker { transition: width var(--idd-base) var(--idd-ease), height var(--idd-base) var(--idd-ease), color var(--idd-base) var(--idd-ease); }
+.idd-marker > span { transition: transform var(--idd-base) var(--idd-ease); }
+.idd-behind { transition: top var(--idd-base) var(--idd-ease), bottom var(--idd-base) var(--idd-ease), opacity var(--idd-base) var(--idd-ease); }
+
+/* 距離は消すが、変化そのものは残す */
+@media (prefers-reduced-motion: reduce) {
+  .idd-enter-next, .idd-enter-prev { animation: idd-fade var(--idd-base) var(--idd-ease) both; }
+  .idd-leave { animation: idd-fade-out var(--idd-base) var(--idd-ease) both; }
+  .idd-leave { animation: idd-fade-out var(--idd-base) var(--idd-ease) both; }
+  .idd-failed, .idd button:not(:disabled):active { animation: none; transform: none; }
+  @keyframes idd-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes idd-fade-out { to { opacity: 0; } }
+}
+
+/* ── hover / focus ────────────────────────────────────────────
+   channel を分ける: hover は「地」、選択は「枠」。同じ channel を使うと
+   「触れている」と「選ばれている」が混ざる。hover は状態ではないので跡を残さない。 */
+
+/* 地と縁は component 側が inline style で持っているため、hover はそれを上書きする必要がある
+   (inline style は class より強い)。ここは意図的な !important。 */
+.idd-btn:not(:disabled):hover,
+.idd-row:hover,
+.idd-option:hover {
+  background-color: var(--bg-hover) !important;
+}
+
+/* 線のボタンは、地に加えて縁も一段起こす (押せる面であることを縁が担っているため) */
+.idd-btn-secondary:not(:disabled):hover {
+  border-color: var(--border-strong) !important;
+}
+
+/* 塗りのボタンは地しか持たないので、地を一段深くする */
+.idd-btn-primary:not(:disabled):hover {
+  background-color: var(--accent-hover) !important;
+  border-color: var(--accent-hover) !important;
+}
+
+.idd-marker:hover { color: var(--text) !important; }
+
+.idd-link {
+  transition: color var(--idd-fast) var(--idd-ease);
+}
+.idd-link:hover {
+  color: var(--text) !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 触れている間だけの気配。指では hover が無いので、動きに依存させない */
+@media (hover: none) {
+  .idd-btn:not(:disabled):hover,
+  .idd-row:hover,
+  .idd-option:hover { background-color: transparent !important; }
+}
+
+.idd :focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
