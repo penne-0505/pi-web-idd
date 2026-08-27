@@ -9,16 +9,13 @@ import { basename, join } from "node:path";
 import type {
   CriterionState, InboxItem, LaneDetailView, LaneGroup, LaneRow, LaneSection, SourceRef, StateFact,
 } from "../types";
+import { intentRoot as intentRootPath, stateDir as stateDirPath } from "./state-paths";
+import { buildTimeline } from "./events-display";
+import { changedFiles, type SessionRecord } from "./lane-work";
 
 /* ── 置き場所 ─────────────────────────────────────────────── */
 
-export function stateDir(): string {
-  return process.env.IDD_STATE_DIR?.trim() || join(process.cwd(), "state");
-}
-
-export function intentRoot(): string {
-  return process.env.IDD_INTENT_DIR?.trim() || join(process.cwd(), "_docs", "intent");
-}
+export { intentRoot, stateDir } from "./state-paths";
 
 function readJsonl<T>(path: string): T[] {
   if (!existsSync(path)) return [];
@@ -103,11 +100,11 @@ interface CronRunRecord {
 /* ── 読み取り ─────────────────────────────────────────────── */
 
 export function readBacklog(): BacklogRecord[] {
-  return readJsonl<BacklogRecord>(join(stateDir(), "backlog.jsonl"));
+  return readJsonl<BacklogRecord>(join(stateDirPath(), "backlog.jsonl"));
 }
 
 export function readLifecycle(): LifecycleRecord[] {
-  const dir = stateDir();
+  const dir = stateDirPath();
   if (!existsSync(dir)) return [];
   return readdirSync(dir)
     .filter((f) => f.startsWith("lifecycle-") && f.endsWith(".jsonl"))
@@ -116,25 +113,29 @@ export function readLifecycle(): LifecycleRecord[] {
 }
 
 export function readPendingReviews(): PendingReview[] {
-  return readJsonl<PendingReview>(join(stateDir(), "pending-reviews.jsonl"));
+  return readJsonl<PendingReview>(join(stateDirPath(), "pending-reviews.jsonl"));
 }
 
 export function readOpenQuestions(): PendingQuestionBatch[] {
-  const batches = readJsonl<PendingQuestionBatch>(join(stateDir(), "pending-questions.jsonl"));
+  const batches = readJsonl<PendingQuestionBatch>(join(stateDirPath(), "pending-questions.jsonl"));
   const answered = new Set(
-    readJsonl<PendingAnswer>(join(stateDir(), "pending-answers.jsonl"))
+    readJsonl<PendingAnswer>(join(stateDirPath(), "pending-answers.jsonl"))
       .map((a) => `${a.idd_id}/${a.batch_id}/${a.question_id}`),
   );
   // 全問揃った batch は resume 済みなので出さない
   return batches.filter((b) => b.questions.some((q) => !answered.has(`${b.idd_id}/${b.batch_id}/${q.question_id}`)));
 }
 
+export function readSessions(kind: "planner" | "executor"): SessionRecord[] {
+  return readJsonl<SessionRecord>(join(stateDirPath(), `${kind}-sessions.jsonl`));
+}
+
 export function readProgress(iddId: string): ExecutorProgress | null {
-  return readJson<ExecutorProgress>(join(stateDir(), `executor-progress-${iddId}.json`));
+  return readJson<ExecutorProgress>(join(stateDirPath(), `executor-progress-${iddId}.json`));
 }
 
 export function readLatestCronRun(): CronRunRecord | null {
-  const dir = stateDir();
+  const dir = stateDirPath();
   if (!existsSync(dir)) return null;
   const files = readdirSync(dir).filter((f) => f.startsWith("cron-run-") && f.endsWith(".json"));
   if (!files.length) return null;
@@ -220,7 +221,7 @@ export function parseIntent(area: string, slug: string): {
   invariants: { id: string; text: string }[];
   references: { path: string; why: string }[];
 } {
-  const dir = join(intentRoot(), area, slug);
+  const dir = join(intentRootPath(), area, slug);
   const pick = (file: string) => {
     const p = join(dir, file);
     if (!existsSync(p)) return [] as { id: string; text: string }[];
@@ -256,7 +257,7 @@ export interface IddState {
 }
 
 export function buildState(): IddState {
-  const dir = stateDir();
+  const dir = stateDirPath();
   const backlog = readBacklog();
   if (!existsSync(dir) || backlog.length === 0) {
     return { source: "empty", stateDir: dir, cron: null, sections: [], lanes: [], items: [] };
@@ -406,13 +407,34 @@ export function buildLaneDetail(iddId: string): LaneDetailView | null {
     return { ...c, state };
   });
 
+  const planner = readSessions("planner").filter((r) => r.idd_id === iddId).pop();
+  const executor = readSessions("executor").filter((r) => r.idd_id === iddId).pop();
+  const startedFrom = evs.find((e) => e.event === "s2_start")?.attrs?.started_from_commit;
+  const worktree = executor?.worktree_path ?? planner?.worktree_path;
+
+  const agents: LaneDetailView["agents"] = [];
+  if (planner?.planner_session_id) {
+    agents.push({
+      role: "下調べ",
+      sessionId: planner.planner_session_id,
+      state: d.group === "prep" ? "稼働中" : "終了",
+    });
+  }
+  if (executor?.executor_session_id) {
+    agents.push({
+      role: "実装",
+      sessionId: executor.executor_session_id,
+      state: d.group === "impl" ? "稼働中" : "終了",
+    });
+  }
+
   return {
     iddId,
     title: rec.title,
     group: d.group,
     phaseLabel: d.group === "impl" ? "実装中" : d.decision === "go" ? "GO 待ち" : d.group === "waiting" ? "待機中" : "下調べ中",
     source: sourceOf(rec),
-    branch: `idd/${iddId}`,
+    branch: executor?.branch ?? planner?.branch ?? `idd/${iddId}`,
     area: rec.area,
     since: elapsedLabel(evs[evs.length - 1]?.at ?? rec.created_at) + " 前",
     contract: {
@@ -422,20 +444,13 @@ export function buildLaneDetail(iddId: string): LaneDetailView | null {
     },
     work: progress
       ? {
-        files: [],
+        files: worktree ? changedFiles(worktree, typeof startedFrom === "string" ? startedFrom : undefined) : [],
         stream: progress.recent_activity.map((a) => ({ time: progress.updated_at.slice(11, 16), kind: "…", body: a })),
       }
       : undefined,
     references: d.decision === "go" ? intent.references : undefined,
-    timeline: evs.slice(-8).map((e) => ({
-      time: e.at.slice(11, 16),
-      title: e.event,
-      detail: JSON.stringify(e.attrs ?? {}).slice(0, 60),
-      kind: e.event === "s1_go" || e.event === "s3_ok" || e.event === "question_batch_answered" ? "user" as const
-        : e.event.includes("fail") || e.event.includes("fallback") || e.event.includes("blocked") ? "warn" as const
-          : "agent" as const,
-    })),
-    agents: [],
+    timeline: buildTimeline(evs),
+    agents,
     pending: d.decision,
   };
 }

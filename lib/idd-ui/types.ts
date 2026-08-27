@@ -149,6 +149,16 @@ export interface ShipItem extends InboxBase {
 export type InboxItem = DuplicateItem | QuestionItem | GoItem | ReviewItem | ShipItem;
 
 /** lane タブの中身。 */
+/** 経過の 1 行。folded を持つものは「畳まれた agent の動き」で、items に中身を抱える。 */
+export interface TimelineEntry {
+  time: string;
+  title: string;
+  detail?: string;
+  kind: "agent" | "user" | "warn" | "mark";
+  folded?: number;
+  items?: TimelineEntry[];
+}
+
 export interface LaneDetailView {
   iddId: string;
   title: string;
@@ -171,7 +181,7 @@ export interface LaneDetailView {
   };
   /** GO 待ちのとき。 */
   references?: { path: string; why: string }[];
-  timeline: { time: string; title: string; detail: string; kind: "agent" | "user" | "warn" }[];
+  timeline: TimelineEntry[];
   agents: { role: string; sessionId: string; state: string }[];
   /** 末尾に出す判断。無ければ lane 操作のみ。 */
   pending?: DecisionKind;
