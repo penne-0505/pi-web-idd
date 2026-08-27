@@ -4,9 +4,8 @@
 // intent: DEC-639 — fixture 表示の切替を localStorage に持ち、同じ画面の全 hook が同時に切り替わる
 
 import { useCallback, useEffect, useState } from "react";
-import { MOCK_CRON, MOCK_INBOX, MOCK_LANES, MOCK_SECTIONS } from "@/lib/idd-ui/fixtures";
-import type { CronRun, InboxItem, LaneRow, LaneSection } from "@/lib/idd-ui/types";
-
+import { MOCK_CRON, MOCK_INBOX, MOCK_LANES, MOCK_SECTIONS, MOCK_UNDELIVERED } from "@/lib/idd-ui/fixtures";
+import type { CronRun, InboxItem, LaneRow, LaneSection, UndeliveredCount } from "@/lib/idd-ui/types";
 const MOCK_KEY = "idd-mock-view";
 const listeners = new Set<() => void>();
 
@@ -26,6 +25,7 @@ export interface IddStateView {
   sections: LaneSection[];
   lanes: LaneRow[];
   items: InboxItem[];
+  undelivered: UndeliveredCount;
   refresh: () => void;
 }
 
@@ -34,6 +34,7 @@ const MOCK: Omit<IddStateView, "refresh" | "source"> = {
   sections: MOCK_SECTIONS,
   lanes: MOCK_LANES,
   items: MOCK_INBOX,
+  undelivered: MOCK_UNDELIVERED,
 };
 
 export function useIddState(pollMs = 15000): IddStateView {
@@ -62,6 +63,7 @@ export function useIddState(pollMs = 15000): IddStateView {
           sections: data.sections ?? [],
           lanes: data.lanes ?? [],
           items: data.items ?? [],
+          undelivered: data.undelivered ?? { total: 0, failed: 0 },
         });
       } else {
         setState({ source: "mock", ...MOCK });

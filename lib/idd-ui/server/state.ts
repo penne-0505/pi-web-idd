@@ -2,26 +2,17 @@
 // intent: DEC-650 — ledger の読み書き・stage 判定・intent parse は @idd/core が持つ
 
 import {
-  areaSegment, buildSubmit, changedFiles, deriveStage, laneActivity, laneBase, laneDiff, elapsedLabel, parseIntent, readBacklog, readLatestCronRun,
-  readAnswers, readLifecycle, readOpenQuestions, readPendingReviews, readProgress, readSessions, slugOf,
+  areaSegment, buildSubmit, changedFiles, countUndelivered, deriveStage, elapsedLabel, laneActivity,
+  laneBase, laneDiff, parseIntent, readAnswers, readBacklog, readLatestCronRun, readLifecycle,
+  readOpenQuestions, readPendingReviews, readProgress, readSessions, slugOf,
 } from "@idd/core";
-import type { BacklogRecord, LaneGroup, LifecycleRecord } from "@idd/core";
+import type { BacklogRecord, LaneGroup, LifecycleRecord, UndeliveredCount } from "@idd/core";
 import { stateDir } from "@idd/core";
 import { existsSync } from "node:fs";
 import type {
   CriterionState, InboxItem, LaneDetailView, LaneRow, LaneSection, SourceRef, StateFact,
 } from "../types";
 import { buildTimeline } from "./events-display";
-import { getRunningRpcSessionIds } from "@/lib/rpc-manager";
-
-// intent: DEC-683 — 生きている session は runtime しか知らない。engine には集合として渡す
-function liveSessions(): Set<string> {
-  try {
-    return new Set(getRunningRpcSessionIds());
-  } catch {
-    return new Set();
-  }
-}
 
 // intent: DEC-681 — lane の成果物は worktree にあるので、その root を intent の探索に渡す
 function laneRoot(iddId: string): string | undefined {
@@ -51,13 +42,15 @@ export interface IddState {
   sections: LaneSection[];
   lanes: LaneRow[];
   items: InboxItem[];
+  undelivered: UndeliveredCount;
 }
 
-export function buildState(): IddState {
+// intent: DEC-683 — 生きている session は runtime しか知らない。呼ぶ側が集合として渡す
+export function buildState(opts: { liveSessions?: Set<string> } = {}): IddState {
   const dir = stateDir();
   const backlog = readBacklog();
   if (!existsSync(dir) || backlog.length === 0) {
-    return { source: "empty", stateDir: dir, cron: null, sections: [], lanes: [], items: [] };
+    return { source: "empty", stateDir: dir, cron: null, sections: [], lanes: [], items: [], undelivered: { total: 0, failed: 0 } };
   }
 
   const events = readLifecycle();
@@ -68,7 +61,7 @@ export function buildState(): IddState {
     byLane.set(e.idd_id, list);
   }
 
-  const live = liveSessions();
+  const live = opts.liveSessions ?? new Set<string>();
   const lanes: LaneRow[] = backlog.map((rec) => {
     const evs = byLane.get(rec.idd_id) ?? [];
     const d = deriveStage(evs);
@@ -233,6 +226,7 @@ export function buildState(): IddState {
     sections,
     lanes,
     items,
+    undelivered: countUndelivered(),
   };
 }
 
@@ -295,5 +289,6 @@ export function buildLaneDetail(iddId: string): LaneDetailView | null {
     timeline: buildTimeline(evs),
     agents,
     pending: d.decision,
+    undelivered: countUndelivered(iddId),
   };
 }

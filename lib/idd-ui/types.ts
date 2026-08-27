@@ -45,6 +45,11 @@ export interface CronRun {
   breakdown?: { intake: number; duplicates: number; newLanes: number };
 }
 
+// intent: DEC-665 — total は delivered_at null 全件、failed はそのうち error 付き (配送失敗) の分
+export interface UndeliveredCount {
+  total: number;
+  failed: number;
+}
 export interface QuestionOption {
   index: number;
   label: string;
@@ -154,6 +159,7 @@ export interface LaneDetailView {
   branch: string;
   area: string;
   since: string;
+  undelivered: UndeliveredCount;
   priorityTop?: boolean;
   contract: {
     decisions: { id: string; text: string }[];

@@ -1,6 +1,9 @@
 // intent: DEC-603 — pipeline が動く前に UI を完成させるための fixture
 
-import type { CronRun, InboxItem, LaneDetailView, LaneRow, LaneSection } from "./types";
+import type { CronRun, InboxItem, LaneDetailView, LaneRow, LaneSection, UndeliveredCount } from "./types";
+
+// intent: DEC-665 — fixture でも失敗分が区別できる状態を再現する
+export const MOCK_UNDELIVERED: UndeliveredCount = { total: 2, failed: 1 };
 
 export const MOCK_CRON: CronRun = {
   startedAt: "05:30",
@@ -172,6 +175,7 @@ export const MOCK_LANE_DETAIL: Record<string, LaneDetailView> = {
     branch: "idd/IDD-043",
     area: "dayseum-app",
     since: "開始 3h 前",
+    undelivered: MOCK_UNDELIVERED,
     contract: {
       decisions: [
         { id: "DEC-1", text: "同一 intent の予約は 1 度だけ送信する (client 側で重複を排除)" },
@@ -220,6 +224,7 @@ export const MOCK_LANE_DETAIL: Record<string, LaneDetailView> = {
     branch: "idd/IDD-042",
     area: "dayseum-app",
     since: "下調べ完了 1h 前",
+    undelivered: { total: 0, failed: 0 },
     priorityTop: true,
     pending: "go",
     contract: {
