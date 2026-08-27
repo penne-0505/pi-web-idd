@@ -3,7 +3,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
-import { stateDir } from "../paths";
+import { stateDir } from "../paths.ts";
 
 interface UnusedSessionRecord {
   idd_id: string;

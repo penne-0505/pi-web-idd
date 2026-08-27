@@ -5,8 +5,8 @@
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import lockfile from "proper-lockfile";
-import { stateDir } from "../paths";
-import { readBacklog } from "./read";
+import { stateDir } from "../paths.ts";
+import { readBacklog } from "./read.ts";
 
 function ensureDir(dir: string) {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -31,8 +31,14 @@ function nowIso(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}${sign}${p(Math.floor(Math.abs(off) / 60))}:${p(Math.abs(off) % 60)}`;
 }
 
+// intent: DEC-658 — area は repo 名を含みうるので、file 名に写すときだけ平坦化する (正本は backlog の area)
+function fileSafeArea(area: string): string {
+  return area.replace(/[^A-Za-z0-9_.-]+/g, "-").replace(/^-+|-+$/g, "") || "default";
+}
+
 function laneArea(iddId: string): string {
-  return readBacklog().find((b) => b.idd_id === iddId)?.area ?? "default";
+  const area = readBacklog().find((b) => b.idd_id === iddId)?.area;
+  return area ? fileSafeArea(area) : "default";
 }
 
 export async function appendLifecycle(event: string, iddId: string, attrs: Record<string, unknown> = {}): Promise<string> {

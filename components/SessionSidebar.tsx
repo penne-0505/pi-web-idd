@@ -428,6 +428,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const fileExplorerRef = useRef<FileExplorerHandle>(null);
   const sidebarSearchParams = useSearchParams();
   const iddState = useIddState();
+  const [intakeBusy, setIntakeBusy] = useState(false);
   // intent: DEC-633 — 既存 shell への追加点その 3: sidebar の mode。Sessions は既存のまま
   const [sidebarMode, setSidebarMode] = useState<"sessions" | "lanes">(
     () => (sidebarSearchParams.get("sidebar") === "lanes" ? "lanes" : "sessions"),
@@ -1743,6 +1744,16 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
             lanes={iddState.lanes}
             selectedId={selectedLaneId ?? null}
             onSelect={(id) => onOpenLane?.(id)}
+            onIntake={async () => {
+              setIntakeBusy(true);
+              try {
+                await fetch("/api/idd/intake", { method: "POST" });
+                iddState.refresh();
+              } finally {
+                setIntakeBusy(false);
+              }
+            }}
+            intakeBusy={intakeBusy}
           />
         )}
     </div>

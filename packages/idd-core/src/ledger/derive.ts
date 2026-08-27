@@ -1,6 +1,6 @@
 // intent: DEC-601 — 最新 event から現在の状態を決める。events.md の対応表がここの正本
 
-import type { LifecycleRecord } from "../schema/records";
+import type { LifecycleRecord } from "../schema/records.ts";
 
 export type LaneGroup = "judge" | "prep" | "impl" | "waiting" | "closed";
 export type DecisionKind = "duplicate" | "question" | "go" | "review" | "ship";

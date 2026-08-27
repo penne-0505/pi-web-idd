@@ -3,8 +3,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
-import { intentRoot } from "../paths";
-import type { BacklogRecord } from "../schema/records";
+import { intentRoot } from "../paths.ts";
+import type { BacklogRecord } from "../schema/records.ts";
 
 const HEADING = /^#{2,3}\s*((?:DEC|QA|INV)-[\w.]+)\s*[—–:-]?\s*(.+?)\s*$/;
 

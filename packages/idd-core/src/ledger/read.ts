@@ -3,11 +3,11 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 
-import { stateDir } from "../paths";
+import { stateDir } from "../paths.ts";
 import type {
   BacklogRecord, CronRunRecord, ExecutorProgress, LifecycleRecord,
   PendingAnswer, PendingQuestionBatch, PendingReview, SessionRecord,
-} from "../schema/records";
+} from "../schema/records.ts";
 
 function readJsonl<T>(path: string): T[] {
   if (!existsSync(path)) return [];

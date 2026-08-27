@@ -47,9 +47,56 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Why not**（両者を変換層で繋ぐ）: 13 event と 41 event は粒度が違い、変換は情報を捏造するか捨てるかのどちらかになる。どちらも履歴の信頼性を壊す。
 - **Anchors**: `packages/idd-core/src/ledger/`（一本化後の正本）、`app/api/idd/decide/route.ts`
 
+### DEC-653: area 別の慣習は config で吸収し、engine に repo 名を焼き付けない
+
+- **What**: `config/areas.json`（`IDD_AREAS_FILE` で差し替え可）に area ごとの source 種別・linked_repo・intake filter・branch 名の型を持たせ、engine はそこから読む。
+- **Why**: handoff の `area-config.md` の履行。Meltly と個人 repo で慣習が違い、これを条件分岐でコードに持つと area が増えるたびに engine を触ることになる。
+- **Change freedom**: field の追加、置き場所は自由。「area 固有の値が engine のコードに現れない」だけが不変。
+- **Anchors**: `config/areas.json`、`packages/idd-core/src/config/areas.ts`
+
+### DEC-654: GitHub の起票は gh CLI 経由で読む
+
+- **What**: issue の取得は `gh issue list --json` を実行して行い、engine 自身は token を持たない。
+- **Why**: `gh` は既に認証済みで、credential の保管と更新をそちらに委ねられる。engine に token を持たせると、保管場所・rotation・漏洩範囲を自前で背負う。
+- **Change freedom**: 取得の実装は自由。「engine が credential を保持しない」だけが不変。
+- **Why not**（GitHub API を直接叩く）: token の管理責務が増えるわりに、得られるのは実行速度だけ。
+- **Revisit when**: Linear を足すとき。Linear には gh 相当が無いため、credential の受け渡し方を別途決める必要がある。
+- **Anchors**: `packages/idd-core/src/intake/github.ts`
+
+### DEC-655: S0 は「拾って backlog に入れる」までで、判断はしない
+
+- **What**: 取り込みは issue を backlog record にし `lane_open` を append するところまで。GO / 中止 などの判断は一切行わない。取り込み自体は判断ではないので INV-003（1 押下 = 1 append）の対象外で、1 回の実行で複数 event を書く。
+- **Why**: 判断は人間の役割（handoff の前提）。取り込みが判断まで踏み込むと、朝起きたときには既に決まっている lane が生まれる。
+- **Change freedom**: 実行契機、取り込み単位は自由。「取り込みが判断を発生させない」だけが不変。
+- **Anchors**: `packages/idd-core/src/intake/run.ts`、`app/api/idd/intake/route.ts`
+
+### DEC-656: 重複判定は URL 一致だけを engine に持ち、意味判定は差し替え可能な口にする
+
+- **What**: 第 1 段階（URL 完全一致）は engine 内で機械的に行い、第 2 段階（意味類似）は `DuplicateDetector` という差し替え可能な関数として口だけ開ける。detector が無い間は URL 一致だけが働く。
+- **Why**: 意味判定には LLM が要り、どの model をどう呼ぶかは未決（handoff は「cron session 内 LLM」とだけ書いている）。判定の質が決まらないまま自前の語彙一致で代用すると、`detection_method: "semantic"` に嘘の値が入る。口だけ開けておけば、決まった時点で engine を触らずに差せる。
+- **Change freedom**: detector の実装と呼び出し位置は自由。「判定方法が `detection_method` に正しく現れる」だけが不変。
+- **Revisit when**: 意味判定の model が決まった時点で detector を実装する。
+- **Anchors**: `packages/idd-core/src/intake/run.ts`
+
+### DEC-657: cron と UI は同じ engine の入口を叩く
+
+- **What**: 取り込みの入口は `runIntake()` 1 つで、cron は `packages/idd-cli`（`idd intake`）から、UI は `POST /api/idd/intake` から呼ぶ。CLI は web app の起動を必要としない。
+- **Why**: 「朝の cron」と「今すぐ取り込む」で処理が分岐すると、片方だけ直る事故が起きる。engine が UI から独立している（DEC-650）ことの実際の効用がここに出る。
+- **Change freedom**: CLI の command 体系は自由。「入口が 1 つ」だけが不変。
+- **Anchors**: `packages/idd-cli/bin/idd.ts`、`app/api/idd/intake/route.ts`
+
+### DEC-658: area は file 名に写すときだけ平坦化する
+
+- **What**: area は `penne-0505/medo` のように `/` を含みうる。`lifecycle-<area>.jsonl` の file 名にするときだけ `[^A-Za-z0-9_.-]` を `-` に潰す。backlog の `area` field は元の値のまま。
+- **Why**: 平坦化した値を正本にすると、area と repo の対応が復元できなくなる。file 名の制約は書き出し側の都合でしかない。
+- **Change freedom**: 平坦化の規則は自由。「正本の area を書き換えない」だけが不変。
+- **Anchors**: `packages/idd-core/src/ledger/write.ts`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。
+- 取り込みは `gh` CLI に依存する（DEC-654）。CI や別ホストで動かすには `gh` の認証が要る。
+- engine の import は `.ts` 拡張子付きにした。`node --experimental-strip-types` で CLI を build 無しに実行するため（tsconfig の `allowImportingTsExtensions`）。
 - `packages/*` を npm workspace として追加した。`@idd/core` は TypeScript のまま解決される（build 段階を持たない）ため、Next の bundler がそのまま取り込む。
 - engine 側にも本 repo の docs 規約（コメントは DEC ポインタのみ）がそのまま適用される。
 
@@ -69,5 +116,6 @@ UI 側の判断は `_docs/intent/IddUi/`。
 
 - **Rollback**: `packages/idd-core` を `lib/idd-ui/server/` へ戻せば、workspace 追加前の構成に復帰する（依存は一方向なので機械的に戻せる）。
 - **Follow-ups**:
-  - `config/areas.json` と S0（取り込み）を engine 側に実装する
-  - engine の入口として `packages/idd-cli` を足し、cron から叩けるようにする
+  - 意味類似の重複判定（DEC-656 の detector）を実装する
+  - S1（planner）を実装し、取り込んだ lane を下調べに載せる
+  - cron を systemd timer などに登録する（現状は手動実行）
