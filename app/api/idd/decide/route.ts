@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     }
     // intent: DEC-692 — 外へ出るのは「このまま出す」を押したときだけ
     if (result.ok && body.action === "s4_verify_clean") {
-      ship = await runShip(String(body.payload?.iddId ?? ""));
+      ship = await runShip(String(body.payload?.iddId ?? ""), body.payload?.pr as { title?: string; body?: string } | undefined);
     }
     let delivery: Awaited<ReturnType<typeof deliverPending>> | { error: string } | undefined;
     if (result.ok) {

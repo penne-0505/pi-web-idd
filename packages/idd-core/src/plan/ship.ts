@@ -118,7 +118,8 @@ export interface ShipResult {
 }
 
 // intent: DEC-692 — push と PR 作成は人間が押したときだけ。engine 側で自動的に外へ出さない
-export async function runShip(iddId: string): Promise<ShipResult> {
+// intent: DEC-694 — 対外文書は人間が直したものを出す。編集があった事実は event に残す
+export async function runShip(iddId: string, edit?: { title?: string; body?: string }): Promise<ShipResult> {
   const view = buildSubmit(iddId);
   if (!view) return { ok: false, error: `lane を提出できる状態にできません: ${iddId}` };
 
@@ -127,11 +128,10 @@ export async function runShip(iddId: string): Promise<ShipResult> {
   await appendLifecycle("s4_pushed", iddId, { pushed_branch: view.branch.from });
 
   const rec = readBacklog().find((r) => r.idd_id === iddId);
-  const bodyLines = [
-    ...view.pr.body.map((b) => `- ${b.text}`),
-    "",
-    `lane: ${iddId}`,
-  ];
+  const title = edit?.title?.trim() || view.pr.title;
+  const bodyLines = edit?.body?.trim()
+    ? [edit.body.trim()]
+    : [...view.pr.body.map((b) => `- ${b.text}`), "", `lane: ${iddId}`];
   let prUrl: string | null = null;
   try {
     prUrl = execFileSync("gh", [
@@ -139,7 +139,7 @@ export async function runShip(iddId: string): Promise<ShipResult> {
       "--repo", view.branch.repo,
       "--base", view.branch.to,
       "--head", view.branch.from,
-      "--title", view.pr.title,
+      "--title", title,
       "--body", bodyLines.join("\n"),
     ], { cwd: view.worktree, encoding: "utf8", timeout: 60000 }).trim();
   } catch (err) {
@@ -147,7 +147,11 @@ export async function runShip(iddId: string): Promise<ShipResult> {
   }
 
   const number = Number(prUrl.split("/").pop());
-  await appendLifecycle("s4_pr_created", iddId, { pr_url: prUrl, pr_number: Number.isFinite(number) ? number : undefined });
+  await appendLifecycle("s4_pr_created", iddId, {
+    pr_url: prUrl,
+    pr_number: Number.isFinite(number) ? number : undefined,
+    edited: Boolean(edit?.title || edit?.body),
+  });
   if (rec) rec.pull_req_url = prUrl;
   return { ok: true, pushedBranch: view.branch.from, prUrl };
 }

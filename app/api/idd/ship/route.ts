@@ -17,7 +17,7 @@ export async function POST(req: Request) {
       const view = await startSubmit(iddId);
       return NextResponse.json({ ok: Boolean(view), view });
     }
-    const result = await runShip(iddId);
+    const result = await runShip(iddId, body.pr);
     return NextResponse.json(result, { status: result.ok ? 200 : 400 });
   } catch (err) {
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
