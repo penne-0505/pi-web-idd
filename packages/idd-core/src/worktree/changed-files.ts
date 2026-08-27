@@ -3,9 +3,9 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { isAbsolute, resolve } from "node:path";
-import { stateDir } from "./state-paths";
+import { stateDir } from "../paths";
 
-export interface SessionRecord {
+interface UnusedSessionRecord {
   idd_id: string;
   planner_session_id?: string;
   executor_session_id?: string;

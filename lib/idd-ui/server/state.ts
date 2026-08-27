@@ -1,176 +1,17 @@
-// intent: DEC-601 — state file 群を UI が描ける形へ fold する境界はここ 1 枚
-// intent: DEC-604 — DEC / QA の本文は event ではなく intent file から parse する
+// intent: DEC-601 — engine が読んだ state を UI の view model へ畳む層 (import の向きは UI → engine)
+// intent: DEC-650 — ledger の読み書き・stage 判定・intent parse は @idd/core が持つ
 
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, join } from "node:path";
+import {
+  changedFiles, deriveStage, elapsedLabel, parseIntent, readBacklog, readLatestCronRun,
+  readLifecycle, readOpenQuestions, readPendingReviews, readProgress, readSessions, slugOf,
+} from "@idd/core";
+import type { BacklogRecord, LaneGroup, LifecycleRecord } from "@idd/core";
+import { stateDir } from "@idd/core";
+import { existsSync } from "node:fs";
 import type {
-  CriterionState, InboxItem, LaneDetailView, LaneGroup, LaneRow, LaneSection, SourceRef, StateFact,
+  CriterionState, InboxItem, LaneDetailView, LaneRow, LaneSection, SourceRef, StateFact,
 } from "../types";
-import { intentRoot as intentRootPath, stateDir as stateDirPath } from "./state-paths";
 import { buildTimeline } from "./events-display";
-import { changedFiles, type SessionRecord } from "./lane-work";
-
-export { intentRoot, stateDir } from "./state-paths";
-
-function readJsonl<T>(path: string): T[] {
-  if (!existsSync(path)) return [];
-  return readFileSync(path, "utf8")
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .flatMap((l) => {
-      try { return [JSON.parse(l) as T]; } catch { return []; }
-    });
-}
-
-function readJson<T>(path: string): T | null {
-  if (!existsSync(path)) return null;
-  try { return JSON.parse(readFileSync(path, "utf8")) as T; } catch { return null; }
-}
-
-interface BacklogRecord {
-  idd_id: string;
-  parent_id: string | null;
-  created_at: string;
-  linear_issue_url: string | null;
-  gh_issue_url: string | null;
-  pull_req_url: string | null;
-  source_type: "linear" | "github";
-  context: string;
-  title: string;
-  area: string;
-  priority_snapshot?: Record<string, unknown>;
-}
-
-interface LifecycleRecord {
-  event: string;
-  idd_id: string;
-  at: string;
-  attrs?: Record<string, unknown>;
-}
-
-interface PendingReview {
-  review_id: string;
-  detected_at: string;
-  candidate: { source_type: string; linear_issue_url?: string; gh_issue_url?: string; title: string; context: string; area: string };
-  suspected_duplicate_of: string[];
-  detection_method: "url" | "semantic";
-  detection_reason: string;
-}
-
-interface PendingQuestionBatch {
-  idd_id: string;
-  batch_id: string;
-  asked_at: string;
-  questions: { question_id: string; question: string; context: string; options: { index: number; label: string; description?: string }[] }[];
-}
-
-interface PendingAnswer {
-  idd_id: string;
-  batch_id: string;
-  question_id: string;
-}
-
-interface ExecutorProgress {
-  idd_id: string;
-  updated_at: string;
-  current_step: string;
-  qa_status: { qa_id: string; status: string }[];
-  recent_activity: string[];
-}
-
-interface CronRunRecord {
-  cron_run_id: string;
-  started_at: string;
-  completed_at: string;
-  intake_count: number;
-  duplicates_detected: number;
-  backlog_added_ids: string[];
-  s1_failed_ids: string[];
-  failure_details: { idd_id?: string; reason?: string }[];
-}
-
-export function readBacklog(): BacklogRecord[] {
-  return readJsonl<BacklogRecord>(join(stateDirPath(), "backlog.jsonl"));
-}
-
-export function readLifecycle(): LifecycleRecord[] {
-  const dir = stateDirPath();
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir)
-    .filter((f) => f.startsWith("lifecycle-") && f.endsWith(".jsonl"))
-    .flatMap((f) => readJsonl<LifecycleRecord>(join(dir, f)))
-    .sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
-}
-
-export function readPendingReviews(): PendingReview[] {
-  return readJsonl<PendingReview>(join(stateDirPath(), "pending-reviews.jsonl"));
-}
-
-export function readOpenQuestions(): PendingQuestionBatch[] {
-  const batches = readJsonl<PendingQuestionBatch>(join(stateDirPath(), "pending-questions.jsonl"));
-  const answered = new Set(
-    readJsonl<PendingAnswer>(join(stateDirPath(), "pending-answers.jsonl"))
-      .map((a) => `${a.idd_id}/${a.batch_id}/${a.question_id}`),
-  );
-  return batches.filter((b) => b.questions.some((q) => !answered.has(`${b.idd_id}/${b.batch_id}/${q.question_id}`)));
-}
-
-export function readSessions(kind: "planner" | "executor"): SessionRecord[] {
-  return readJsonl<SessionRecord>(join(stateDirPath(), `${kind}-sessions.jsonl`));
-}
-
-export function readProgress(iddId: string): ExecutorProgress | null {
-  return readJson<ExecutorProgress>(join(stateDirPath(), `executor-progress-${iddId}.json`));
-}
-
-export function readLatestCronRun(): CronRunRecord | null {
-  const dir = stateDirPath();
-  if (!existsSync(dir)) return null;
-  const files = readdirSync(dir).filter((f) => f.startsWith("cron-run-") && f.endsWith(".json"));
-  if (!files.length) return null;
-  const newest = files
-    .map((f) => ({ f, m: statSync(join(dir, f)).mtimeMs }))
-    .sort((a, b) => b.m - a.m)[0];
-  return readJson<CronRunRecord>(join(dir, newest.f));
-}
-
-export function deriveStage(events: LifecycleRecord[]): {
-  group: LaneGroup;
-  stageDone: number;
-  stageCurrent: number | null;
-  blockedBy?: string;
-  decision?: LaneRow["decision"];
-} {
-  const names = events.map((e) => e.event);
-  const last = names[names.length - 1] ?? "";
-  const has = (n: string) => names.includes(n);
-  const lastOf = (n: string) => [...events].reverse().find((e) => e.event === n);
-
-  if (has("lane_close")) return { group: "closed", stageDone: 5, stageCurrent: null };
-  if (has("s1_defer") || has("s3_defer")) return { group: "closed", stageDone: 2, stageCurrent: null };
-  if (has("s4_merged")) return { group: "closed", stageDone: 5, stageCurrent: null };
-  if (last === "blocked_by_dependency") {
-    const dep = lastOf("blocked_by_dependency")?.attrs?.depends_on;
-    return { group: "waiting", stageDone: 2, stageCurrent: 2, blockedBy: Array.isArray(dep) ? String(dep[0]) : undefined };
-  }
-  if (has("s4_submit_started")) {
-    if (has("s4_verify_user_judgment_requested") && !has("s4_verify_clean")) {
-      return { group: "judge", stageDone: 4, stageCurrent: 4, decision: "ship" };
-    }
-    return { group: "impl", stageDone: 4, stageCurrent: 4 };
-  }
-  if (has("s3_ready")) {
-    if (!has("s3_ok")) return { group: "judge", stageDone: 3, stageCurrent: 3, decision: "review" };
-    return { group: "impl", stageDone: 4, stageCurrent: 4 };
-  }
-  if (has("s2_start")) return { group: "impl", stageDone: 2, stageCurrent: 2 };
-  if (has("s1_go")) return { group: "impl", stageDone: 2, stageCurrent: 2 };
-  if (has("s1_ready")) return { group: "judge", stageDone: 2, stageCurrent: null, decision: "go" };
-  if (has("question_batch_asked")) return { group: "judge", stageDone: 1, stageCurrent: 1, decision: "question" };
-  if (has("lane_open")) return { group: "prep", stageDone: 1, stageCurrent: 1 };
-  return { group: "prep", stageDone: 0, stageCurrent: 0 };
-}
 
 function sourceOf(rec: BacklogRecord): SourceRef | undefined {
   if (rec.linear_issue_url) {
@@ -184,51 +25,6 @@ function sourceOf(rec: BacklogRecord): SourceRef | undefined {
   return undefined;
 }
 
-export function elapsedLabel(iso: string, now = Date.now()): string {
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return "";
-  const min = Math.floor((now - t) / 60000);
-  if (min < 1) return "たった今";
-  if (min < 60) return `${min}m`;
-  const h = Math.floor(min / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  return d === 1 ? "昨日" : `${d}d`;
-}
-
-const HEADING = /^#{2,3}\s*((?:DEC|QA|INV)-[\w.]+)\s*[—–:-]?\s*(.+?)\s*$/;
-
-export function parseIntent(area: string, slug: string): {
-  decisions: { id: string; text: string }[];
-  criteria: { id: string; text: string }[];
-  invariants: { id: string; text: string }[];
-  references: { path: string; why: string }[];
-} {
-  const dir = join(intentRootPath(), area, slug);
-  const pick = (file: string) => {
-    const p = join(dir, file);
-    if (!existsSync(p)) return [] as { id: string; text: string }[];
-    return readFileSync(p, "utf8").split("\n").flatMap((line) => {
-      const m = line.match(HEADING);
-      return m ? [{ id: m[1], text: m[2] }] : [];
-    });
-  };
-  const refs = (() => {
-    const p = join(dir, "reference.md");
-    if (!existsSync(p)) return [] as { path: string; why: string }[];
-    return readFileSync(p, "utf8").split("\n").flatMap((line) => {
-      const m = line.match(/^-\s*`([^`]+)`\s*[—–:-]?\s*(.*)$/);
-      return m ? [{ path: m[1], why: m[2] }] : [];
-    });
-  })();
-  return { decisions: pick("decision.md"), criteria: pick("qa.md"), invariants: pick("invariant.md"), references: refs };
-}
-
-function slugOf(rec: BacklogRecord): string {
-  return basename(rec.title).toLowerCase().replace(/\s+/g, "-").slice(0, 40);
-}
-
-/* ── 組み立て ─────────────────────────────────────────────── */
 
 export interface IddState {
   source: "state" | "empty";
@@ -240,7 +36,7 @@ export interface IddState {
 }
 
 export function buildState(): IddState {
-  const dir = stateDirPath();
+  const dir = stateDir();
   const backlog = readBacklog();
   if (!existsSync(dir) || backlog.length === 0) {
     return { source: "empty", stateDir: dir, cron: null, sections: [], lanes: [], items: [] };
@@ -272,7 +68,7 @@ export function buildState(): IddState {
     };
   });
 
-  // 重複確認は backlog に入る前なので lane にはならない。Inbox にだけ出す
+  // intent: DEC-651 — 重複確認は lane 化の前なので lane 一覧には出さず Inbox にだけ出す
   const answeredReviews = new Set(
     events.filter((e) => e.event === "pending_review_resolved").map((e) => String(e.attrs?.review_id ?? "")),
   );

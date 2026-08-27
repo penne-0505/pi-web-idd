@@ -5,7 +5,8 @@
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import lockfile from "proper-lockfile";
-import { readBacklog, stateDir } from "./state";
+import { stateDir } from "../paths";
+import { readBacklog } from "./read";
 
 function ensureDir(dir: string) {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
