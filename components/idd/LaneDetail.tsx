@@ -2,6 +2,7 @@
 
 // intent: DEC-632 — 契約 / 現物 / 経過 の 3 primitive。進捗を別に持たない
 // intent: DEC-608 — 経過は節目と自分の判断だけを出し、間は畳む
+// intent: DEC-664 — lane 分の未達件数は見出し行の端へ出す (DEC-667: 押せない件数表示のみ)
 
 import { useState } from "react";
 import type { LaneDetailView, TimelineEntry } from "@/lib/idd-ui/types";
@@ -97,6 +98,14 @@ export function LaneDetail({ lane, onDecide, onOpenIntent, onOpenWorktree, onSpe
             <Chip label={lane.phaseLabel} strong />
             {lane.priorityTop ? <Chip label="最優先" /> : null}
             <span style={{ flex: 1 }} />
+            {lane.undelivered.total > 0 ? (
+              <span
+                title={lane.undelivered.failed > 0 ? `配送失敗 ${lane.undelivered.failed} 件を含む` : "配送待ちの envelope"}
+                style={{ fontSize: FS.xs, color: lane.undelivered.failed > 0 ? "var(--text)" : "var(--text-dim)" }}
+              >
+                未達 {lane.undelivered.total} 件{lane.undelivered.failed > 0 ? ` (失敗 ${lane.undelivered.failed})` : ""}
+              </span>
+            ) : null}
             <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{lane.iddId}</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

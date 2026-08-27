@@ -5,7 +5,7 @@
 // intent: DEC-634 — mobile では器を持たず素直に流す (variant の分岐)
 
 import { useState } from "react";
-import type { CronRun, InboxItem } from "@/lib/idd-ui/types";
+import type { CronRun, InboxItem, UndeliveredCount } from "@/lib/idd-ui/types";
 import { Icon } from "./primitives";
 import { type DecideHandler } from "./cards";
 import { InboxDeck } from "./InboxDeck";
@@ -75,6 +75,29 @@ function CronDetail({ run, onOpenLog }: { run: CronRun; onOpenLog?: () => void }
   );
 }
 
+// intent: DEC-664 — 判断でない滞留情報は見出し行の端へ逃がす (CronStatus と同じ扱い)
+// intent: DEC-667 — 第一弾は押せない件数表示のみ (button にしない)
+function UndeliveredStatus({ count }: { count: UndeliveredCount }) {
+  const failed = count.failed > 0;
+  return (
+    <span
+      title={failed ? `配送失敗 ${count.failed} 件を含む` : "配送待ちの envelope"}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 6,
+        minHeight: 26, padding: "0 8px", borderRadius: 4,
+        background: failed ? "var(--bg-panel)" : "transparent",
+        border: `1px solid ${failed ? "var(--border-strong)" : "transparent"}`,
+        color: failed ? "var(--text)" : "var(--text-dim)",
+        fontSize: FS.sm, flexShrink: 0,
+      }}
+    >
+      {failed ? <Icon name="warn" size={13} color="var(--text)" weight={1.5} /> : null}
+      未達 {count.total} 件
+      {failed ? <span style={{ fontWeight: 600 }}>(失敗 {count.failed})</span> : null}
+    </span>
+  );
+}
+
 function EmptyQueue({ running }: { running: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "48px 0" }}>
@@ -84,8 +107,9 @@ function EmptyQueue({ running }: { running: string }) {
   );
 }
 
-export function InboxPanel({ cron, items, onDecide, onAsk, compact, runningSummary, pendingId, decidedId, failure }: {
+export function InboxPanel({ cron, items, onDecide, onAsk, compact, runningSummary, pendingId, decidedId, failure, undelivered }: {
   cron: CronRun;
+  undelivered?: UndeliveredCount;
   items: InboxItem[];
   onDecide: DecideHandler;
   onAsk?: (item: InboxItem) => void;
@@ -109,6 +133,7 @@ export function InboxPanel({ cron, items, onDecide, onAsk, compact, runningSumma
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontSize: FS.xl, fontWeight: 600, color: "var(--text)" }}>判断キュー</span>
         <span style={{ flex: 1 }} />
+        {undelivered && undelivered.total > 0 ? <UndeliveredStatus count={undelivered} /> : null}
         <CronStatus run={cron} open={openCron} onToggle={() => setOpenCron((v) => !v)} />
       </div>
 

@@ -2,10 +2,11 @@
 // intent: DEC-650 — ledger の読み書き・stage 判定・intent parse は @idd/core が持つ
 
 import {
-  areaSegment, buildSubmit, changedFiles, deriveStage, laneActivity, laneBase, laneDiff, elapsedLabel, parseIntent, readBacklog, readLatestCronRun,
-  readAnswers, readLifecycle, readOpenQuestions, readPendingReviews, readProgress, readSessions, slugOf,
+  areaSegment, buildSubmit, changedFiles, countUndelivered, deriveStage, elapsedLabel, laneActivity,
+  laneBase, laneDiff, parseIntent, readAnswers, readBacklog, readLatestCronRun, readLifecycle,
+  readOpenQuestions, readPendingReviews, readProgress, readSessions, slugOf,
 } from "@idd/core";
-import type { BacklogRecord, LaneGroup, LifecycleRecord } from "@idd/core";
+import type { BacklogRecord, LaneGroup, LifecycleRecord, UndeliveredCount } from "@idd/core";
 import { stateDir } from "@idd/core";
 import { existsSync } from "node:fs";
 import type {
@@ -51,13 +52,14 @@ export interface IddState {
   sections: LaneSection[];
   lanes: LaneRow[];
   items: InboxItem[];
+  undelivered: UndeliveredCount;
 }
 
 export function buildState(): IddState {
   const dir = stateDir();
   const backlog = readBacklog();
   if (!existsSync(dir) || backlog.length === 0) {
-    return { source: "empty", stateDir: dir, cron: null, sections: [], lanes: [], items: [] };
+    return { source: "empty", stateDir: dir, cron: null, sections: [], lanes: [], items: [], undelivered: { total: 0, failed: 0 } };
   }
 
   const events = readLifecycle();
@@ -233,6 +235,7 @@ export function buildState(): IddState {
     sections,
     lanes,
     items,
+    undelivered: countUndelivered(),
   };
 }
 
@@ -295,5 +298,6 @@ export function buildLaneDetail(iddId: string): LaneDetailView | null {
     timeline: buildTimeline(evs),
     agents,
     pending: d.decision,
+    undelivered: countUndelivered(iddId),
   };
 }

@@ -40,6 +40,18 @@ export function pendingEnvelopes(): OutboxRecord[] {
     .sort((a, b) => a.queued_at.localeCompare(b.queued_at));
 }
 
+export interface UndeliveredCount {
+  total: number;
+  failed: number;
+}
+
+// intent: DEC-665 — 母数は delivered_at null 全件、error 付きは失敗分として別に数える
+// intent-invariant: INV-009 — 件数は pendingEnvelopes() の単一実装から導き、呼び出し側で outbox.jsonl を再解釈しない
+export function countUndelivered(iddId?: string): UndeliveredCount {
+  const recs = pendingEnvelopes().filter((rec) => !iddId || rec.idd_id === iddId);
+  return { total: recs.length, failed: recs.filter((rec) => rec.error).length };
+}
+
 async function patch(envelopeId: string, fields: Partial<OutboxRecord>): Promise<void> {
   const path = outboxPath();
   if (!existsSync(path)) return;

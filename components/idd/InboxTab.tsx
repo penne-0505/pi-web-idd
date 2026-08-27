@@ -70,6 +70,7 @@ export function InboxTab({ compact, onCountChange, onOpenLane }: {
     >
       <InboxPanel
         cron={state.cron}
+        undelivered={state.undelivered}
         items={items}
         onDecide={decide}
         onAsk={(item) => onOpenLane?.(item.iddId)}
