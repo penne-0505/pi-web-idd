@@ -173,6 +173,13 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: card 内の進み方、進捗の見せ方は自由。「1 問ずつ判断できる」「全問揃うまで agent を起こさない」「同じ batch が複数の札に割れない」の 3 点が不変。
 - **Anchors**: `lib/idd-ui/server/state.ts`、`packages/idd-core/src/ledger/write.ts`（applyDecision の answer）
 
+### DEC-678: 眠った session は file から起こす。起こし直しで id が変わったら配信しない
+
+- **What**: 配信先の session が registry に生きていない場合、session id から session file を解決して起こす。file が見つからない、または起こした結果 id が変わった場合は配信せず、未達として残す。
+- **Why**: `startRpcSession(id, "", cwd)` は file を指定しないと**新しい session を作る**。pi の session は 10 分で idle 破棄されるため、回答が届く頃には眠っているのが普通で、この経路を踏むと「届いた」と記録されたまま、質問を知らない別の session に投げ込まれる。届かなかったことが観測できない配信は、未達より悪い。
+- **Change freedom**: 解決の方法は自由。「届け先が意図した session であることを確認してから配信する」だけが不変。
+- **Anchors**: `lib/idd-ui/server/agent-runner.ts`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。

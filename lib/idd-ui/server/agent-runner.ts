@@ -2,6 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { getRpcSession, startRpcSession } from "@/lib/rpc-manager";
+import { resolveSessionPath } from "@/lib/session-reader";
 import { allowFileRoot } from "@/lib/file-access";
 import { setAgentRunner, type AgentRunner } from "@idd/core";
 
@@ -26,9 +27,17 @@ const runner: AgentRunner = {
 
   async deliver(sessionId: string, text: string, opts?: { cwd?: string }): Promise<void> {
     const existing = getRpcSession(sessionId);
-    const session = existing?.isAlive()
-      ? existing
-      : (await startRpcSession(sessionId, "", opts?.cwd)).session;
+    // intent: DEC-678 — 眠った session は file から起こす。file 無しで起こすと別の session が生える
+    let session = existing?.isAlive() ? existing : null;
+    if (!session) {
+      const file = await resolveSessionPath(sessionId);
+      if (!file) throw new Error(`session file not found: ${sessionId}`);
+      const started = await startRpcSession(sessionId, file, opts?.cwd);
+      if (started.realSessionId !== sessionId) {
+        throw new Error(`session id changed on resume: ${sessionId} -> ${started.realSessionId}`);
+      }
+      session = started.session;
+    }
 
     const state = await session.send({ type: "get_state" }) as { isStreaming?: boolean };
     await session.send({
