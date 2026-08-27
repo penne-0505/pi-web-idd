@@ -13,6 +13,10 @@ import { SkillsConfig } from "./SkillsConfig";
 import { PluginsConfig } from "./PluginsConfig";
 import { ProjectTrustDialog } from "./ProjectTrustDialog";
 import { BranchNavigator } from "./BranchNavigator";
+import { MainTabs, laneIdOf, laneView, type MainView } from "./idd/MainTabs";
+import { InboxTab } from "./idd/InboxTab";
+import { LaneTab } from "./idd/LaneTab";
+import { MOCK_INBOX } from "@/lib/idd-ui/fixtures";
 import { useTheme } from "@/hooks/useTheme";
 import { useI18n } from "@/hooks/useI18n";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -802,6 +806,25 @@ export function AppShell() {
   useLayoutEffect(() => {
     activeNewSessionDraftKeyRef.current = newSessionDraftKey;
   }, [newSessionDraftKey]);
+  // intent: 拡張 IDD — main に何を出すか。Inbox は常設タブで、Chat と切り替える。
+  // ?view=inbox で直接開ける (出先の端末から判断キューへ 1 手で入るため)
+  const initialView = searchParams.get("view") ?? "";
+  const [mainView, setMainView] = useState<MainView>(
+    () => (initialView === "inbox" || initialView.startsWith("lane:") ? initialView : "chat"),
+  );
+  // 開いている lane タブ。file タブと同じく複数開けて閉じられる
+  const [openLanes, setOpenLanes] = useState<string[]>(
+    () => (initialView.startsWith("lane:") ? [initialView.slice(5)] : []),
+  );
+  const handleOpenLane = useCallback((iddId: string) => {
+    setOpenLanes((prev) => (prev.includes(iddId) ? prev : [...prev, iddId]));
+    setMainView(laneView(iddId));
+  }, []);
+  const handleCloseLane = useCallback((iddId: string) => {
+    setOpenLanes((prev) => prev.filter((id) => id !== iddId));
+    setMainView((cur) => (cur === laneView(iddId) ? "inbox" : cur));
+  }, []);
+  const [inboxCount, setInboxCount] = useState(MOCK_INBOX.length);
   const showChat = selectedSession !== null || effectiveNewSessionCwd !== null;
   const projectTrustCwd = selectedSession?.cwd ?? effectiveNewSessionCwd;
   // intent: DEC-355 — URLからの初期session復元中はplaceholderを表示しない
@@ -870,6 +893,8 @@ export function AppShell() {
   const sidebarContent = (
     <>
       <SessionSidebar
+        onOpenLane={handleOpenLane}
+        selectedLaneId={laneIdOf(mainView)}
         selectedSessionId={selectedSession?.id ?? null}
         onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
@@ -1532,7 +1557,7 @@ export function AppShell() {
           transform: translateY(0);
           filter: blur(0);
           background: color-mix(in srgb, var(--accent) 8%, var(--bg-panel));
-          box-shadow: 0 18px 44px rgba(37,99,235,0.16);
+          box-shadow: 0 18px 44px rgba(0,0,0,0.14);
         }
         100% {
           opacity: 1;
@@ -2032,8 +2057,23 @@ export function AppShell() {
         {isMobile && renderProjectTrustWarning(true)}
         </div>
 
+        <MainTabs
+          active={mainView}
+          inboxCount={inboxCount}
+          laneTabs={openLanes.map((id) => ({ id, label: id }))}
+          onSelect={setMainView}
+          onCloseLane={handleCloseLane}
+        />
+
         <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
-          {showChat ? (
+          {mainView === "inbox" ? (
+            <InboxTab compact={isMobile} onCountChange={setInboxCount} onOpenLane={handleOpenLane} />
+          ) : laneIdOf(mainView) ? (
+            <LaneTab
+              iddId={laneIdOf(mainView)!}
+              onDecide={(action, payload) => console.info("decide", action, payload)}
+            />
+          ) : showChat ? (
             <ChatWindow
               key={sessionKey}
               session={selectedSession}
