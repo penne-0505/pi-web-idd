@@ -22,8 +22,12 @@ export function InboxTab({ compact, onCountChange, onOpenLane }: {
 
   useEffect(() => {
     setItems(state.items);
-    onCountChange?.(state.items.length);
-  }, [state.items, onCountChange]);
+  }, [state.items]);
+
+  // intent: DEC-695 — 件数は items から派生させる。更新の途中で親を触らない
+  useEffect(() => {
+    onCountChange?.(items.length);
+  }, [items, onCountChange]);
 
   const decide: DecideHandler = useCallback(async (action, payload) => {
     const target = String(payload?.iddId ?? payload?.reviewId ?? "");
@@ -46,11 +50,8 @@ export function InboxTab({ compact, onCountChange, onOpenLane }: {
       setDecided(target);
       window.setTimeout(() => {
         setDecided(null);
-        setItems((prev) => {
-          const next = prev.filter((i) => i.iddId !== target);
-          onCountChange?.(next.length);
-          return next;
-        });
+        // intent: DEC-695 — 件数の通知は updater の外。updater は render 中に走りうる
+        setItems((prev) => prev.filter((i) => i.iddId !== target));
         state.refresh();
       }, 180);
     } catch (e) {

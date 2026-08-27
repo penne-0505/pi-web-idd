@@ -210,6 +210,20 @@ view / state 層の判断は `_docs/intent/IddUi/lib/decision.md`。
 - **Note**: PR 以外の対外文書（S4 Phase B の reviewer への返答など）にも同じ規則を適用する。
 - **Anchors**: `components/idd/cards/index.tsx`（ShipCard）、`packages/idd-core/src/plan/ship.ts`（runShip の edit）
 
+### DEC-695: 親への通知を state updater の中でしない
+
+- **What**: 判断が済んで札を list から外すとき、件数の通知（`onCountChange`）は `setItems` の updater の中ではなく、`items` を見る effect から行う。
+- **Why**: updater は render 中に実行されうるので、その中で別の component を更新すると React が警告を出す（実際に「Cannot update a component (AppShell) while rendering a different component (InboxTab)」が出た）。件数は `items` から導ける値なので、通知点を 1 箇所（effect）に寄せれば二重に持つ必要もない。
+- **Change freedom**: 通知の実装は自由。「派生値を更新の途中で親へ push しない」だけが不変。
+- **Anchors**: `components/idd/InboxTab.tsx`
+
+### DEC-696: 出したあとの lane は待機側に置く
+
+- **What**: `s4_pr_created` があり `s4_merged` が無い lane は「待機中」に置き、`PR #n` を待ち先として示す。
+- **Why**: PR を出した lane は自分では進まない。それを「実装中」に置くと、稼働していないものが稼働中の群に並ぶ（DEC-683 で潰したのと同じ誤読）。待っている相手が外部の PR であることまで示せば、次に何をすべきかが行から分かる。
+- **Change freedom**: 群の選び方、表示は自由。「進まない lane を進行中の群に置かない」だけが不変。
+- **Anchors**: `packages/idd-core/src/ledger/derive.ts`
+
 ## Consequences / Impact
 
 - 札束（DEC-620）により、一覧で全件を俯瞰する手段は sidebar の lane 一覧だけになる。Inbox 側に一覧表示は持たない。

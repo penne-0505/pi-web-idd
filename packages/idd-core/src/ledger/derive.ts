@@ -20,6 +20,11 @@ export function deriveStage(events: LifecycleRecord[]): {
   if (has("lane_close")) return { group: "closed", stageDone: 5, stageCurrent: null };
   if (has("s1_defer") || has("s3_defer")) return { group: "closed", stageDone: 2, stageCurrent: null };
   if (has("s4_merged")) return { group: "closed", stageDone: 5, stageCurrent: null };
+  // intent: DEC-696 — 出したあとの lane は自分では進まない。merge 待ちとして待機側に置く
+  if (has("s4_pr_created")) {
+    const pr = lastOf("s4_pr_created")?.attrs?.pr_number;
+    return { group: "waiting", stageDone: 5, stageCurrent: null, blockedBy: pr ? `PR #${pr}` : "PR" };
+  }
   if (last === "blocked_by_dependency") {
     const dep = lastOf("blocked_by_dependency")?.attrs?.depends_on;
     return { group: "waiting", stageDone: 2, stageCurrent: 2, blockedBy: Array.isArray(dep) ? String(dep[0]) : undefined };
