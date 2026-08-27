@@ -130,9 +130,39 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: 引き方は自由。「envelope の問いが agent の発した問いと一致する」だけが不変。
 - **Anchors**: `packages/idd-core/src/ledger/read.ts`（readQuestionBatch）、`packages/idd-core/src/ledger/write.ts`
 
+### DEC-670: lane ごとに git worktree を切る
+
+- **What**: 下調べ / 実装は `<local_path>-lanes/<IDD-ID>` の worktree で行い、branch は area の `branch_name_pattern`（既定 `idd/{idd_id}`）で作る。area に `local_path` が無い場合は prep を skip する。
+- **Why**: 並列 lane が同じ working tree を踏むと、片方の編集がもう片方の観測を壊す。worktree なら分離が物理で担保され、S3 の衝突確認も「別 branch 同士の merge」として素直に書ける。
+- **Change freedom**: 置き場所、branch 名、既存 branch の扱いは自由。「lane 同士が同じ working tree を共有しない」だけが不変。
+- **Anchors**: `packages/idd-core/src/worktree/ensure.ts`、`config/areas.json`
+
+### DEC-671: 下調べに載せる lane の選定は engine、session を起こすのは runtime
+
+- **What**: どの lane を下調べに載せるか（待ち行列・並列上限 `IDD_PLANNER_CONCURRENCY`）は engine が決め、pi session を起こすのは runtime 側の `AgentRunner.spawn` だけ。起動した session は `planner-sessions.jsonl` に記録する。
+- **Why**: 並列上限は pipeline の規律（handoff の S1）であって runtime の都合ではない。逆に session の起こし方は runtime の都合であって pipeline の規律ではない。DEC-659（session の所有者は 1 プロセス）と同じ境界をここでも引く。
+- **Change freedom**: 選定の順序付け、上限の既定値は自由。「engine が session を直接起こさない」「上限を runtime 側で解釈しない」の 2 点が不変。
+- **Revisit when**: handoff の優先度 ranking（11 段階）が確定したら、現在の起票順 FIFO を置き換える。
+- **Anchors**: `packages/idd-core/src/plan/prep.ts`、`lib/idd-ui/server/agent-runner.ts`、`app/api/idd/prep/route.ts`
+
+### DEC-672: planner への最初の指示も envelope にする
+
+- **What**: 下調べの開始指示は `<idd-system-message type="s1_prep_start">` として組み立て、lane の題名・source URL・context・成果物の置き場所・書式の制約・質問の作法・callback を 1 通に含める。
+- **Why**: agent 側に前提知識を置かないという envelope の self-containment 原則を、最初の 1 通にも適用する。書式の制約（`## DEC-1 — <一文>`、選択肢 label 40 文字以内）は UI がその形で読む以上、指示に含まれていないと守られない。
+- **Change freedom**: 文面と含める項目は自由。「agent 側の設定に依存しない」「UI が要求する書式が指示に含まれる」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/prep.ts`（plannerBrief）
+
+### DEC-673: intent の置き場所は題名ではなく lane id から作る
+
+- **What**: `_docs/intent/<Area>/<slug>/` の slug は lane id（`idd-902`）から作る。
+- **Why**: 題名は日本語を含むが、docs 規約の canonical path は `[a-z0-9]+(-[a-z0-9]+)*` を要求する。題名由来の slug では planner が作る intent が validator を通らない。lane id なら ASCII で一意、かつ lane と 1:1 に対応する。
+- **Change freedom**: slug の形は自由。「ASCII で、lane と 1:1 で、題名の変更で動かない」だけが不変。
+- **Anchors**: `packages/idd-core/src/intent/parse.ts`（slugOf）
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。
+- 下調べは lane ごとに worktree を作る（DEC-670）。`<repo>-lanes/` が増えるので、lane を閉じたときの撤去が要る。
 - envelope の配信は server が起きている必要がある（DEC-659）。`POST /api/idd/deliver` が入口で、未達は `outbox.jsonl` の `delivered_at: null` として残る。
 - `state/agent-token` が生成される（DEC-660）。state dir を共有する全プロセスが同じ token を見る。
 - 取り込みは `gh` CLI に依存する（DEC-654）。CI や別ホストで動かすには `gh` の認証が要る。
@@ -157,6 +187,8 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Rollback**: `packages/idd-core` を `lib/idd-ui/server/` へ戻せば、workspace 追加前の構成に復帰する（依存は一方向なので機械的に戻せる）。
 - **Follow-ups**:
   - 意味類似の重複判定（DEC-656 の detector）を実装する
-  - worker pool（Workspace DEC-007 の実体）を runtime 側に置き、planner / executor を role 付きで起こす
+  - S2（executor）を同じ形で足す。worker pool（Workspace DEC-007 の実体）は `AgentRunner.spawn` が最小形として担っている
+  - lane を閉じたときに worktree を撤去する
+  - 優先度 ranking（11 段階）の確定後に FIFO を置き換える（DEC-671）
   - S1（planner）を実装し、取り込んだ lane を下調べに載せる
   - cron を systemd timer などに登録する（現状は手動実行）

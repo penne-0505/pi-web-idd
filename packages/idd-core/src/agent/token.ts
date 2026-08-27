@@ -23,8 +23,12 @@ export function agentToken(): string {
   return token;
 }
 
+// intent: DEC-661 — 書き戻し先は envelope に載る。port が既定と違う環境では env で上書きする
 export function agentBaseUrl(): string {
-  return process.env.IDD_AGENT_BASE_URL?.trim() || "http://127.0.0.1:30141";
+  const explicit = process.env.IDD_AGENT_BASE_URL?.trim();
+  if (explicit) return explicit;
+  const port = process.env.PORT?.trim() || "30141";
+  return `http://127.0.0.1:${port}`;
 }
 
 export function checkAgentToken(presented: string | null | undefined): boolean {

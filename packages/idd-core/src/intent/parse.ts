@@ -1,7 +1,7 @@
 // intent: DEC-604 — DEC / QA の本文は event ではなく intent file から parse する
 
 import { existsSync, readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 
 import { intentRoot } from "../paths.ts";
 import type { BacklogRecord } from "../schema/records.ts";
@@ -34,6 +34,7 @@ export function parseIntent(area: string, slug: string): {
   return { decisions: pick("decision.md"), criteria: pick("qa.md"), invariants: pick("invariant.md"), references: refs };
 }
 
+// intent: DEC-673 — intent の置き場所は題名ではなく lane id から作る (docs 規約が ASCII の slug を要求する)
 export function slugOf(rec: BacklogRecord): string {
-  return basename(rec.title).toLowerCase().replace(/\s+/g, "-").slice(0, 40);
+  return rec.idd_id.toLowerCase();
 }
