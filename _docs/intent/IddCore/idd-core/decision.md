@@ -39,6 +39,14 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: 畳み込みの実装と置き場所（UI 内での module 分割）は自由。「表示都合の型が engine の公開面に現れない」だけが不変。
 - **Anchors**: `lib/idd-ui/server/state.ts`、`lib/idd-ui/server/events-display.ts`
 
+### DEC-652: 旧 13-event 実装と msync への shell out を削除し、handoff schema に一本化する
+
+- **What**: `lib/idd/`（`ledger-io.ts` / `lifecycle-schema.ts` / `worker-pool.ts` とその test）と `/api/idd/{lanes,lifecycle,workers}` を削除する。lane の状態・event の書き込みは `@idd/core`（handoff の 41 event / `lifecycle-<repo>.jsonl`）だけが持つ。
+- **Why**: 旧実装は Meltly 側 Python の部分移植で、13 event / `ledger-<repo>.jsonl` という**非互換の schema** を持っていた。同じ「lane の状態」に正本が 2 つあると、どちらを信じるかが実装ごとに分かれる。設計の SSOT は handoff（`_meta/extended-idd-design/`）と決めており、食い違う実装は統合ではなく破棄する。`/api/idd/lifecycle` の msync CLI shell out も、`POST /api/idd/decide` が同じ役割を handoff schema で果たすため二重になっていた。これを消すことで Meltly のツールチェーンへの最後の直接依存が切れる。
+- **Change freedom**: 削除後の再実装の形は自由。「lane の状態の正本を 2 つ持たない」「外部 CLI に状態変更を委譲しない」だけが不変。
+- **Why not**（両者を変換層で繋ぐ）: 13 event と 41 event は粒度が違い、変換は情報を捏造するか捨てるかのどちらかになる。どちらも履歴の信頼性を壊す。
+- **Anchors**: `packages/idd-core/src/ledger/`（一本化後の正本）、`app/api/idd/decide/route.ts`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。
@@ -48,6 +56,7 @@ UI 側の判断は `_docs/intent/IddUi/`。
 ## Quality Implications
 
 - **DEC-650 が守る品質**: engine が UI の都合で歪まない。破ると: 表示の変更が pipeline の API を揺らし、切り出しが不可能になる。
+- **DEC-652 が守る品質**: lane の状態の正本が 1 つに保たれる。破ると: UI と CLI が別の履歴を見て、同じ lane に矛盾した判断を下す。
 - **DEC-651 が守る品質**: engine の公開面が handoff の schema だけに対応する。破ると: view model が engine の契約に混ざり、別 front から使えなくなる。
 
 ## Intent-derived Invariants
@@ -56,8 +65,9 @@ UI 側の判断は `_docs/intent/IddUi/`。
 
 ## Rollback / Follow-ups
 
+- **worker pool の再実装**: DEC-652 で `lib/idd/worker-pool.ts` を消したため、Workspace DEC-004 / DEC-007 が宣言した「pi session = persistent worker」の実体は現在存在しない。S1 / S2 の実装時に handoff の `agents.md` に沿って engine 側へ書き直す。
+
 - **Rollback**: `packages/idd-core` を `lib/idd-ui/server/` へ戻せば、workspace 追加前の構成に復帰する（依存は一方向なので機械的に戻せる）。
 - **Follow-ups**:
-  - 旧 `lib/idd/`（13 event の ledger-*.jsonl 系）と `/api/idd/{lanes,lifecycle,workers}` を削除し、正本の二重化を解消する
   - `config/areas.json` と S0（取り込み）を engine 側に実装する
   - engine の入口として `packages/idd-cli` を足し、cron から叩けるようにする
