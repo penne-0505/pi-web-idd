@@ -231,6 +231,20 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Revisit when**: lane ごとに検証 server を管理する script を用意できたら、指示ではなくその script だけを使わせる形にする（構造で守る）。
 - **Anchors**: `packages/idd-core/src/plan/exec.ts`（executorBrief の host-rules）
 
+### DEC-688: S3 の機械部分は「upstream と衝突するか」だけを見る
+
+- **What**: `s2_result` が来た lane に対し `git merge-tree --write-tree` を実行して衝突の有無だけを判定し、`s3_ready` → `s3_check_in_progress` → `s3_check_clean` / `s3_check_conflict` を append する。解消はしない。判定後、lane は差分確認の判断待ちになる。
+- **Why**: merge-tree は index も working tree も触らずに答えるので、lane の作業を壊さずに問える。解消（Integrator の 3 態度）はまだ実装が無いが、**人間の承認だけは先に通せる** — 機械的判定と人間の判断は独立に足せる。
+- **Change freedom**: 判定方法、cascading の扱いは自由。「判定が lane の作業状態を変えない」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/review.ts`、`app/api/idd/check/route.ts`
+
+### DEC-689: 差分確認に出す diff は実物から作り、基準は今の分岐点にする
+
+- **What**: 差分確認 card の diff は lane の worktree で `git diff <merge-base(HEAD, main)>` を実行して作る。要約や再構成はしない。
+- **Why**: 判断の材料は実物でなければならない。基準に `s2_start` の起点 commit を固定で使うと、**rebase 後には他人の変更まで差分に混ざる**（実際に 15 ファイルのはずが 39 ファイルになった）。分岐点なら rebase を跨いでも lane の変更だけが残る。
+- **Change freedom**: 表示する行数、ファイルの選び方は自由。「基準が分岐点」「実物から作る」の 2 点が不変。
+- **Anchors**: `packages/idd-core/src/plan/review.ts`（laneBase / laneDiff）、`lib/idd-ui/server/state.ts`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。

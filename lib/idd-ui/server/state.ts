@@ -2,7 +2,7 @@
 // intent: DEC-650 — ledger の読み書き・stage 判定・intent parse は @idd/core が持つ
 
 import {
-  areaSegment, changedFiles, deriveStage, laneActivity, elapsedLabel, parseIntent, readBacklog, readLatestCronRun,
+  areaSegment, changedFiles, deriveStage, laneActivity, laneBase, laneDiff, elapsedLabel, parseIntent, readBacklog, readLatestCronRun,
   readAnswers, readLifecycle, readOpenQuestions, readPendingReviews, readProgress, readSessions, slugOf,
 } from "@idd/core";
 import type { BacklogRecord, LaneGroup, LifecycleRecord } from "@idd/core";
@@ -162,10 +162,31 @@ export function buildState(): IddState {
     if (d.decision === "review") {
       const intent = parseIntent(rec.area, slugOf(rec), { root: laneRoot(rec.idd_id) });
       const progress = readProgress(rec.idd_id);
+      const root = laneRoot(rec.idd_id);
+      const startedFrom = evs.find((e) => e.event === "s2_start")?.attrs?.started_from_commit;
+      // intent: DEC-689 — 差分は実物から。基準は今の main との分岐点 (rebase を跨いでも lane の変更だけが残る)
+      const base = root ? laneBase(root, typeof startedFrom === "string" ? startedFrom : undefined) : null;
+      const diff = root && base ? laneDiff(root, base) : null;
+      const conflict = evs.filter((e) => e.event === "s3_check_conflict").pop();
+      const conflictFiles = Array.isArray(conflict?.attrs?.conflict_files)
+        ? (conflict.attrs.conflict_files as string[])
+        : [];
       items.push({
         kind: "review",
         iddId: rec.idd_id,
         target: { title: rec.title, ref: sourceOf(rec) ?? { kind: "lane", label: rec.idd_id } },
+        conflictWith: conflictFiles.length
+          ? { title: `${conflictFiles.length} ファイルが upstream と衝突`, ref: { kind: "file", label: conflictFiles[0] } }
+          : undefined,
+        diff: diff
+          ? {
+            file: diff.file,
+            fileIndex: diff.fileIndex,
+            fileTotal: diff.fileTotal,
+            before: diff.before.map((l) => ({ ...l, marker: (l.marker ?? null) as "+" | "-" | null })),
+            after: diff.after.map((l) => ({ ...l, marker: (l.marker ?? null) as "+" | "-" | null })),
+          }
+          : undefined,
         criteria: intent.criteria.map((c) => ({
           ...c,
           state: (progress?.qa_status.find((q) => q.qa_id === c.id)?.status === "verified" ? "done" : "todo") as CriterionState,

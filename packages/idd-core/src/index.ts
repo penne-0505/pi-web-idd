@@ -39,3 +39,5 @@ export type { ExecResult } from "./plan/exec.ts";
 export { headCommit } from "./worktree/ensure.ts";
 export { resumeBrief, resumeTargetFor, runResume } from "./plan/resume.ts";
 export type { ResumeTarget } from "./plan/resume.ts";
+export { laneBase, laneDiff, lanesAwaitingCheck, runCheck } from "./plan/review.ts";
+export type { CheckResult, LaneDiff } from "./plan/review.ts";
