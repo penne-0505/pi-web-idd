@@ -1,0 +1,24 @@
+{
+  "areas": {
+    "penne-0505/pi-web-idd": {
+      "context": "personal",
+      "source_type_priority": "github",
+      "linked_repo": "penne-0505/pi-web-idd",
+      "branch_name_source": "config",
+      "branch_name_pattern": "idd/{idd_id}",
+      "intake_filter": {
+        "github_labels": ["idd-ready"]
+      }
+    },
+    "penne-0505/medo": {
+      "context": "personal",
+      "source_type_priority": "github",
+      "linked_repo": "penne-0505/medo",
+      "branch_name_source": "config",
+      "branch_name_pattern": "idd/{idd_id}",
+      "intake_filter": {
+        "github_labels": ["idd-ready"]
+      }
+    }
+  }
+}

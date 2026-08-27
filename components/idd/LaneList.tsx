@@ -75,13 +75,14 @@ function Row({ lane, selected, onSelect }: { lane: LaneRow; selected?: boolean; 
   );
 }
 
-export function LaneList({ sections, lanes, selectedId, areaLabel, onSelect, onIntake }: {
+export function LaneList({ sections, lanes, selectedId, areaLabel, onSelect, onIntake, intakeBusy }: {
   sections: LaneSection[];
   lanes: LaneRow[];
   selectedId?: string | null;
   areaLabel?: string;
   onSelect?: (id: string) => void;
   onIntake?: () => void;
+  intakeBusy?: boolean;
 }) {
   return (
     <div className="idd" style={{ display: "contents" }}>
@@ -125,15 +126,17 @@ export function LaneList({ sections, lanes, selectedId, areaLabel, onSelect, onI
       <div style={{ flexShrink: 0, borderTop: "1px solid var(--border)", padding: "10px 12px 12px" }}>
         <button
           onClick={onIntake}
+          disabled={intakeBusy}
           style={{
             display: "inline-flex", alignItems: "center", gap: 6,
             minHeight: 34, padding: "6px 12px", borderRadius: 4,
             background: "var(--bg)", border: "1px solid var(--text-muted)",
-            color: "var(--text)", fontSize: FS.md, cursor: "pointer",
+            color: intakeBusy ? "var(--text-dim)" : "var(--text)", fontSize: FS.md,
+            cursor: intakeBusy ? "default" : "pointer",
           }}
         >
-          <Icon name="intake" size={14} />
-          今すぐ取り込む
+          <Icon name="intake" size={14} color={intakeBusy ? "var(--text-dim)" : "var(--text)"} />
+          {intakeBusy ? "取り込み中" : "今すぐ取り込む"}
         </button>
       </div>
     </div>

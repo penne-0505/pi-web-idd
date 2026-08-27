@@ -19,7 +19,7 @@ related_prs: []
 
 対象は `lib/idd-ui/`（view 型 / 尺度 / fixture / server 側の fold）、`lib/build-stamp.ts`、`app/api/idd/*`。UI 側の見せ方の判断は `_docs/intent/IddUi/components/decision.md` に置く。
 
-`lib/idd/`（worker pool 等、Workspace DEC-004 / DEC-007 の系列）は別系統で、本文書の対象外。
+engine 側（`packages/idd-core`）の判断は `_docs/intent/IddCore/idd-core/decision.md`。旧 `lib/idd/` は IddCore DEC-652 で削除済み。
 
 ## Decisions
 

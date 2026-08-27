@@ -47,7 +47,7 @@ related_prs: []
 - **Why**: cold-start コスト（毎回数秒 × N lane）を消し、live worker status を pi-web 上で観測できる。従来の Python fan-out.py は subprocess 起動を毎回行うため、5 分 timeout に GLM 5.3:xhigh の深い推論が収まらないケースを 2 件観測（2026-08-23）。persistent session であれば timeout の意味自体が変わる（session は生きたまま、prompt 完了を待つだけ）。加えて pi-web の既存 idle timeout（10 分）と `globalThis.__piStartLocks` の並行制御をそのまま活用できる。
 - **Change freedom**: worker pool のサイズ、role 割当（planner / executor / verifier 等）、session 割当ポリシーは自由。「session を使い捨てない」だけが不変。
 - **Why not**（fan-out.py の subprocess 方式を維持）: cold-start のコストと timeout 逼迫が実測で問題化している。既に pi-web に persistent session 基盤があるのに二重の実装を並走させる合理性がない。
-- **Anchors**: `lib/rpc-manager.ts`（pi-web 既存、無改変）、これから追加する `lib/idd/worker-pool.ts`、`app/api/idd/workers/*`
+- **Anchors**: `lib/rpc-manager.ts`（pi-web 既存、無改変）。worker pool の実体は IddCore DEC-652 で一旦削除済み、S1 / S2 実装時に `packages/idd-core` 側へ書き直す
 
 ### DEC-005: Meltly 側 sync-tools/ui/（Python）は deprecated 予定
 
@@ -57,23 +57,23 @@ related_prs: []
   - button 集合と各 state における承認境界（DEC-006 系: S1 GO / S3 OK / S4 approval が per-action 承認）
 - **Why**: 単一の IDD dashboard を持つ方が保守負担・混乱が少ない。pi-web 拡張は worker 管理層と一体化しているため、Python 側で二重に持つ意味がなくなる。ただし承継が完了するまでは Python 側が生きていた方が観測を絶やさずに済む。
 - **Change freedom**: 廃止のタイミング（本 repo のどの機能が揃った時点か）は自由。「lifecycle event 名と state machine と承認境界の contract を承継する」だけが不変。
-- **Anchors**: `~/dev/00_meltly/sync-tools/ui/`（承継元、この repo 外）、`~/dev/00_meltly/sync-tools/lib/lifecycle.py`（schema SSOT）、本 repo の `lib/idd/lifecycle-schema.ts`（承継先、これから作成）
+- **Anchors**: `~/dev/00_meltly/sync-tools/ui/`（承継元、この repo 外）、`~/dev/00_meltly/sync-tools/lib/lifecycle.py`（schema SSOT）、本 repo の `packages/idd-core/src/schema/records.ts`（承継先。13 event の移植は IddCore DEC-652 で破棄し、handoff の 41 event に一本化）
 
 ### DEC-006: 承認境界は pi-web の per-action button と一致させる（Meltly 側 DEC-006 の承継）
 
 - **What**: 対外境界（Meltly repo への push / PR / レビュー依頼 / export 承認）は per-action の人間承認を通す。本 repo の IDD dashboard では button 押下 = 承認発行として扱い、button 押下 event を承継元の msync ledger に `lifecycle_*` として記録する。auto batch approval は行わない。
 - **Why**: Meltly-side DEC-006 の直接承継。承認の per-action 性は Meltly の client-facing 制約であり、UI が pi-web に載っても本質は変わらない。
 - **Change freedom**: 承認 UI（button の見た目、confirm dialog の有無）は自由。「1 button 押下 = 1 承認、batch 化しない」だけが不変。
-- **Anchors**: これから作成する `components/IDDLaneButtons.tsx`、`app/api/idd/lifecycle/route.ts`（msync CLI を shell 経由で叩く endpoint）
+- **Anchors**: `components/idd/cards/index.tsx`（押下 = 承認発行）、`app/api/idd/decide/route.ts`（msync CLI 経由をやめ、handoff schema で直接 append。IddCore DEC-652）
 
-### DEC-007: worker pool は role-aware な pi session registry として lib/idd/worker-pool.ts に実装
+### DEC-007: worker pool は role-aware な pi session registry として実装する
 
-- **What**: DEC-004 で宣言した「pi session = persistent worker」を実体化する薄い registry を `lib/idd/worker-pool.ts` に置く。pool の unit は `WorkerDescriptor { id, role, status, model, currentTask?, updatedAt }` で、id は pi 側 AgentSession の session id と 1:1 に対応する。pool state はプロセス内 in-memory Map で保持し、Next.js の hot-reload を跨ぐため `globalThis.__iddWorkerPool` に置く（pi-web の `globalThis.__piSessions` パターンと同型）。role は `planner` / `executor` の 2 種を初期集合とし、model は role ごとに設定する（planner=Kimi 想定、executor=v4 Flash 想定、ただし model 名は runtime で切替可能）。
+- **What**: DEC-004 で宣言した「pi session = persistent worker」を実体化する薄い registry を置く（当初は `lib/idd/worker-pool.ts`、IddCore DEC-652 で削除、再実装は engine 側）。pool の unit は `WorkerDescriptor { id, role, status, model, currentTask?, updatedAt }` で、id は pi 側 AgentSession の session id と 1:1 に対応する。pool state はプロセス内 in-memory Map で保持し、Next.js の hot-reload を跨ぐため `globalThis.__iddWorkerPool` に置く（pi-web の `globalThis.__piSessions` パターンと同型）。role は `planner` / `executor` の 2 種を初期集合とし、model は role ごとに設定する（planner=Kimi 想定、executor=v4 Flash 想定、ただし model 名は runtime で切替可能）。
 - **Why**: DEC-004 は方針の宣言であり、実装上は「どの session が誰の role で、いま何をしていて、次のタスクをどこに渡すか」の状態管理が必要になる。この責務を pi-web の `AgentSessionWrapper` に混ぜると内部変更のたびに壊れやすくなるので、addon layer として lib/idd/ 側に閉じ込める。pool を registry として最小化し、実際の session 起動・prompt 送信は既存の `lib/rpc-manager.ts` の API に委譲する。
 - **Change freedom**: role の集合、model 割当、task 配布ポリシー（round-robin / priority / manual）、task queue の有無、`WorkerDescriptor` の追加フィールドは自由。「pool は AgentSession の id を鍵にして role/status を addon で持つ」「globalThis に置いて hot-reload を跨ぐ」「rpc-manager を書き換えず上に載る」の 3 点だけが不変。
 - **Why not**（pi-web の AgentSessionWrapper を継承して role 情報を持たせる）: 内部 signature 変更のたびに拡張側が壊れる負担が上乗せされる。
 - **Revisit when**: role が 3 種以上に増える、task queue が単純な list より複雑な要件（priority, dependency graph）を持つ、または worker の物理配置が multi-machine に広がった時点で pool の設計を見直す。
-- **Anchors**: `lib/idd/worker-pool.ts`（本 DEC の実装本体）、`lib/rpc-manager.ts`（pi-web 側、無改変）、`app/api/idd/workers/route.ts`（pool の read 用 GET endpoint）
+- **Anchors**: `lib/rpc-manager.ts`（pi-web 側、無改変）。実装本体は S1 / S2 の実装時に `packages/idd-core` 側へ置き直す（IddCore DEC-652）
 
 ## Consequences / Impact
 

@@ -5,7 +5,9 @@
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import lockfile from "proper-lockfile";
-import { readBacklog, stateDir } from "./state";
+import { stateDir } from "../paths.ts";
+import { readBacklog, readQuestionBatch } from "./read.ts";
+import { agentBaseUrl, agentToken } from "../agent/token.ts";
 
 function ensureDir(dir: string) {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -30,8 +32,14 @@ function nowIso(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}${sign}${p(Math.floor(Math.abs(off) / 60))}:${p(Math.abs(off) % 60)}`;
 }
 
+// intent: DEC-658 — area は repo 名を含みうるので、file 名に写すときだけ平坦化する (正本は backlog の area)
+function fileSafeArea(area: string): string {
+  return area.replace(/[^A-Za-z0-9_.-]+/g, "-").replace(/^-+|-+$/g, "") || "default";
+}
+
 function laneArea(iddId: string): string {
-  return readBacklog().find((b) => b.idd_id === iddId)?.area ?? "default";
+  const area = readBacklog().find((b) => b.idd_id === iddId)?.area;
+  return area ? fileSafeArea(area) : "default";
 }
 
 export async function appendLifecycle(event: string, iddId: string, attrs: Record<string, unknown> = {}): Promise<string> {
@@ -63,6 +71,7 @@ export async function appendAnswer(rec: {
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+// intent: DEC-661 — envelope は自己完結。書き戻し先と token を同梱し、agent 側の設定に依存させない
 export function buildEnvelope(type: string, iddId: string, body: string): string {
   return [
     "<idd-system-message>",
@@ -70,6 +79,16 @@ export function buildEnvelope(type: string, iddId: string, body: string): string
     `  <type>${esc(type)}</type>`,
     `  <idd-id>${esc(iddId)}</idd-id>`,
     body,
+    "  <callback>",
+    `    <base-url>${esc(agentBaseUrl())}</base-url>`,
+    `    <token>${esc(agentToken())}</token>`,
+    "    <endpoints>",
+    "      <questions>POST /api/idd/agent/questions</questions>",
+    "      <ready>POST /api/idd/agent/ready</ready>",
+    "      <progress>POST /api/idd/agent/progress</progress>",
+    "      <result>POST /api/idd/agent/result</result>",
+    "    </endpoints>",
+    "  </callback>",
     "</idd-system-message>",
   ].join("\n");
 }
@@ -160,8 +179,18 @@ export async function applyDecision(action: string, payload: Record<string, unkn
 
     case "answer": {
       const batchId = String(payload.batchId ?? "");
-      const questionId = String(payload.questionId ?? "Q-001");
-      const selection = (payload.selection ?? { label: "その他" }) as { index?: number; label: string };
+      // intent: DEC-663 — envelope に載せる問いと選択肢は UI の payload ではなく pending-questions を正本にする
+      const batch = readQuestionBatch(iddId, batchId);
+      const asked = batch?.questions?.[0];
+      const questionId = String(payload.questionId ?? asked?.question_id ?? "Q-001");
+      const options = asked?.options ?? [];
+      const raw = (payload.selection ?? {}) as { index?: number; label?: string };
+      const selection = {
+        index: raw.index,
+        label: raw.label
+          ?? options.find((o) => o.index === raw.index)?.label
+          ?? "その他",
+      };
       wrote.push(await appendAnswer({
         iddId, batchId, questionId, selection,
         reason: payload.reason as string | undefined,
@@ -170,8 +199,9 @@ export async function applyDecision(action: string, payload: Record<string, unkn
       const id = await queueEnvelope(iddId, "question_batch_answered",
         questionAnsweredEnvelope(iddId, batchId, [{
           questionId,
-          question: String(payload.question ?? ""),
-          options: (payload.options as { index: number; label: string }[] | undefined) ?? [],
+          question: asked?.question ?? String(payload.question ?? ""),
+          context: asked?.context,
+          options,
           selection,
           reason: payload.reason as string | undefined,
           notes: payload.notes as string | undefined,

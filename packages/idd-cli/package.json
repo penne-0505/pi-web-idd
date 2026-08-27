@@ -1,0 +1,10 @@
+{
+  "name": "@idd/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "idd": "bin/idd.ts" },
+  "dependencies": {
+    "@idd/core": "*"
+  }
+}

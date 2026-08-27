@@ -1,4 +1,5 @@
-// intent: DEC-609 — 根の解決だけを分けて state.ts と lane-work.ts の循環を避ける
+// intent: DEC-609 — 根の解決だけを分けて循環 import を避ける
+// intent: DEC-650 — engine が知ってよい外界は state dir と intent root だけ
 
 import { join } from "node:path";
 

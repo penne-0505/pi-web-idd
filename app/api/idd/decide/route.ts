@@ -1,7 +1,7 @@
 // intent: DEC-605 — 書けなければ ok:false。UI は押した状態にしない
 
 import { NextResponse } from "next/server";
-import { applyDecision } from "@/lib/idd-ui/server/write";
+import { applyDecision } from "@idd/core";
 
 export const dynamic = "force-dynamic";
 

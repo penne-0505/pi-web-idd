@@ -24,9 +24,16 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@idd/core": [
+        "./packages/idd-core/src/index.ts"
+      ],
+      "@idd/core/*": [
+        "./packages/idd-core/src/*"
       ]
     },
-    "target": "ES2017"
+    "target": "ES2017",
+    "allowImportingTsExtensions": true
   },
   "include": [
     "next-env.d.ts",

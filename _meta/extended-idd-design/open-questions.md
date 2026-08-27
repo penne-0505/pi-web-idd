@@ -4,13 +4,18 @@
 
 ## 高優先 (実装着手前に必要)
 
-### 1. Web UI ↔ LLM 通信の具体的な protocol 実装
+### 1. Web UI ↔ LLM 通信の具体的な protocol 実装 (2026-08-27 解決)
 
 - envelope schema は決定済み (envelope.md 参照)
-- ただし「user prompt 前挿入」を **pi の API でどう実現するか** は未検証
-  - pi の session に「次 turn の user message を prepend」する仕組みがあるか
-  - あるいは、pi session の user prompt 送信時に prepend する外側のラッパーが必要か
-- 実装着手前に pi の SDK / CLI で試作して確認する
+- 「user prompt 前挿入」は **pi の SDK にそのまま存在した**:
+  `AgentSession.prompt(text, { streamingBehavior: "followUp" })` が「現在の turn の完了を待って次の turn の user 位置に入る」。
+  session が待機中なら通常の `prompt()` がそのまま新しい turn になる。外側のラッパーは不要。
+  (`@earendil-works/pi-coding-agent/dist/core/agent-session.d.ts` の `PromptOptions`)
+- **`expandPromptTemplates: false` を必ず付ける。** 既定は true で、envelope には agent 生成の文字列が載るため、
+  skill command / prompt template として解釈される余地を残せない (IddCore DEC-662)
+- 逆方向 (LLM → Web UI) は envelope.md の通り tool call = HTTP。口は 4 つに限り、token で閉じる
+  (IddCore DEC-660 / DEC-661)。envelope に `<callback>` として base-url / token / endpoint を同梱する
+- pi session の所有者は runtime を持つ 1 プロセスに限る (IddCore DEC-659)。engine は port だけを持つ
 
 ### 2. `linear-axi` MCP の branch 名取得機能
 
