@@ -6,7 +6,7 @@ import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import lockfile from "proper-lockfile";
 import { stateDir } from "../paths.ts";
-import { readBacklog, readQuestionBatch } from "./read.ts";
+import { readAnswers, readBacklog, readQuestionBatch } from "./read.ts";
 import { agentBaseUrl, agentToken } from "../agent/token.ts";
 
 function ensureDir(dir: string) {
@@ -148,6 +148,7 @@ export async function queueEnvelope(iddId: string, type: string, xml: string): P
 }
 
 export interface DecideResult {
+  remaining?: number;
   ok: boolean;
   wrote: string[];
   envelopeId?: string;
@@ -179,35 +180,47 @@ export async function applyDecision(action: string, payload: Record<string, unkn
 
     case "answer": {
       const batchId = String(payload.batchId ?? "");
-      // intent: DEC-663 — envelope に載せる問いと選択肢は UI の payload ではなく pending-questions を正本にする
       const batch = readQuestionBatch(iddId, batchId);
-      const asked = batch?.questions?.[0];
-      const questionId = String(payload.questionId ?? asked?.question_id ?? "Q-001");
+      const questionId = String(payload.questionId ?? batch?.questions?.[0]?.question_id ?? "Q-001");
+      const asked = batch?.questions?.find((q) => q.question_id === questionId) ?? batch?.questions?.[0];
       const options = asked?.options ?? [];
       const raw = (payload.selection ?? {}) as { index?: number; label?: string };
       const selection = {
         index: raw.index,
-        label: raw.label
-          ?? options.find((o) => o.index === raw.index)?.label
-          ?? "その他",
+        label: raw.label ?? options.find((o) => o.index === raw.index)?.label ?? "その他",
       };
       wrote.push(await appendAnswer({
         iddId, batchId, questionId, selection,
         reason: payload.reason as string | undefined,
         notes: payload.notes as string | undefined,
       }));
+
+      // intent: DEC-677 — planner の resume 条件は batch 全問が揃うこと。1 問ごとに起こさない
+      const answers = readAnswers().filter((a) => a.idd_id === iddId && a.batch_id === batchId);
+      const answeredIds = new Set(answers.map((a) => a.question_id));
+      const remaining = (batch?.questions ?? []).filter((q) => !answeredIds.has(q.question_id));
+      if (remaining.length > 0) {
+        return { ok: true, wrote, remaining: remaining.length };
+      }
+
+      wrote.push(await appendLifecycle("question_batch_answered", iddId, { batch_id: batchId }));
+      const pairs = (batch?.questions ?? []).map((q) => {
+        const a = answers.filter((x) => x.question_id === q.question_id).pop();
+        return {
+          questionId: q.question_id,
+          question: q.question,
+          context: q.context,
+          options: q.options ?? [],
+          selection: a?.selection ?? { label: "その他" },
+          reason: a?.reason ?? undefined,
+          notes: a?.notes ?? undefined,
+        };
+      });
       const id = await queueEnvelope(iddId, "question_batch_answered",
-        questionAnsweredEnvelope(iddId, batchId, [{
-          questionId,
-          question: asked?.question ?? String(payload.question ?? ""),
-          context: asked?.context,
-          options,
-          selection,
-          reason: payload.reason as string | undefined,
-          notes: payload.notes as string | undefined,
-        }]));
+        questionAnsweredEnvelope(iddId, batchId, pairs));
       return { ok: true, wrote, envelopeId: id };
     }
+
 
     case "s3_ok":
       wrote.push(await appendLifecycle("s3_ok", iddId, {

@@ -41,6 +41,10 @@ export interface PendingAnswer {
   idd_id: string;
   batch_id: string;
   question_id: string;
+  answered_at: string;
+  selection: { index?: number; label: string };
+  reason?: string | null;
+  notes?: string | null;
 }
 
 export interface ExecutorProgress {

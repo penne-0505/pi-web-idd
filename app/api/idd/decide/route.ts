@@ -1,7 +1,8 @@
 // intent: DEC-605 — 書けなければ ok:false。UI は押した状態にしない
 
 import { NextResponse } from "next/server";
-import { applyDecision } from "@idd/core";
+import { applyDecision, deliverPending } from "@idd/core";
+import { ensureAgentRunner } from "@/lib/idd-ui/server/agent-runner";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,13 @@ export async function POST(req: Request) {
 
   try {
     const result = await applyDecision(body.action, body.payload ?? {});
-    return NextResponse.json(result, {
+    // intent: DEC-676 — 記録が済んだら即座に配信を試みる。失敗しても記録は成功のまま (未達は outbox に残る)
+    let delivery: Awaited<ReturnType<typeof deliverPending>> | { error: string } | undefined;
+    if (result.ok) {
+      ensureAgentRunner();
+      delivery = await deliverPending().catch((err) => ({ error: String(err) }));
+    }
+    return NextResponse.json({ ...result, delivery }, {
       status: result.ok ? 200 : 400,
       headers: { "Cache-Control": "no-store" },
     });

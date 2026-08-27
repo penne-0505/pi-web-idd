@@ -22,7 +22,7 @@ const KIND_ICON: Record<DecisionKind, IconName> = {
 function itemLabel(item: InboxItem): string {
   switch (item.kind) {
     case "duplicate": return item.incoming.title;
-    case "question": return item.question;
+    case "question": return item.open[0]?.question ?? "";
     case "review": return item.target.title;
     default: return item.title;
   }

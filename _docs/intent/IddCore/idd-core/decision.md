@@ -159,6 +159,20 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: slug の形は自由。「ASCII で、lane と 1:1 で、題名の変更で動かない」だけが不変。
 - **Anchors**: `packages/idd-core/src/intent/parse.ts`（slugOf）
 
+### DEC-676: 判断を記録したら、その場で配信を試みる
+
+- **What**: `POST /api/idd/decide` は記録に成功したら続けて `deliverPending()` を呼ぶ。配信の失敗は記録の成功を取り消さず、未達は outbox に残る。
+- **Why**: 記録と送信を分ける（DEC-606）のは「送れなくても記録は残す」ためであって、「送るのを後回しにする」ためではない。人間が回答したのに planner が動き出さない時間は、そのまま lane の停滞になる。押した時点で試すのが最も短い。
+- **Change freedom**: 呼ぶ場所、再送の戦略は自由。「配信の失敗が記録の成功を巻き戻さない」だけが不変。
+- **Anchors**: `app/api/idd/decide/route.ts`
+
+### DEC-677: 質問は 1 問ずつ判断し、planner を起こすのは batch が揃ってから
+
+- **What**: batch は **1 枚の card** として出し、その中で未回答の問いを 1 問ずつ順に見せる。主ボタンは残りがある間は「次の質問へ」、最後の 1 問で「回答して再開させる」。回答は 1 問ごとに `pending-answers.jsonl` へ記録し、全問が揃ったときにだけ `question_batch_answered` event と envelope を 1 通生成する。
+- **Why**: handoff の S1 は「batch 内最大 5 問」「planner の resume 条件は全問が揃ったとき」。判断の単位（1 問）と再開の単位（1 batch）は別物だが、**1 問 = 1 card にすると同じ lane の札が 5 枚並び**、1 画面 1 判断の趣旨（IddUi DEC-620）に反する上、「4 枚答えたが何も進んでいない」状態がキューに散らばる。card 間に依存関係を持たせる案は、めくる操作の意味まで変えるので採らない。batch という単位が既にあるのだから、その中で完結させる。
+- **Change freedom**: card 内の進み方、進捗の見せ方は自由。「1 問ずつ判断できる」「全問揃うまで agent を起こさない」「同じ batch が複数の札に割れない」の 3 点が不変。
+- **Anchors**: `lib/idd-ui/server/state.ts`、`packages/idd-core/src/ledger/write.ts`（applyDecision の answer）
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。

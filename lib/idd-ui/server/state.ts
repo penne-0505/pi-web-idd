@@ -3,7 +3,7 @@
 
 import {
   changedFiles, deriveStage, elapsedLabel, parseIntent, readBacklog, readLatestCronRun,
-  readLifecycle, readOpenQuestions, readPendingReviews, readProgress, readSessions, slugOf,
+  readAnswers, readLifecycle, readOpenQuestions, readPendingReviews, readProgress, readSessions, slugOf,
 } from "@idd/core";
 import type { BacklogRecord, LaneGroup, LifecycleRecord } from "@idd/core";
 import { stateDir } from "@idd/core";
@@ -96,26 +96,31 @@ export function buildState(): IddState {
     });
   }
 
+  const answeredIds = new Set(readAnswers().map((a) => `${a.idd_id}/${a.batch_id}/${a.question_id}`));
   for (const b of readOpenQuestions()) {
     const rec = backlog.find((x) => x.idd_id === b.idd_id);
-    const q = b.questions[0];
-    if (!q) continue;
-    const facts: StateFact[] = q.context
-      ? [{ label: "context", value: q.context }]
-      : [];
+    const open = b.questions
+      .filter((q) => !answeredIds.has(`${b.idd_id}/${b.batch_id}/${q.question_id}`))
+      .map((q) => ({
+        questionId: q.question_id,
+        question: q.question,
+        facts: q.context ? [{ label: "context", value: q.context }] : [],
+        options: q.options.map((o) => ({ index: o.index, label: o.label })),
+      }));
+    if (!open.length) continue;
     items.push({
       kind: "question",
       iddId: b.idd_id,
       laneTitle: rec?.title,
       source: rec ? sourceOf(rec) : undefined,
       batchId: b.batch_id,
-      askedIndex: 1,
+      open,
       askedTotal: b.questions.length,
-      question: q.question,
-      facts,
-      options: q.options.map((o) => ({ index: o.index, label: o.label })),
+      answeredCount: b.questions.length - open.length,
     });
   }
+
+
 
   for (const rec of backlog) {
     const evs = byLane.get(rec.idd_id) ?? [];

@@ -6,7 +6,7 @@ export type {
   PendingAnswer, PendingQuestionBatch, PendingReview, SessionRecord,
 } from "./schema/records.ts";
 export {
-  readBacklog, readLatestCronRun, readLifecycle, readOpenQuestions,
+  readAnswers, readBacklog, readLatestCronRun, readLifecycle, readOpenQuestions,
   readPendingReviews, readProgress, readQuestionBatch, readSessions,
 } from "./ledger/read.ts";
 export { deriveStage, elapsedLabel } from "./ledger/derive.ts";
