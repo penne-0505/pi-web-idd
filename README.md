@@ -1,257 +1,237 @@
-# Intent Driven Development Template
+# 拡張 IDD — Intent-Driven Development pipeline
 
-> This README is available in English and Japanese. English speakers, please scroll down.
+> この README は日本語と英語の 2 部構成です。English speakers, please scroll down.
 
-## 概要
+## このリポジトリは何か
 
-このリポジトリは intent-driven development *(意図駆動開発)* のテンプレートです。
+このリポジトリは、[pi coding agent](https://github.com/earendil-works/pi) のブラウザ UI である [pi-web](https://github.com/agegr/pi-web) v0.8.9 の固定派生に、**拡張 IDD (intent-driven development) の pipeline と判断 UI** を組み込んだものです。
 
-コーディングエージェントによる開発の最大の問題は一貫性の欠如であり、その原因は意図
-(why / why not) の不足です。このテンプレートは、実装の意図を記録・参照・検証することを
-開発サイクルの中心に置きます。ドキュメントは意図を運ぶ媒体であり、想定読者は毎回
-コンテクストが分離された状態で作業を始める coding agent です。
+拡張 IDD は「朝起きたら、判断待ちの作業レーンが N 件並んでいる」を実現する、AI 主導の開発 pipeline です。起票 (GitHub issue) を lane に取り込み、planner が下調べして契約 (DEC / INV / QA / reference) を生成し、**人間は GO / DEFER の判断だけ**を行い、executor が独立した git worktree で並列実装します。
 
-- **すべての変更**が最小ループを回ります: `TODO (AC) → 実装 → Intent Delta の宣言 → QA round の記録`。省略できるのは深さであって、存在ではありません。
-- 設計判断はリポジトリ一意の ID を持つ `DEC` として `_docs/intent/` に記録され、コードからは `// intent: DEC-xxx — <理由>` のポインタコメントだけで到達します。散文コメントは validator が禁止します。
-- QA は計画と検証記録が一体の `qa.md` 一種類で、微小変更は Area ごとの集約ファイルに数行の round を追記するだけです。
-- 品質は機械 (validator が構造を強制) と agent review (R1 妥当性 / R2 再構成テスト) が担い、人間は標準の改訂だけを行います。
+- **S0 取り込み**: GitHub issue (label `idd-ready`) を backlog に追加
+- **S1 下調べ**: planner が lane ごとに DEC / INV / QA / reference を生成
+- **GO 判断**: 人間が Web UI で GO / DEFER を判定
+- **S2 実装**: executor が独立 worktree で実装
+- **S3 衝突確認**: 並列 lane 同士 / upstream との衝突を機械判定
+- **S4 提出**: commit rewrite → 確認 → push / PR 化
 
-人がサイクルを回すことも出来ますが、基本的には**Claude Codeなどのコーディングエージェント**が、この規則に従って自律的な開発を行うために設計されました。
+構成:
 
-**詳細については [workflow standard](_docs/standards/workflow.md) と [document contracts](_docs/standards/document_contracts.md) を参照してください。**
+| 場所 | 内容 |
+| --- | --- |
+| `packages/idd-core` | engine。state の読み書き、intake / plan / check / ship の各段階 |
+| `packages/idd-cli` | CLI (`idd intake` / `idd tick`) |
+| `components/idd` / `lib/idd-ui` | 判断 UI (Inbox / lane detail / card) |
+| `app/api/idd/` | 判断 UI と engine を繋ぐ API |
+| その他 | pi-web v0.8.9 の派生 shell (session 閲覧、モデル設定など) |
 
-初めて使う場合は、まず [Quickstart](QUICKSTART.md) を読んでください。
+## 動かし方
 
-## 使用方法
-
-1. このリポジトリをフォークまたはクローンします。
-2. **`starter/` を展開します。** 利用者向けの `AGENTS.md` / `CLAUDE.md` / `TODO.md` と agent 設定は `starter/` に畳まれており、展開するまで有効になりません。手順は [Quickstart](QUICKSTART.md) の「0. 初期化」にあります。
-3. プロジェクトに合わせてドキュメントと設定ファイルを編集します。
-4. 開発を開始します。
-
-配布用 ZIP を作る場合は、`.git` / `.jj` などの VCS メタデータを含めないために、GitHub 標準アーカイブまたは `scripts/create-template-archive.sh` を使用してください。
-
-ローカルでドキュメント検証をまとめて実行する場合は、`scripts/check-docs.sh` を使います。CI も同一 script を通します。
-
-既存プロジェクトへ後付け導入する場合は、`DD_SCOPE_BASE` に導入時点の commit を設定して、既定では「導入以降に追加した docs だけ」を検証対象に絞れます。設定方法は [Quickstart](QUICKSTART.md) と [template_operations.md](_docs/standards/template_operations.md) を参照してください。
-
-導入後も template の更新を取り込む場合は、推奨 release tag とその full SHA を `docs-template.lock.json` に記録し、[`docs-template-migration`](.agents/skills/docs-template-migration/SKILL.md) skill で既存のカスタマイズを保全しながら three-way migration を行います。
-
-Codex / Claude Code 向けの lifecycle hook を同梱しています。hook は optional な増幅であり、規範の代替ではありません（規範は Markdown 層に、機械強制は Deno validator にあります）。SessionStart はワークフローの想起、PreToolUse は恒久削除・秘密ファイル操作の安全ブロック、Stop はループ関連の未コミット変更があるときの一言想起のみを行います。利用時は各 agent の `/hooks` で内容を確認して信頼してください。
-
-久しぶりの再開や handoff 探索では、`docs-inventory` skill が TODO、intent、QA、legacy 文書の棚卸しを行います。
-
-## カスタマイズ
-
-使用に当たっては、以下のファイルをプロジェクトに合わせてカスタマイズしてください。
-
-- **AGENTS.md**: プロジェクト固有の実行コマンド、安全基準に合わせて確認・編集してください。
-- **README.md**: このREADME自体も、プロジェクトに合わせて編集してください。
-- **LICENSE.txt**: 特に著作者の表示を編集してください。
-- **docs-validators.json** (任意): ライブラリとして API doc comment を配布する場合の opt-out など、validator の設定を宣言できます。
-
-## ライセンス
-
-このリポジトリは [MITライセンス](LICENSE.txt) の下でライセンスされています。
-
----
-
-## Summary
-
-This repository is a template for intent-driven development.
-
-The core failure mode of agent-driven coding is loss of consistency, and its cause is missing
-intent (the why / why not behind implementations). This template puts recording, referencing,
-and verifying intent at the center of the development cycle. Documents are the medium that
-carries intent; the primary reader is a coding agent that starts every session with a fresh
-context.
-
-- **Every change** runs the minimal loop: `TODO (AC) → implement → declare the Intent Delta → record a QA round`. Only depth varies; presence does not.
-- Design decisions are recorded as `DEC` entries with repository-unique IDs under `_docs/intent/`, reachable from code exclusively through pointer comments (`// intent: DEC-xxx — <reason>`). Prose comments are rejected by a validator.
-- QA planning and verification live in one `qa.md` per feature; small changes append a few-line round to a per-area rolling file.
-- Quality is held by machines (validators enforce structure) and agent review (R1 validity / R2 reconstruction test); humans only revise the standards.
-
-While humans can run the cycle, it is primarily designed **for coding agents like Claude Code** to autonomously develop according to these rules.
-
-**For details, see the [workflow standard](_docs/standards/workflow.md) and the [document contracts](_docs/standards/document_contracts.md).**
-
-If this is your first time using the template, start with the [Quickstart](QUICKSTART.md).
-
-## Usage
-
-1. Fork or clone this repository.
-2. **Expand `starter/`.** The consumer-facing `AGENTS.md` / `CLAUDE.md` / `TODO.md` and the agent configuration live under `starter/` and stay inactive until you expand them. See "0. 初期化" in the [Quickstart](QUICKSTART.md).
-3. Edit the documentation and configuration files to suit your project.
-4. Start development.
-
-Use `scripts/check-docs.sh` to run the local documentation validators together; CI runs the same script.
-
-When adopting this template in an existing project, set `DD_SCOPE_BASE` to the adoption commit so that, by default, only docs added after adoption are validated. To keep an adopted project current with later template releases, record the recommended release tag and its full SHA in `docs-template.lock.json`, then use the [`docs-template-migration`](.agents/skills/docs-template-migration/SKILL.md) skill.
-
-Lifecycle hooks for Codex and Claude Code are included as optional amplifiers, never as the norm itself (norms live in Markdown, machine enforcement in Deno validators): SessionStart reinjects the workflow, PreToolUse blocks permanent deletion and credential-file access, and Stop asks a single ignorable question when loop-relevant uncommitted changes exist. Review and trust them through each agent's `/hooks` UI before use.
-
-## License
-
-This repository is licensed under the [MIT License](LICENSE.txt).
-
-
----
-
-# pi-web README (v0.8.9, agegr, MIT)
-
-# Pi Web
-
-[中文文档](./README.zh-CN.md) | [日本語](./README.ja.md) | [Русский](./README.ru.md)
-
-Local browser UI for the [pi coding agent](https://github.com/earendil-works/pi). Pi Web uses the same local configuration and session files as pi, so you can browse and resume conversations, run agent turns, configure models and resources, and inspect project files from a browser.
-
-![Pi Web displaying a pi session with structured Markdown, tool calls, and project navigation](https://raw.githubusercontent.com/agegr/pi-web/main/docs/screenshot2.png)
-
-## Features
-
-- **Session workspace**: browse, resume, rename, export, and delete conversations grouped by project, with running state, context usage, cost, and compaction details.
-- **Two ways to branch**: **New session** creates an independent session file from an earlier message; **Edit from here** creates a branch inside the current session.
-- **Project file tools**: browse and upload files, inspect Git diffs, and preview source, Markdown, images, audio, PDFs, and DOCX files with automatic refresh.
-- **Git worktrees**: switch checkouts from the sidebar while keeping sessions from the same repository grouped together.
-- **Web-based configuration**: manage provider login and API keys, models, model tests, plugin packages, and skills without leaving Pi Web.
-- **English and Simplified Chinese UI**: Pi Web follows the browser language initially and provides a language switcher in the top bar.
-
-## Quick Start
-
-Pi Web requires Node.js 22.19.0 or newer. Check your version with `node --version`, then run:
-
-```bash
-npx @agegr/pi-web@latest
-```
-
-The CLI opens a browser after the server is ready. If it does not, open [http://127.0.0.1:30141](http://127.0.0.1:30141). Pi Web listens only on `127.0.0.1` by default.
-
-If no model provider is configured yet, open the **Models** panel to sign in or add an API key.
-
-To install the `pi-web` command globally:
-
-```bash
-npm install -g @agegr/pi-web@latest
-pi-web
-```
-
-To update, stop the running process with `Ctrl+C` and run the same install command again. To uninstall, run `npm uninstall -g @agegr/pi-web`.
-
-## Configuration
-
-For port and hostname, command-line options override the corresponding environment variables. Either `--no-open` or `PI_WEB_NO_OPEN=1` disables automatic browser opening.
-
-| Option or environment variable | Purpose | Default |
-| --- | --- | --- |
-| `--port <port>`, `-p <port>`, or `PORT` | Server port | `30141` |
-| `--hostname <host>`, `-H <host>`, or `PI_WEB_HOSTNAME` | Bind hostname | `127.0.0.1` |
-| `--no-open` or `PI_WEB_NO_OPEN=1` | Do not open a browser automatically | Browser opens |
-| `PI_WEB_ALLOWED_HOSTS` | Additional exact proxy or custom hostnames, comma-separated | Unset |
-| `PI_WEB_PASSWORD` | Enable HTTP Basic Auth; the username is always `pi` | Authentication disabled |
-
-For example:
-
-```bash
-pi-web -p 8080 -H 0.0.0.0 --no-open
-```
-
-### Remote Access
-
-Binding to a non-loopback address exposes an agent that can execute high-privilege actions. On a trusted LAN, require a long random password:
-
-```bash
-PI_WEB_PASSWORD='a-long-random-password' pi-web --hostname 0.0.0.0
-```
-
-Basic Auth does not encrypt the password in transit. Do not expose Pi Web over plain HTTP to the internet; use HTTPS through a trusted reverse proxy or a trusted VPN. If a reverse proxy sends an external hostname, add that exact name to `PI_WEB_ALLOWED_HOSTS`. This allow-list does not change the address Pi Web binds to.
-
-### HTTP Proxy
-
-Server-side model and API requests honor the standard `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` environment variables.
-
-On macOS or Linux:
-
-```bash
-HTTP_PROXY=http://127.0.0.1:7890 \
-HTTPS_PROXY=http://127.0.0.1:7890 \
-NO_PROXY=localhost,127.0.0.1 \
-npx @agegr/pi-web@latest
-```
-
-On Windows PowerShell:
-
-```powershell
-$env:HTTP_PROXY = "http://127.0.0.1:7890"
-$env:HTTPS_PROXY = "http://127.0.0.1:7890"
-$env:NO_PROXY = "localhost,127.0.0.1"
-npx @agegr/pi-web@latest
-```
-
-## Notes
-
-- **Agent data**: Pi Web reads pi data from `~/.pi/agent` by default, including session files under `sessions/<encoded-cwd>/<timestamp>_<uuid>.jsonl`. Set `PI_CODING_AGENT_DIR` to use another pi agent directory.
-- **Filesystem access**: Pi Web must be able to read the agent data directory and the working directories recorded by its sessions. Run Pi Web in the same filesystem environment as pi when sharing existing sessions.
-- **Shared configuration**: the Models panel uses pi's model, settings, and credential storage, so changes are visible to both interfaces.
-- **File access boundary**: the file browser is limited to working directories selected in Pi Web and project or session roots it already knows about; it is not a general filesystem browser.
-- **Git worktrees**: see [Worktrees in Pi Web](./docs/worktrees.md) for switcher visibility, worktree creation, and removal behavior.
-
-### Downstream Session Context Menu
-
-Electron wrappers and other downstream integrations can provide a session-row
-context menu without patching `SessionSidebar`. Listen for the cancelable
-`pi-web:session-row-contextmenu` browser event and call `preventDefault()`
-synchronously when the integration will handle it:
-
-```js
-window.addEventListener("pi-web:session-row-contextmenu", (event) => {
-  event.preventDefault();
-  const { id, path, cwd, name, clientX, clientY, refresh } = event.detail;
-
-  void openSessionMenu({ id, path, cwd, name, clientX, clientY }).then((changed) => {
-    if (changed) refresh();
-  });
-});
-```
-
-The detail object contains `id`, `path`, `cwd`, optional `name`, pointer
-coordinates, and a `refresh()` callback for actions that change the session
-list. If no listener cancels the extension event, Pi Web preserves the
-browser's native context menu. This hook is browser-side and independent of
-Pi agent extensions.
-
-## Development
+### 開発サーバー
 
 ```bash
 npm install
 npm run dev
 ```
 
-The development server runs at [http://127.0.0.1:30141](http://127.0.0.1:30141). Run the common checks with:
+開発サーバーは [http://127.0.0.1:30141](http://127.0.0.1:30141) で起動します。ブラウザで開くと、判断待ちの lane が Inbox に並びます。
+
+### 環境変数
+
+| 変数 | 意味 | 既定値 |
+| --- | --- | --- |
+| `IDD_STATE_DIR` | state ファイル (backlog.jsonl / lifecycle / cron-run など) の置き場 | `<cwd>/state` |
+| `IDD_INTENT_DIR` | intent (DEC) の root | `<cwd>/_docs/intent` |
+| `IDD_AGENT_BASE_URL` | agent の書き戻し先 (envelope の配信先) | `http://127.0.0.1:$PORT` |
+| `IDD_AGENT_TOKEN` | agent 用書き込み口の token | `<state>/agent-token` に自動生成 |
+
+### CLI
 
 ```bash
-npm test
-node_modules/.bin/tsc --noEmit
-npm run lint
+bun run packages/idd-cli/bin/idd.ts intake   # S0 取り込み (server 不要、engine 直接)
+bun run packages/idd-cli/bin/idd.ts tick     # S0 → S3 を一巡 (server 必須、POST /api/idd/tick)
 ```
 
-Do not run `next build` or `npm run build` during normal development. It writes to `.next/` and can interfere with the development server; leave builds for release work.
+## 全体の流れ (S0-S4)
 
-Contributor guides: [Internationalization](./docs/i18n.md) and [Release process](./docs/release.md).
+### S0: 取り込み (Intake)
 
-## Repository Layout
+GitHub issue (area config の `intake_filter.github_labels`、既定 `idd-ready`) を拾い、`backlog.jsonl` に追加します。重複判定は URL 完全一致 (機械) のみ稼働しています。取り込みの結果は 1 実行 1 file の `cron-run-<timestamp>.json` に記録されます。
+
+### S1: 下調べ (Planner Prep)
+
+各 lane について planner が下調べし、`_docs/intent/<Area>/<slug>/` に `decision.md` (DEC) / `invariant.md` (INV) / `qa.md` (QA) / `reference.md` を生成します。各 lane に独立 planner pi session と git worktree を切り、並列度は `IDD_PLANNER_CONCURRENCY` (既定 5) で制限します。完了状態は `s1_ready` (人間 GO 待ち) と `pending_question` (質問 batch を発して回答待ち) の 2 種です。
+
+### GO 判断
+
+人間が Web UI で GO を押すと `s1_go` event が ledger に直接書き込まれます (AI 非経由)。GO を受けた lane だけが S2 に進みます。
+
+### S2: 実装 (Executor)
+
+executor pi session が独立 worktree で実装します。並列度は `IDD_EXECUTOR_CONCURRENCY` (既定 3) で制限します。完了すると `s2_result` (outcome: success / partial) が記録されます。
+
+### S3: 衝突確認 (Integration Check)
+
+`git merge-tree` で upstream と衝突するかだけを機械判定します (DEC-688)。clean なら人間が diff と QA を review して `s3_ok` / `s3_reject` / `s3_defer` を判定します。**衝突の解消は未実装**で、検出までです。
+
+### S4: 提出 (Ship)
+
+提出物 (commit rewrite / branch rename / PR body / checks) を lane の実物から機械的に組み立てます (DEC-690)。push と PR 作成は人間が押したときだけ行います (DEC-692)。merge は観測して記録するだけです (DEC-697)。
+
+### 未実装のもの
+
+| 項目 | 現状 |
+| --- | --- |
+| 意味類似の重複判定 | `DuplicateDetector` の口のみ。URL 完全一致のみ稼働 |
+| cron 登録 | scheduler 不在。cron-run 記録は書く |
+| verifier agent | 人間が兼ねる暫定 (DEC-693) |
+| 衝突の解消 | 検出のみ |
+| Linear 取り込み | config schema のみ。intake は GitHub のみ読む |
+
+## 設計の正本と判断の記録
+
+- **設計の正本**: [`_meta/extended-idd-design/`](_meta/extended-idd-design/README.md) — S0-S4 の全体フロー設計の引き継ぎ資料 (SSOT)
+- **判断の記録**: [`_docs/intent/`](_docs/intent/) — 実装中の設計判断 (DEC) の記録
+
+## 開発規約
+
+このリポジトリ自身は intent-driven development の規約で開発されています。すべての変更は最小ループを回ります:
 
 ```text
-app/             Next.js UI and API routes
-components/      React UI components
-hooks/           Client state and interaction hooks
-lib/             Session, agent, model, file, Git, and security logic
-public/          Static assets and PWA files
-bin/             npm CLI entrypoint and launch option parsing
-docs/            Focused user and contributor guides
+TODO (AC) → 実装 → Intent Delta の宣言 → QA round の記録
 ```
 
-See [AGENTS.md](./AGENTS.md) for the architecture notes and detailed file map.
+- 設計判断はリポジトリ一意の ID を持つ `DEC` として `_docs/intent/` に記録され、コードからは `// intent: DEC-xxx — <理由>` のポインタコメントで到達します
+- QA は計画と検証記録が一体の `qa.md` 一種類です
+- 品質は機械 (validator が構造を強制) と agent review が担います
+- ローカル検証は `./scripts/check-docs.sh` でまとめて実行します (CI も同一 script)
+
+詳細は [_docs/standards/workflow.md](_docs/standards/workflow.md) (どう働くか) と [_docs/standards/document_contracts.md](_docs/standards/document_contracts.md) (文書種別ごとの契約) を参照してください。初めての場合は [QUICKSTART.md](QUICKSTART.md) から。
+
+## ライセンス
+
+このリポジトリは [MIT ライセンス](LICENSE.txt) の下でライセンスされています。
+
+### 派生元
+
+このリポジトリは [pi-web](https://github.com/agegr/pi-web) v0.8.9 の固定派生です (MIT)。上流の README と機能の説明は [pi-web のリポジトリ](https://github.com/agegr/pi-web) を参照してください。
+
+---
+
+# Extended IDD — Intent-Driven Development pipeline
+
+> This README is available in English and Japanese. 日本語版は上を参照してください。
+
+## What this repository is
+
+This repository is a fixed fork of [pi-web](https://github.com/agegr/pi-web) v0.8.9, the browser UI for the [pi coding agent](https://github.com/earendil-works/pi), with the **extended IDD (intent-driven development) pipeline and decision UI** built in.
+
+Extended IDD is an AI-driven development pipeline that realizes "wake up in the morning to N work lanes waiting for your judgment." Tickets (GitHub issues) are ingested into lanes, a planner researches each lane and produces a contract (DEC / INV / QA / reference), **humans only make GO / DEFER decisions**, and executors implement in parallel in separate git worktrees.
+
+- **S0 Intake**: GitHub issues (label `idd-ready`) are added to the backlog
+- **S1 Planner Prep**: a planner produces DEC / INV / QA / reference per lane
+- **GO decision**: a human decides GO / DEFER in the web UI
+- **S2 Implementation**: an executor implements in a separate worktree
+- **S3 Integration Check**: conflicts against parallel lanes / upstream are detected mechanically
+- **S4 Ship**: commit rewrite → review → push / PR
+
+Layout:
+
+| Location | Contents |
+| --- | --- |
+| `packages/idd-core` | Engine. State read/write and the intake / plan / check / ship stages |
+| `packages/idd-cli` | CLI (`idd intake` / `idd tick`) |
+| `components/idd` / `lib/idd-ui` | Decision UI (Inbox / lane detail / cards) |
+| `app/api/idd/` | API connecting the decision UI to the engine |
+| Everything else | The pi-web v0.8.9 shell (session browsing, model configuration, etc.) |
+
+## Getting Started
+
+### Development server
+
+```bash
+npm install
+npm run dev
+```
+
+The development server runs at [http://127.0.0.1:30141](http://127.0.0.1:30141). Open it in a browser to see the lanes awaiting judgment in the Inbox.
+
+### Environment variables
+
+| Variable | Meaning | Default |
+| --- | --- | --- |
+| `IDD_STATE_DIR` | Where state files live (backlog.jsonl / lifecycle / cron-run, etc.) | `<cwd>/state` |
+| `IDD_INTENT_DIR` | Root of the intent (DEC) records | `<cwd>/_docs/intent` |
+| `IDD_AGENT_BASE_URL` | Where agents write back (envelope delivery target) | `http://127.0.0.1:$PORT` |
+| `IDD_AGENT_TOKEN` | Token for agent write endpoints | Auto-generated at `<state>/agent-token` |
+
+### CLI
+
+```bash
+bun run packages/idd-cli/bin/idd.ts intake   # S0 intake (no server needed, engine direct)
+bun run packages/idd-cli/bin/idd.ts tick     # One pass through S0 → S3 (server required, POST /api/idd/tick)
+```
+
+## The pipeline (S0-S4)
+
+### S0: Intake
+
+GitHub issues (area config `intake_filter.github_labels`, default `idd-ready`) are picked up and appended to `backlog.jsonl`. Only exact-URL duplicate detection (mechanical) is active. Each run's result is recorded in a per-run `cron-run-<timestamp>.json` file.
+
+### S1: Planner Prep
+
+A planner researches each lane and produces `decision.md` (DEC) / `invariant.md` (INV) / `qa.md` (QA) / `reference.md` under `_docs/intent/<Area>/<slug>/`. Each lane gets its own planner pi session and git worktree; concurrency is capped by `IDD_PLANNER_CONCURRENCY` (default 5). A lane finishes in one of two states: `s1_ready` (waiting for a human GO) or `pending_question` (a question batch was sent, waiting for answers).
+
+### GO decision
+
+When a human presses GO in the web UI, an `s1_go` event is written directly to the ledger (not through AI). Only lanes with GO proceed to S2.
+
+### S2: Implementation
+
+An executor pi session implements in a separate worktree. Concurrency is capped by `IDD_EXECUTOR_CONCURRENCY` (default 3). Completion is recorded as `s2_result` (outcome: success / partial).
+
+### S3: Integration Check
+
+`git merge-tree` mechanically answers only whether the lane conflicts with upstream (DEC-688). If clean, a human reviews the diff and QA and decides `s3_ok` / `s3_reject` / `s3_defer`. **Conflict resolution is not implemented** — detection only.
+
+### S4: Ship
+
+The submission (commit rewrite / branch rename / PR body / checks) is assembled mechanically from the lane itself (DEC-690). Push and PR creation happen only when a human presses the button (DEC-692). Merges are observed and recorded, never performed (DEC-697).
+
+### Not implemented
+
+| Item | Current state |
+| --- | --- |
+| Semantic duplicate detection | Only the `DuplicateDetector` port exists; exact-URL matching is active |
+| Cron registration | No scheduler; cron-run records are written |
+| Verifier agent | A human stands in provisionally (DEC-693) |
+| Conflict resolution | Detection only |
+| Linear intake | Config schema only; intake reads GitHub only |
+
+## Design source of truth and decision records
+
+- **Design source of truth**: [`_meta/extended-idd-design/`](_meta/extended-idd-design/README.md) — the handoff document for the S0-S4 pipeline design (SSOT)
+- **Decision records**: [`_docs/intent/`](_docs/intent/) — design decisions (DEC) made during implementation
+
+## Development conventions
+
+This repository itself is developed under the intent-driven development conventions. Every change runs the minimal loop:
+
+```text
+TODO (AC) → implement → declare the Intent Delta → record a QA round
+```
+
+- Design decisions are recorded as `DEC` entries with repository-unique IDs under `_docs/intent/`, reachable from code through pointer comments (`// intent: DEC-xxx — <reason>`)
+- QA planning and verification live in a single `qa.md` per feature
+- Quality is held by machines (validators enforce structure) and agent review
+- Run the local documentation validators together with `./scripts/check-docs.sh`; CI runs the same script
+
+See [_docs/standards/workflow.md](_docs/standards/workflow.md) (how it works) and [_docs/standards/document_contracts.md](_docs/standards/document_contracts.md) (per-document contracts). If this is your first time, start with [QUICKSTART.md](QUICKSTART.md).
 
 ## License
 
-[MIT](./LICENSE)
+This repository is licensed under the [MIT License](LICENSE.txt).
+
+### Upstream
+
+This repository is a fixed fork of [pi-web](https://github.com/agegr/pi-web) v0.8.9 (MIT). See the [pi-web repository](https://github.com/agegr/pi-web) for the upstream README and feature documentation.
