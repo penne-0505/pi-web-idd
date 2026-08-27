@@ -12,6 +12,7 @@ export interface FileIndexEntry {
 }
 
 // intent: DEC-205 — @ trigger を行頭 or whitespace 直後に限定し email 誤検出を避け、quoted form (@"...") で space 含みパスの drill-down を維持する
+
 export function extractAtQuery(textBeforeCursor: string): AtQueryMatch | null {
   const quoted = /(?:^|\s)@"([^"\n]*)$/.exec(textBeforeCursor);
   if (quoted) {
@@ -41,6 +42,7 @@ function pathDepth(p: string): number {
 }
 
 // intent: DEC-206 — index API が返す flat file list から directory entry を派生し、shallow-first alphabetical を empty @ query の既定順にする
+
 export function buildEntriesFromFiles(files: string[]): FileIndexEntry[] {
   const dirs = new Set<string>();
   for (const f of files) {
@@ -119,6 +121,7 @@ export interface AtInsertion {
 }
 
 // intent: DEC-208 — 候補確定時の @token 挿入形は file/directory/quoted で切り替え、directory は menu を閉じずに drill-down を維持する
+
 export function buildAtInsertText(entryPath: string, isDir: boolean, forceQuotes = false): AtInsertion {
   const p = isDir ? `${entryPath}/` : entryPath;
   const needsQuotes = forceQuotes || p.includes(" ");
@@ -131,6 +134,7 @@ export function buildAtInsertText(entryPath: string, isDir: boolean, forceQuotes
 }
 
 // intent: DEC-208 — one-shot mention は drill-down を伴わないため directory も trailing "/" 付きで closed 挿入
+
 export function buildAtMentionText(entryPath: string, isDir: boolean): string {
   const p = isDir ? `${entryPath}/` : entryPath;
   return p.includes(" ") ? `@"${p}" ` : `@${p} `;

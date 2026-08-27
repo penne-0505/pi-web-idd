@@ -39,6 +39,7 @@ function createShadowTools(tools: AgentTool[]): AgentTool[] {
 }
 
 // intent: DEC-156 — tool 名/説明/schema は保ったまま execute だけ差し替え、命名 run で副作用を起こさない
+
 export function buildSessionTitleAgentOptions(source: Agent): AgentOptions {
   const state = source.state;
   return {
@@ -66,6 +67,7 @@ export function buildSessionTitleAgentOptions(source: Agent): AgentOptions {
 }
 
 // intent: DEC-157 — 末尾 user message に畳み込み provider に user を 2 連続で並べない
+
 export function appendTitleRequestToTrailingUser(messages: AgentMessage[]): AgentMessage[] {
   const lastMessage = messages.at(-1);
   if (!lastMessage || lastMessage.role !== "user") return messages;

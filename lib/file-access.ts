@@ -45,11 +45,13 @@ export async function getAllowedFileRoots(): Promise<Set<string>> {
 }
 
 // intent: DEC-202 — lexical (filesystem 非接触) 判定経路
+
 export function isFilePathAllowed(target: string, allowedRoots: Set<string>): boolean {
   return isPathWithinRoots(target, allowedRoots);
 }
 
 // intent: DEC-202 — symbolic link 解決後の実在 path 判定経路
+
 export function isExistingFilePathAllowed(target: string, allowedRoots: Set<string>): boolean {
   return isExistingPathWithinRoots(target, allowedRoots);
 }

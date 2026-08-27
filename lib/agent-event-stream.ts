@@ -17,6 +17,7 @@ function errorMessage(error: unknown): string {
 }
 
 // intent: DEC-213 — SSE transport を先に開き、agent ready と listener 装着後にだけ snapshot を publish する 3 段階 handshake
+
 export function createAgentEventStream(
   req: Request,
   sessionId: string,

@@ -30,6 +30,7 @@ function hasFocusedEditableElement(): boolean {
 }
 
 // intent: DEC-522 — mobile keyboard 開時に app height を visualViewport に合わせる
+
 export function useViewportHeight(): void {
   useEffect(() => {
     const viewport = window.visualViewport;

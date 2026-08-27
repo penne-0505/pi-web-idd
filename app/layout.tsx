@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Mono } from "next/font/google";
 import { PwaRegistration } from "@/components/PwaRegistration";
+import { getBuildStamp } from "@/lib/build-stamp";
 import "katex/dist/katex.min.css";
 import "./globals.css";
 
@@ -70,6 +71,24 @@ export default function RootLayout({
       <body translate="no" className="notranslate" suppressHydrationWarning>
         {children}
         <PwaRegistration />
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            right: "calc(4px + env(safe-area-inset-right))",
+            bottom: "calc(2px + env(safe-area-inset-bottom))",
+            zIndex: 9999,
+            pointerEvents: "none",
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: 9,
+            lineHeight: "12px",
+            letterSpacing: "0.02em",
+            color: "var(--text-dim)",
+            opacity: 0.7,
+          }}
+        >
+          {getBuildStamp()}
+        </div>
       </body>
     </html>
   );

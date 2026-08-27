@@ -45,6 +45,7 @@ export interface AgentEventConnectionOptions {
 const EVENT_SOURCE_OPEN = 1;
 
 // intent: DEC-214 — EventSource / readiness handshake / passive reconnect を 1 オブジェクトで所有し呼び手を state 管理から解放する
+
 export class AgentEventConnection {
   private current: Connection | null = null;
   private retry: { sessionId: string; timer: ReturnType<typeof setTimeout> } | null = null;

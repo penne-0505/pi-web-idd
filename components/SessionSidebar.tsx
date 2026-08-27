@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import type { SessionInfo } from "@/lib/types";
 import { loadExplorerOpen, saveExplorerOpen } from "@/lib/file-explorer-state";
@@ -10,6 +11,8 @@ import { workspaceKeyOf } from "@/lib/workspace-memory";
 import { useI18n } from "@/hooks/useI18n";
 import { DirectoryPicker } from "./DirectoryPicker";
 import { FileExplorer, type FileExplorerHandle } from "./FileExplorer";
+import { LaneList, SidebarModeSwitch } from "./idd/LaneList";
+import { useIddState } from "@/hooks/useIddState";
 
 declare global {
   interface Window {
@@ -101,6 +104,8 @@ interface Props {
   // intent: DEC-320 — 未選択セッションの完走を親に伝え、ワークスペース跨ぎの完了音を鳴らせるようにする
   onBackgroundTaskDone?: () => void;
   onRunningSessionIdsChange?: (ids: Set<string>) => void;
+  onOpenLane?: (iddId: string) => void;
+  selectedLaneId?: string | null;
 }
 
 interface WorktreeEntry {
@@ -245,8 +250,6 @@ function AnimatedDropdown({ open, children, style }: { open: boolean; children: 
   );
 }
 
-
-
 interface SessionTreeNode {
   session: SessionInfo;
   children: SessionTreeNode[];
@@ -382,7 +385,7 @@ function PiWebTitle() {
   );
 }
 
-export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onOpenFile, explorerRefreshKey, onExplorerRefresh, onAtMention, onAtMentions, onBackgroundTaskDone, onRunningSessionIdsChange }: Props) {
+export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSession, initialSessionId, skipInitialProjectSelection, onInitialRestoreDone, refreshKey, onSessionDeleted, selectedCwd: selectedCwdProp, onCwdChange, onOpenFile, explorerRefreshKey, onExplorerRefresh, onAtMention, onAtMentions, onBackgroundTaskDone, onRunningSessionIdsChange, onOpenLane, selectedLaneId }: Props) {
   const { t } = useI18n();
   const [allSessions, setAllSessions] = useState<SessionInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -423,6 +426,12 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   const sessionRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const explorerRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileExplorerRef = useRef<FileExplorerHandle>(null);
+  const sidebarSearchParams = useSearchParams();
+  const iddState = useIddState();
+  // intent: DEC-633 — 既存 shell への追加点その 3: sidebar の mode。Sessions は既存のまま
+  const [sidebarMode, setSidebarMode] = useState<"sessions" | "lanes">(
+    () => (sidebarSearchParams.get("sidebar") === "lanes" ? "lanes" : "sessions"),
+  );
 
   const loadSessions = useCallback(async (showLoading = false, force = false) => {
     try {
@@ -964,7 +973,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                 if (!selectedCwd) return;
                 e.currentTarget.style.background = "var(--bg-selected)";
                 e.currentTarget.style.color = "var(--accent)";
-                e.currentTarget.style.borderColor = "rgba(37,99,235,0.35)";
+                e.currentTarget.style.borderColor = "var(--border-strong)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = "var(--bg-hover)";
@@ -996,7 +1005,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                 if (sessionRefreshDone) return;
                 e.currentTarget.style.background = "var(--bg-selected)";
                 e.currentTarget.style.color = "var(--accent)";
-                e.currentTarget.style.borderColor = "rgba(37,99,235,0.35)";
+                e.currentTarget.style.borderColor = "var(--border-strong)";
               }}
               onMouseLeave={(e) => {
                 if (sessionRefreshDone) return;
@@ -1020,6 +1029,10 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           </div>
         </div>
 
+        <SidebarModeSwitch mode={sidebarMode} laneBadge={iddState.lanes.filter((l) => l.group === "judge").length} onChange={setSidebarMode} />
+
+        {sidebarMode === "sessions" && (
+        <>
         <div ref={dropdownRef} style={{ position: "relative" }}>
           <button
             onClick={() => setDropdownOpen((v) => !v)}
@@ -1029,8 +1042,8 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
               display: "flex",
               alignItems: "center",
               padding: "6px 10px",
-              background: selectedCwd ? "var(--bg-hover)" : "rgba(37,99,235,0.06)",
-              border: selectedCwd ? "1px solid var(--border)" : "1px solid rgba(37,99,235,0.4)",
+              background: selectedCwd ? "var(--bg-hover)" : "var(--bg-hover)",
+              border: selectedCwd ? "1px solid var(--border)" : "1px solid var(--border-strong)",
               borderRadius: 7,
               cursor: "pointer",
               fontSize: 12,
@@ -1567,8 +1580,12 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
             <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{inactiveWorktreeSelector.label}</span>
           </button>
         )}
+        </>
+        )}
       </div>
 
+      {sidebarMode === "sessions" ? (
+      <>
       <div style={{ flex: explorerOpen && (selectedCwdProp || selectedCwd) ? "1 1 0" : "1 1 auto", overflowY: "auto", padding: "0", minHeight: 80 }}>
         {loading && (
           <div style={{ padding: "16px 14px", color: "var(--text-muted)", fontSize: 12 }}>
@@ -1719,6 +1736,15 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
           )}
         </div>
       )}
+        </>
+        ) : (
+          <LaneList
+            sections={iddState.sections}
+            lanes={iddState.lanes}
+            selectedId={selectedLaneId ?? null}
+            onSelect={(id) => onOpenLane?.(id)}
+          />
+        )}
     </div>
   );
 }
@@ -2190,7 +2216,7 @@ function SessionItem({
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = "var(--bg-selected)";
                   e.currentTarget.style.color = "var(--accent)";
-                  e.currentTarget.style.borderColor = "rgba(37,99,235,0.35)";
+                  e.currentTarget.style.borderColor = "var(--border-strong)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = "var(--bg-hover)";

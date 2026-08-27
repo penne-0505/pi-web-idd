@@ -1411,6 +1411,7 @@ function runtimeMessageActivityMs(entry: SessionMessageEntry): number | undefine
 }
 
 // intent: DEC-107 — pi の flush 遅延仕様のため、prompt 承認直後は in-memory SessionManager から記述する
+
 export function getRpcSessionInfos(): SessionInfo[] {
   const sessions: SessionInfo[] = [];
   for (const session of getRegistry().values()) {
@@ -1511,6 +1512,7 @@ export function notifyRunningChange(): void {
 }
 
 // intent: DEC-110 — 新規 session の model 解決は construction 前に一度だけ行い、initial model / thinking pin / scopedModels が同じ snapshot を共有する
+
 export async function startRpcSession(
   sessionId: string,
   sessionFile: string,

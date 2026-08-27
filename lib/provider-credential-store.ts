@@ -84,6 +84,7 @@ export function storeProviderCredential(
 }
 
 // intent: DEC-178 — pi の AuthStorage と同じ proper-lockfile を共有し、並行ログインが stale UI 要求で消えないようにする
+
 export async function removeStoredCredentialIfType(
   providerId: string,
   expectedType: ProviderCredentialType,

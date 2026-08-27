@@ -86,6 +86,7 @@ function assertNoAmbiguousExactPatterns(
 }
 
 // intent: DEC-180 — 空 / 解決失敗時は available 全体にフォールバックし、typo や stale 設定で UI から選択肢を消さない
+
 export async function resolveVisibleModels(
   modelRuntime: ModelRuntime,
   patterns: string[] | undefined,
@@ -132,6 +133,7 @@ export async function resolveVisibleModels(
 }
 
 // intent: DEC-182 — 初期 model 選択は requested → scope 内 default → resolver 先頭の順で確定させ、pi の起動則と一致させる
+
 export function selectInitialModelScope(
   scope: ModelScopeResult,
   options: InitialModelScopeOptions = {},

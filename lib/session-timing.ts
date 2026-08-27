@@ -5,6 +5,7 @@ interface TimingEntry {
 }
 
 // intent: DEC-158 — user/bashExecution エントリはユーザー待ち時間を含みうるので active 集計の境界とする
+
 export function computeSessionTotalActiveMs(entries: readonly TimingEntry[]): number {
   let totalActiveMs = 0;
   let previousTimestamp: number | undefined;

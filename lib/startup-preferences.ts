@@ -13,6 +13,7 @@ export interface EffectiveStartupPreferences {
 }
 
 // intent: DEC-248 — session コンストラクタが effective 値を既に記録済み、setModel/setThinkingLevel の再呼び出しは重複 event を生む
+
 export async function persistExplicitStartupPreferences(
   settingsManager: SettingsManager,
   explicit: ExplicitStartupPreferences,

@@ -55,6 +55,7 @@ function toolCallMetadata(
 }
 
 // intent: DEC-216 — pi-web の event filter と Pi 0.84 message_update projection を server→client の変換点に集約する
+
 export function toClientAgentEvent(
   event: AgentEventLike,
 ): AgentEventLike | ClientMessageUpdateEvent | null {

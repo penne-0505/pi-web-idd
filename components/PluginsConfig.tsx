@@ -162,8 +162,8 @@ function ScopeTag({ scope }: { scope: PluginScope }) {
         padding: "1px 5px",
         borderRadius: 3,
         flexShrink: 0,
-        background: scope === "project" ? "rgba(99,102,241,0.12)" : "rgba(120,120,120,0.12)",
-        color: scope === "project" ? "rgba(99,102,241,0.85)" : "var(--text-dim)",
+        background: scope === "project" ? "var(--bg-hover)" : "rgba(120,120,120,0.12)",
+        color: scope === "project" ? "var(--text-muted)" : "var(--text-dim)",
       }}
     >
       {scope}

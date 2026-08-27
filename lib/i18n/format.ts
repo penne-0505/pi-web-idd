@@ -10,6 +10,7 @@ export function interpolateMessage(message: string, params: TranslationParams = 
 }
 
 // intent: DEC-235 — 未対応言語・未翻訳 key は英語に fallback してから key 生値で最終防衛
+
 export function translateMessage(
   locale: Locale,
   key: string,

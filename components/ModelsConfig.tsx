@@ -50,6 +50,7 @@ import ZAIIcon from "@lobehub/icons/es/ZAI/components/Mono";
 type IconComponent = React.ComponentType<{ size?: number | string; style?: React.CSSProperties }>;
 
 // intent: DEC-410 — hasColor=true は自己配色 SVG、false は currentColor でテーマ追従
+
 const PROVIDER_ICONS: Record<string, { Icon: IconComponent; hasColor: boolean }> = {
   "anthropic":              { Icon: AnthropicIcon,        hasColor: false },
   "openai":                 { Icon: OpenAIIcon,           hasColor: false },
@@ -2166,7 +2167,7 @@ export function ModelsConfig({ onClose }: { onClose: () => void }) {
                              {m.id || t("i18n.newModel")}
                           </span>
                           {m.reasoning && (
-                            <span style={{ fontSize: 9, padding: "1px 4px", background: "rgba(99,102,241,0.12)", color: "rgba(99,102,241,0.8)", borderRadius: 3, flexShrink: 0 }}>T</span>
+                            <span style={{ fontSize: 9, padding: "1px 4px", background: "var(--bg-hover)", color: "var(--text-muted)", borderRadius: 3, flexShrink: 0 }}>T</span>
                           )}
                         </div>
                       );

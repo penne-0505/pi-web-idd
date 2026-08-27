@@ -1,6 +1,7 @@
 import path from "node:path";
 
 // intent: DEC-250 — 内部識別 key は Windows で case-fold し、platform 注入で非 Windows CI でも同等挙動を検証可能に
+
 export function projectIdentityKey(
   projectRoot: string,
   platform: NodeJS.Platform = process.platform,

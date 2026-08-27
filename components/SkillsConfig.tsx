@@ -138,10 +138,10 @@ function SkillDetail({
               flexShrink: 0,
               background:
                 label === "project"
-                  ? "rgba(99,102,241,0.12)"
+                  ? "var(--bg-hover)"
                   : "rgba(120,120,120,0.12)",
               color:
-                label === "project" ? "rgba(99,102,241,0.8)" : "var(--text-dim)",
+                label === "project" ? "var(--text-muted)" : "var(--text-dim)",
             }}
           >
             {label}

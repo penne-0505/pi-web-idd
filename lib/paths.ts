@@ -9,6 +9,7 @@ export function isWindowsAbsolutePath(filePath: string): boolean {
 }
 
 // intent: DEC-128 — git の POSIX 形式 path 出力を Node の native と比較可能にする、branch 名など非 path 文字列には渡さない
+
 export function toNativePath(p: string): string {
   if (!p || process.platform !== "win32") return p;
   return normalize(p);
@@ -27,6 +28,7 @@ function normalizeForComparison(p: string): string {
 }
 
 // intent: DEC-130 — separator style と Windows の case-insensitive を吸収する lexical 比較、symlink 解決は呼び出し側の責務
+
 export function samePath(a: string, b: string): boolean {
   if (a === b) return true;
   if (!a || !b) return false;
