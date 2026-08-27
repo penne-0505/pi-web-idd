@@ -195,6 +195,13 @@ view / state 層の判断は `_docs/intent/IddUi/lib/decision.md`。
 - **Change freedom**: 既定の開閉、印の形は自由。「畳める印は畳める」だけが不変。
 - **Anchors**: `components/idd/LaneList.tsx`
 
+### DEC-684: 稼働の有無だけは色で示す（無彩色の唯一の例外）
+
+- **What**: 下調べ中 / 実装中の lane 行に 7px の点を置き、**稼働中 = 薄い緑 / 待機 = 黄 / 未起動 = 輪郭だけの灰**の 3 値で示す。色は `--status-live` / `--status-pending` / `--status-idle` として持ち、この 3 値以外には使わない。
+- **Why**: palette は無彩色に統一している（DEC の対象外だが repo 全体の前提）。ただし「動いている / 待っている / 動いていない」は**判断ではなく事実の観測**で、形や濃度で表すと stage bar や群の重みと channel が衝突する。ここだけ色を独立した channel として使う。語（「停止」「未起動」）で書くと、一覧の 1 行 1 入口（DEC-631）を崩す。
+- **Change freedom**: 色相、点の寸法、tip の文言は自由。「3 値以外に色を使わない」「判断待ちの表現には使わない」の 2 点が不変。
+- **Anchors**: `components/idd/primitives.tsx`（StatusDot）、`components/idd/LaneList.tsx`、`app/globals.css`
+
 ## Consequences / Impact
 
 - 札束（DEC-620）により、一覧で全件を俯瞰する手段は sidebar の lane 一覧だけになる。Inbox 側に一覧表示は持たない。

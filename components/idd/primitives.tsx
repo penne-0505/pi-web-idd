@@ -160,7 +160,23 @@ export function CriterionMark({ state }: { state: CriterionState }) {
 }
 
 export function LiveDot() {
-  return <span aria-hidden style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--accent)", flexShrink: 0 }} />;
+  return <span aria-hidden style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--status-live)", flexShrink: 0 }} />;
+}
+
+// intent: DEC-684 — 稼働の有無だけは色で示す。無彩色の唯一の例外で、3 値以外には使わない
+export function StatusDot({ state, title }: { state: "live" | "pending" | "idle"; title?: string }) {
+  const color = state === "live" ? "var(--status-live)" : state === "pending" ? "var(--status-pending)" : "var(--status-idle)";
+  return (
+    <span
+      title={title}
+      aria-label={title}
+      style={{
+        width: 7, height: 7, borderRadius: "50%", flexShrink: 0,
+        background: state === "idle" ? "transparent" : color,
+        border: state === "idle" ? `1px solid ${color}` : "none",
+      }}
+    />
+  );
 }
 
 export type ButtonVariant = "primary" | "secondary" | "quiet";

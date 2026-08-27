@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import type { DecisionKind, LaneRow, LaneSection } from "@/lib/idd-ui/types";
-import { Icon, StageBar, type IconName } from "./primitives";
+import { Icon, StageBar, StatusDot, type IconName } from "./primitives";
 import { FS } from "@/lib/idd-ui/scale";
 
 const DECISION_ICON: Record<DecisionKind, IconName> = {
@@ -35,8 +35,8 @@ const TITLE: Record<Attention, { weight: number; color: string }> = {
 function Row({ lane, selected, onSelect }: { lane: LaneRow; selected?: boolean; onSelect?: (id: string) => void }) {
   const halted = lane.group === "waiting";
   const attn = attentionOf(lane);
-  // intent: DEC-683 — 動いていない lane を、動いている lane と同じ顔で出さない
-  const stalled = lane.activity === "stalled" || lane.activity === "unstarted";
+  // intent: DEC-684 — 稼働の有無を問えるのは下調べ中 / 実装中の lane だけ
+  const working = lane.group === "prep" || lane.group === "impl";
   const title = TITLE[attn];
   return (
     <button
@@ -67,8 +67,13 @@ function Row({ lane, selected, onSelect }: { lane: LaneRow; selected?: boolean; 
       </span>
 
       <span style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", opacity: attn === "act" ? 1 : attn === "done" ? 0.5 : 0.75 }}>
-        <StageBar done={lane.stageDone} current={lane.stageCurrent} halted={halted || stalled} faded={lane.faded} />
-        {stalled ? <span style={{ fontSize: FS.xs, color: "var(--text-muted)" }}>{lane.activity === "unstarted" ? "未起動" : "停止"}</span> : null}
+        {working ? (
+          <StatusDot
+            state={lane.activity === "live" ? "live" : lane.activity === "stalled" ? "pending" : "idle"}
+            title={lane.activity === "live" ? "稼働中" : lane.activity === "stalled" ? "待機 (session はあるが動いていない)" : "未起動"}
+          />
+        ) : null}
+        <StageBar done={lane.stageDone} current={lane.stageCurrent} halted={halted} faded={lane.faded} />
         <span style={{ flex: 1 }} />
         {lane.blockedBy ? <Icon name="link" size={11} color="var(--text-dim)" /> : null}
         <span style={{ fontSize: FS.xs, color: "var(--text-dim)", flexShrink: 0 }}>
