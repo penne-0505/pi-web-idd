@@ -28,34 +28,34 @@ UI は DEC / QA の見出しを parse して card にそのまま出す (`packag
 
 ## Decisions
 
-### DEC-701: 作法は pi skill として `.agents/skills/` に置く
+### DEC-741: 作法は pi skill として `.agents/skills/` に置く
 
 - **What**: 文章の作法を pi の skill 形式 (frontmatter の name / description を持つ SKILL.md) として repo root の `.agents/skills/` に新設する。planner / executor session は lane worktree を cwd に起ち、pi は `.agents/skills` を cwd から git root まで遡って project skill として読む (project trust 下。この host は `/home/penne/dev/active` が trust 済み)。
 - **Why**: 作法が prep.ts の文字列リテラルにあると、例や物差しを持てず、直すたびに code change になる。skill なら description が session の system prompt に載り、agent が自分から file を読みにいける。
 - **Change freedom**: skill 名・内部構成・例の選び方は自由。session の cwd から pi の discovery が届く位置にあることだけが不変。
 - **Anchors**: `.agents/skills/` (新設)
 
-### DEC-702: brief の inline 作法は残し skill 参照を足す
+### DEC-742: brief の inline 作法は残し skill 参照を足す
 
 - **What**: plannerBrief の `<writing>` 節は要点を残したまま、末尾に skill file への参照を 1 行足す。executorBrief にも同じ参照を足す。作法の正本 (完全版) は skill とし、inline は要点の写しとする。
 - **Why**: DEC-672 の不変条件 (「UI が要求する書式が指示に含まれる」) があるため brief から作法を消せない (質問 q2 の回答: inline 維持 + skill 併設)。かといって 2 か所が独立に本文を持つと乖離するので、正本を skill に決めて inline は写しと位置づける。
 - **Change freedom**: 参照の文言、inline に残す要点の粒度は自由。inline が skill と矛盾しないこと、完全版が skill にだけあることが不変。
 - **Anchors**: `packages/idd-core/src/plan/prep.ts` (plannerBrief)、`packages/idd-core/src/plan/exec.ts` (executorBrief)
 
-### DEC-703: 作法は人間向けの文章全般に適用する
+### DEC-743: 作法は人間向けの文章全般に適用する
 
 - **What**: skill の対象は DEC / AC / INV 見出しと質問の選択肢に限らず、commit message、PR 本文、README など人間向けに書く文章全般とする。card に出る文字列には別の節で長さの上限を定める。
 - **Why**: 判断面の質は見出しだけで決まらない。DEC の本文は ship が PR body に流用し、README も agent が書く。1 主張 1 文・出典を混ぜない・修飾を落とすという原則は文章種をまたいで効く (質問 q3 の回答: 人間向けに記述する文章全般)。
 - **Change freedom**: 文章種ごとの個別ルールの有無は自由。人間向けの文章すべてが対象であることだけが不変。
 
-### DEC-704: card に出る文字列は 1 行に収める
+### DEC-744: card に出る文字列は 1 行に収める
 
 - **What**: DEC / AC / INV 見出しと質問の選択肢 label は Inbox card の 1 行 (IdList の text 列) に収まる長さで書く。目安は実測で 40 文字前後。物差しとして IDD-902 の decision.md / qa.md の見出しを作法どおりに書き直す。
 - **Why**: UI は見出しを parse して 1 行でそのまま出し、折り返しの実例が IDD-902 の QA-1。書き直しは lane の完了の目安であり (質問 q1 の回答: 実際に書き直す)、作法の妥当性の検証を兼ねる。
 - **Change freedom**: 40 は実測ベースの目安であり厳密な上限ではない。card で折り返さないことが不変の性質。
 - **Anchors**: `_docs/intent/pi-web-idd/idd-902/decision.md`、`_docs/qa/pi-web-idd/idd-902/qa.md` (書き直し対象)
 
-### DEC-705: brief の qa_schema 指示を現行の 5 に合わせる
+### DEC-745: brief の qa_schema 指示を現行の 5 に合わせる
 
 - **What**: plannerBrief の `<format>` が指示する `qa_schema: 3` を、現行 template に合わせて 5 に直す。
 - **Why**: 現行 template と IDD-902 の実績は `qa_schema: 5` で、3 は validator の legacy warning を毎回出す。brief が古い指示を出し続けると warning 持ちの文書が量産される (下調べで発見。質問 q4 の回答: この lane で直す)。
@@ -78,8 +78,8 @@ UI は DEC / QA の見出しを parse して card にそのまま出す (`packag
 
 ## Intent-derived Invariants
 
-- INV-010 (from DEC-702): 作法の完全版は skill file にのみ存在し、brief の inline は要点の写しと参照に留まる
-- INV-011 (from DEC-701): skill は planner / executor session の cwd から pi の `.agents/skills` discovery が届く位置に置く
+- INV-010 (from DEC-742): 作法の完全版は skill file にのみ存在し、brief の inline は要点の写しと参照に留まる
+- INV-011 (from DEC-741): skill は planner / executor session の cwd から pi の `.agents/skills` discovery が届く位置に置く
 
 ## Rollback / Follow-ups
 
