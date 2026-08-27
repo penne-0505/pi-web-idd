@@ -102,17 +102,22 @@ export interface LaneDiff {
   after: { lineNo?: string; marker?: string; code: string }[];
 }
 
-// intent: DEC-689 — 差分は git から取り、最初の 1 ファイルを 2 pane 分の行に畳む
-export function laneDiff(worktree: string, base: string, maxLines = 14): LaneDiff | null {
-  let files: string[];
+export function laneDiffFiles(worktree: string, base: string): string[] {
   try {
-    files = git(worktree, ["diff", "--name-only", base]).split("\n").map((l) => l.trim()).filter(Boolean);
+    return git(worktree, ["diff", "--name-only", base]).split("\n").map((l) => l.trim()).filter(Boolean);
   } catch {
-    return null;
+    return [];
   }
+}
+
+// intent: DEC-703 — 差分は 1 ファイルずつ。何ファイル目を見ているかは呼ぶ側が決める
+export function laneDiff(worktree: string, base: string, opts: { index?: number; maxLines?: number } = {}): LaneDiff | null {
+  const maxLines = opts.maxLines ?? 14;
+  const files = laneDiffFiles(worktree, base);
   if (!files.length) return null;
 
-  const file = files[0];
+  const at = Math.min(Math.max(1, opts.index ?? 1), files.length);
+  const file = files[at - 1];
   let patch: string;
   try {
     patch = git(worktree, ["diff", "--unified=3", base, "--", file]);
@@ -145,7 +150,7 @@ export function laneDiff(worktree: string, base: string, maxLines = 14): LaneDif
 
   return {
     file,
-    fileIndex: 1,
+    fileIndex: at,
     fileTotal: files.length,
     before: before.slice(0, maxLines),
     after: after.slice(0, maxLines),

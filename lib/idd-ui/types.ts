@@ -117,6 +117,8 @@ export interface ReviewItem extends InboxBase {
   kind: "review";
   target: { title: string; ref: SourceRef };
   conflictWith?: { title: string; ref: SourceRef };
+  // intent: DEC-703 — 差分は 1 ファイルずつ出す。行き来できるよう一覧も渡す
+  diffFiles?: string[];
   diff?: {
     file: string;
     fileIndex: number;

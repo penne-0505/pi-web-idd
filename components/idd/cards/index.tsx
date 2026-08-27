@@ -3,7 +3,7 @@
 // intent: DEC-637 — 固定ラベルの操作はボタン、可変内容はリスト。押したら確定
 // intent: DEC-628 — 取り返しのつかない 4 つにだけ確認を挟む
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type {
   DuplicateItem, GoItem, InboxItem, QuestionItem, ReviewItem, ShipItem,
 } from "@/lib/idd-ui/types";
@@ -182,6 +182,24 @@ export function GoCard({ item, onDecide, onAsk, compact }: CardProps<GoItem>) {
 
 export function ReviewCard({ item, onDecide, onAsk, compact }: CardProps<ReviewItem>) {
   const [instruction, setInstruction] = useState("");
+  // intent: DEC-703 — 何ファイル目を見ているかは card が持つ。差分は 1 枚ずつ取りに行く
+  const [diff, setDiff] = useState(item.diff);
+  const [at, setAt] = useState(item.diff?.fileIndex ?? 1);
+  const total = item.diff?.fileTotal ?? item.diffFiles?.length ?? 0;
+
+  useEffect(() => { setDiff(item.diff); setAt(item.diff?.fileIndex ?? 1); }, [item.diff]);
+
+  const step = useCallback(async (delta: number) => {
+    const next = Math.min(Math.max(1, at + delta), Math.max(1, total));
+    if (next === at) return;
+    setAt(next);
+    try {
+      const res = await fetch(`/api/idd/diff?idd=${encodeURIComponent(item.iddId)}&index=${next}`, { cache: "no-store" });
+      if (res.ok) setDiff(await res.json());
+    } catch {
+      // intent: DEC-703 — 取れなければ今の 1 枚を保つ (判断の材料を消さない)
+    }
+  }, [at, total, item.iddId]);
   return (
     <Card>
       <Identity
@@ -197,14 +215,15 @@ export function ReviewCard({ item, onDecide, onAsk, compact }: CardProps<ReviewI
             ...(item.conflictWith ? [{ label: "衝突相手", title: item.conflictWith.title, ref: item.conflictWith.ref, muted: true }] : []),
           ]}
         />
-        {item.diff ? (
+        {diff ? (
           <DiffView
-            file={item.diff.file}
-            fileIndex={item.diff.fileIndex}
-            fileTotal={item.diff.fileTotal}
-            before={item.diff.before}
-            after={item.diff.after}
+            file={diff.file}
+            fileIndex={diff.fileIndex}
+            fileTotal={diff.fileTotal}
+            before={diff.before}
+            after={diff.after}
             unified={compact}
+            onStep={total > 1 ? step : undefined}
           />
         ) : null}
         <IdList label="満たすべき条件" items={item.criteria} />

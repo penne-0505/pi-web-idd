@@ -56,7 +56,8 @@ export function buildSubmit(iddId: string): SubmitView | null {
 
   const worktree = session.worktree_path;
   const base = laneBase(worktree) ?? "main";
-  const commits = (tryGit(worktree, ["log", "--format=%s", `${base}..HEAD`]) ?? "")
+  // intent: DEC-704 — commit は古い順。題名は lane が最初にやったことで、後から足した修正ではない
+  const commits = (tryGit(worktree, ["log", "--reverse", "--format=%s", `${base}..HEAD`]) ?? "")
     .split("\n").map((l) => l.trim()).filter(Boolean);
   const intent = parseIntent(rec.area, slugOf(rec), { root: worktree });
   const progress = readProgress(iddId);

@@ -224,6 +224,13 @@ view / state 層の判断は `_docs/intent/IddUi/lib/decision.md`。
 - **Change freedom**: 群の選び方、表示は自由。「進まない lane を進行中の群に置かない」だけが不変。
 - **Anchors**: `packages/idd-core/src/ledger/derive.ts`
 
+### DEC-703: 差分は 1 ファイルずつ出し、行き来は card の中で完結させる
+
+- **What**: 差分確認の diff は 1 ファイルだけを描き、見出しに `n / 全体` と前後のボタンを置く。押すと `GET /api/idd/diff?idd=&index=` でその 1 枚を取り直す。取れなかったときは今の 1 枚を保つ。
+- **Why**: 変更が複数ファイルに及ぶのが普通で（実測で 7〜15 ファイル）、最初の 1 枚しか見られないなら差分確認は成立しない。全ファイルを一度に返すと card の器を溢れ、めくる操作とも競合する。1 枚ずつ取りに行けば器は一定で、判断の対象も 1 度に 1 つに保てる。
+- **Change freedom**: 取得の粒度、ボタンの位置は自由。「1 度に 1 ファイル」「行き来が card の中で完結する」の 2 点が不変。
+- **Anchors**: `components/idd/cards/index.tsx`（ReviewCard）、`components/idd/cards/parts.tsx`（DiffView）、`app/api/idd/diff/route.ts`
+
 ## Consequences / Impact
 
 - 札束（DEC-620）により、一覧で全件を俯瞰する手段は sidebar の lane 一覧だけになる。Inbox 側に一覧表示は持たない。

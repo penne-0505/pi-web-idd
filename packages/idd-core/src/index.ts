@@ -39,7 +39,7 @@ export type { ExecResult } from "./plan/exec.ts";
 export { headCommit } from "./worktree/ensure.ts";
 export { resumeBrief, resumeTargetFor, runResume } from "./plan/resume.ts";
 export type { ResumeTarget } from "./plan/resume.ts";
-export { laneBase, laneDiff, lanesAwaitingCheck, runCheck } from "./plan/review.ts";
+export { laneBase, laneDiff, laneDiffFiles, lanesAwaitingCheck, runCheck } from "./plan/review.ts";
 export type { CheckResult, LaneDiff } from "./plan/review.ts";
 export { buildSubmit, lanesAwaitingShip, runShip, startSubmit } from "./plan/ship.ts";
 export type { ShipResult, SubmitView } from "./plan/ship.ts";
