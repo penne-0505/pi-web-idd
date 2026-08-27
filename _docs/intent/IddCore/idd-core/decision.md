@@ -215,6 +215,65 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: brief の文面、並列上限、model は自由。「契約を渡す」「契約が無ければ起こさない」「起点 commit を残す」の 3 点が不変。
 - **Anchors**: `packages/idd-core/src/plan/exec.ts`、`app/api/idd/exec/route.ts`、`packages/idd-core/src/worktree/ensure.ts`（headCommit）
 
+### DEC-686: 中断した agent は session file から起こして続きを頼む
+
+- **What**: `POST /api/idd/resume` で、lane の session を file から起こし、「作業は worktree に残っている。`git status` / `git diff` で自分の進み具合を確認してから続けろ」という envelope を届ける。executor の場合は `s2_recovery_attempt` を append する。
+- **Why**: runtime が落ちれば session は全て死ぬが、agent が書いたものは worktree に残る。作業を捨てて最初からやり直させるのは、時間だけでなく判断（既に人間が答えた質問の反映など）も捨てることになる。handoff の agents.md が「server 再起動時に jsonl から resume」と書いているのは、この経路のこと。
+- **Change freedom**: 文面、再開の契機（手動 / 自動検出）は自由。「途中の作業を前提に再開する」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/resume.ts`、`app/api/idd/resume/route.ts`
+
+### DEC-687: agent にホストの共有物を触らせない
+
+- **What**: executor の brief に host-rules を置き、pattern による `pkill` / `killall` を禁じ、検証用 server は未使用 port + PID 指定でのみ止めるよう指示する。IDD の runtime が使う port は名指しで「触るな」と書く。
+- **Why**: 実際に executor が後片付けのつもりで `pkill -f "next dev"` を実行し、**自分の session を載せている runtime ごと落とした**。lane の分離は worktree（DEC-670）でファイル系だけを分けており、プロセスは共有のまま。範囲の広い停止操作は自分自身に届く。
+- **Change freedom**: 文面は自由。「共有のプロセス空間に対する破壊的操作を禁じる」だけが不変。
+- **Why not**（bash を取り上げる）: 実装には build と test が要る。
+- **Revisit when**: lane ごとに検証 server を管理する script を用意できたら、指示ではなくその script だけを使わせる形にする（構造で守る）。
+- **Anchors**: `packages/idd-core/src/plan/exec.ts`（executorBrief の host-rules）
+
+### DEC-688: S3 の機械部分は「upstream と衝突するか」だけを見る
+
+- **What**: `s2_result` が来た lane に対し `git merge-tree --write-tree` を実行して衝突の有無だけを判定し、`s3_ready` → `s3_check_in_progress` → `s3_check_clean` / `s3_check_conflict` を append する。解消はしない。判定後、lane は差分確認の判断待ちになる。
+- **Why**: merge-tree は index も working tree も触らずに答えるので、lane の作業を壊さずに問える。解消（Integrator の 3 態度）はまだ実装が無いが、**人間の承認だけは先に通せる** — 機械的判定と人間の判断は独立に足せる。
+- **Change freedom**: 判定方法、cascading の扱いは自由。「判定が lane の作業状態を変えない」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/review.ts`、`app/api/idd/check/route.ts`
+
+### DEC-689: 差分確認に出す diff は実物から作り、基準は今の分岐点にする
+
+- **What**: 差分確認 card の diff は lane の worktree で `git diff <merge-base(HEAD, main)>` を実行して作る。要約や再構成はしない。
+- **Why**: 判断の材料は実物でなければならない。基準に `s2_start` の起点 commit を固定で使うと、**rebase 後には他人の変更まで差分に混ざる**（実際に 15 ファイルのはずが 39 ファイルになった）。分岐点なら rebase を跨いでも lane の変更だけが残る。
+- **Change freedom**: 表示する行数、ファイルの選び方は自由。「基準が分岐点」「実物から作る」の 2 点が不変。
+- **Anchors**: `packages/idd-core/src/plan/review.ts`（laneBase / laneDiff）、`lib/idd-ui/server/state.ts`
+
+### DEC-690: 提出物は lane の実物から機械的に組み立てる
+
+- **What**: PR の title は先頭 commit の subject、body は「起票の URL + 契約の DEC の一文」、commit 一覧は `git log <merge-base>..HEAD`。AI に要約させない。IDD の語彙（`DEC-` / `AC-` / `IDD-` 等）が残っている行は flag して card 上で見せる。
+- **Why**: 提出物は外に出るもので、内部語彙が漏れると読み手に意味が通らない。かといって AI に書き直させると、**実物と提出物がずれる**（何を出したのかが commit と一致しなくなる）。実物から組み立てて、内部語彙が残っている箇所だけを人間に見せるのが、ずれを作らずに読める形にする最短経路。
+- **Change freedom**: 本文の組み立て、flag の対象は自由。「提出物が実物と一致する」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/ship.ts`（buildSubmit）
+
+### DEC-691: verifier の検査は実際に走らせられるものだけを並べる
+
+- **What**: 提出前の検査は 5 つ（未 commit の変更が無い / commit がある / 満たすべき条件がすべて確認済み / PR 本文に IDD の語彙が残っていない / commit message が規約に沿う）。すべて実際に判定する。判定できないものは項目に出さない。
+- **Why**: 検査項目は「通ったことにできてしまう」もっとも危険な表示。実行できない項目を並べると、緑のチェックが判断の根拠として機能しなくなる。
+- **Change freedom**: 項目の増減は自由。「並べた項目はすべて実際に判定される」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/ship.ts`
+
+### DEC-692: push と PR 作成は人間が押したときだけ
+
+- **What**: `git push` と `gh pr create` は `s4_verify_clean`（「このまま出す」）を人間が押したときにのみ実行する。engine 側の自動処理からは呼ばない。
+- **Why**: この 2 つがこの pipeline で唯一「外に出る」操作で、取り消せない（IddUi DEC-628 の緩衝材が付いているのもこの押下）。自動化の対象にすると、判断を人間に絞るという前提そのものが崩れる。
+- **Change freedom**: 実行の場所、失敗時の扱いは自由。「人間の押下以外で外に出ない」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/ship.ts`（runShip）、`app/api/idd/decide/route.ts`
+
+### DEC-693: verifier agent が未実装の間は、提出前の検査を人間が兼ねる
+
+- **What**: `s4_submit_started` の後、`s4_verify_clean` が無い間は提出前確認の判断待ちにする（handoff では verifier agent の態度 3 のときだけ人間に上がる）。承認（`s3_ok`）を押した時点で提出の準備まで進める。
+- **Why**: verifier agent は未実装だが、検査項目は機械的に判定できている（DEC-691）。agent を待たずに人間が同じ材料で判断できる。**未実装を「素通し」で埋めない**ための暫定であり、agent が入ったら人間に上がる条件を handoff 通りに戻す。
+- **Change freedom**: 暫定の期間、条件は自由。「未実装の段階を素通しにしない」だけが不変。
+- **Revisit when**: verifier agent を実装した時点。
+- **Anchors**: `packages/idd-core/src/ledger/derive.ts`、`app/api/idd/decide/route.ts`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。

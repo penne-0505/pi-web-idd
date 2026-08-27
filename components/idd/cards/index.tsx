@@ -243,6 +243,14 @@ export function ReviewCard({ item, onDecide, onAsk, compact }: CardProps<ReviewI
 
 export function ShipCard({ item, onDecide, onAsk, compact }: CardProps<ShipItem>) {
   const [instruction, setInstruction] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(item.pr.title);
+  const [body, setBody] = useState(() => item.pr.body.map((b) => `- ${b.text}`).join("\n"));
+  const edited = title !== item.pr.title || body !== item.pr.body.map((b) => `- ${b.text}`).join("\n");
+  // intent: DEC-694 — 内部語彙が残っているかは編集中も判定し続ける (直したことがその場で分かる)
+  const leftover = /\b(DEC|INV|QA|AC|IDD)-[\w.]+/;
+  const flaggedLines = body.split("\n").filter((l) => leftover.test(l));
+
   return (
     <Card>
       <Identity
@@ -263,24 +271,59 @@ export function ShipCard({ item, onDecide, onAsk, compact }: CardProps<ShipItem>
         <div style={{ flexShrink: 0, borderRadius: 5, border: "1px solid var(--border)", overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--bg-panel)", borderBottom: "1px solid var(--border)" }}>
             <span style={{ flex: 1, fontSize: FS.sm, fontWeight: 600, color: "var(--text)" }}>提出される内容</span>
-            <span style={{ fontSize: FS.xs, color: "var(--text-muted)" }}>lane 内の元の記述と比べる ↗</span>
+            {flaggedLines.length ? (
+              <span style={{ fontSize: FS.xs, color: "var(--text)" }}>内部語彙 {flaggedLines.length}</span>
+            ) : null}
+            {edited ? <span style={{ fontSize: FS.xs, color: "var(--text-muted)" }}>編集済み</span> : null}
+            <IconButton
+              icon={editing ? "approve" : "diff"}
+              title={editing ? "編集を終える" : "文面を直す"}
+              size={compact ? 44 : 30}
+              onClick={() => setEditing((v) => !v)}
+            />
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 14, maxHeight: 220, overflowY: "auto" }}>
-            <span style={{ fontSize: FS.lg, fontWeight: 600, color: "var(--text)" }}>{item.pr.title}</span>
-            {item.pr.body.map((b) => (
-              b.flagged ? (
-                <div key={b.text} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: 3, background: "var(--bg-panel)", borderLeft: "3px solid var(--accent)" }}>
-                  <span style={{ flex: 1, fontSize: FS.md, color: "var(--text)" }}>{b.text}</span>
-                  <span style={{ fontSize: FS.xs, fontWeight: 600, color: "var(--text)" }}>元: {b.flagged.original}</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 14, maxHeight: 260, overflowY: "auto" }}>
+            {editing ? (
+              <>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  style={{
+                    padding: "8px 10px", borderRadius: 4,
+                    background: "var(--bg)", border: "1px solid var(--border-strong)",
+                    color: "var(--text)", fontSize: FS.lg, fontWeight: 600, fontFamily: "inherit",
+                  }}
+                />
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  rows={Math.min(14, body.split("\n").length + 2)}
+                  style={{
+                    padding: "8px 10px", borderRadius: 4, resize: "vertical",
+                    background: "var(--bg)", border: "1px solid var(--border-strong)",
+                    color: "var(--text)", fontSize: FS.md, fontFamily: "inherit", lineHeight: 1.6,
+                  }}
+                />
+              </>
+            ) : (
+              <>
+                <span style={{ fontSize: FS.lg, fontWeight: 600, color: "var(--text)" }}>{title}</span>
+                {body.split("\n").filter(Boolean).map((line, i) => (
+                  leftover.test(line) ? (
+                    <div key={`${line}-${i}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: 3, background: "var(--bg-panel)", borderLeft: "3px solid var(--accent)" }}>
+                      <span style={{ flex: 1, fontSize: FS.md, color: "var(--text)" }}>{line}</span>
+                      <span style={{ fontSize: FS.xs, fontWeight: 600, color: "var(--text)" }}>内部語彙</span>
+                    </div>
+                  ) : (
+                    <span key={`${line}-${i}`} style={{ fontSize: FS.md, color: "var(--text)" }}>{line}</span>
+                  )
+                ))}
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <span style={{ fontSize: FS.xs, fontWeight: 600, color: "var(--text-muted)" }}>commit {item.pr.commits.length} 件</span>
+                  {item.pr.commits.map((c) => <span key={c} style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{c}</span>)}
                 </div>
-              ) : (
-                <span key={b.text} style={{ fontSize: FS.md, color: "var(--text)" }}>{b.text}</span>
-              )
-            ))}
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <span style={{ fontSize: FS.xs, fontWeight: 600, color: "var(--text-muted)" }}>commit {item.pr.commits.length} 件</span>
-              {item.pr.commits.map((c) => <span key={c} style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{c}</span>)}
-            </div>
+              </>
+            )}
           </div>
         </div>
         <IdList
@@ -291,10 +334,13 @@ export function ShipCard({ item, onDecide, onAsk, compact }: CardProps<ShipItem>
       <Actions compact={compact}>
         <ConfirmGate
           trigger={{ icon: "approve", label: "このまま出す", minWidth: 150 }}
-          consequences={[item.branch.repo, `${item.branch.to} ← ${item.branch.from}`, "PR を作成", `commit ${item.pr.commits.length}`]}
+          consequences={[item.branch.repo, `${item.branch.to} ← ${item.branch.from}`, "PR を作成", `commit ${item.pr.commits.length}`, ...(edited ? ["文面は編集済み"] : [])]}
           confirmLabel="出す"
           compact={compact}
-          onConfirm={() => onDecide("s4_verify_clean", { iddId: item.iddId })}
+          onConfirm={() => onDecide("s4_verify_clean", {
+            iddId: item.iddId,
+            ...(edited ? { pr: { title, body } } : {}),
+          })}
         >
         {compact ? null : <span style={{ width: 1, alignSelf: "stretch", background: "var(--bg-hover)" }} />}
         <div style={{ display: "flex", flexDirection: compact ? "row" : "column", gap: compact ? 12 : 8 }}>

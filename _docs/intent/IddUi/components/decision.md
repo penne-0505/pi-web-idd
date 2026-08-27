@@ -202,6 +202,28 @@ view / state 層の判断は `_docs/intent/IddUi/lib/decision.md`。
 - **Change freedom**: 色相、点の寸法、tip の文言は自由。「3 値以外に色を使わない」「判断待ちの表現には使わない」の 2 点が不変。
 - **Anchors**: `components/idd/primitives.tsx`（StatusDot）、`components/idd/LaneList.tsx`、`app/globals.css`
 
+### DEC-694: 対外文書は出す前に UI で直せる
+
+- **What**: 提出前確認 card の「提出される内容」は、その場で編集できる（題名は input、本文は textarea）。内部語彙（`DEC-` / `AC-` / `IDD-`）が残っている行は編集中も判定し続け、残数を見出しに出す。編集した場合は「編集済み」を示し、確認の緩衝材にも「文面は編集済み」を並べる。出すときは編集後の文面を使い、編集があった事実を `s4_pr_created` の attrs に残す。
+- **Why**: 検査が「内部語彙が残っている」と告げるのに直せないなら、人間に残る手は「戻す」だけになる。戻すと agent が 1 往復し、直る保証もない。外へ出る文書は**出す直前が最後の編集機会**なので、そこに編集を置くのが最短。読む場所と直す場所を分けない（別画面に飛ばすと、何を出すのかの確認と編集がずれる）。
+- **Change freedom**: 編集の形、判定する語彙は自由。「出す直前に直せる」「直した事実が記録に残る」の 2 点が不変。
+- **Note**: PR 以外の対外文書（S4 Phase B の reviewer への返答など）にも同じ規則を適用する。
+- **Anchors**: `components/idd/cards/index.tsx`（ShipCard）、`packages/idd-core/src/plan/ship.ts`（runShip の edit）
+
+### DEC-695: 親への通知を state updater の中でしない
+
+- **What**: 判断が済んで札を list から外すとき、件数の通知（`onCountChange`）は `setItems` の updater の中ではなく、`items` を見る effect から行う。
+- **Why**: updater は render 中に実行されうるので、その中で別の component を更新すると React が警告を出す（実際に「Cannot update a component (AppShell) while rendering a different component (InboxTab)」が出た）。件数は `items` から導ける値なので、通知点を 1 箇所（effect）に寄せれば二重に持つ必要もない。
+- **Change freedom**: 通知の実装は自由。「派生値を更新の途中で親へ push しない」だけが不変。
+- **Anchors**: `components/idd/InboxTab.tsx`
+
+### DEC-696: 出したあとの lane は待機側に置く
+
+- **What**: `s4_pr_created` があり `s4_merged` が無い lane は「待機中」に置き、`PR #n` を待ち先として示す。
+- **Why**: PR を出した lane は自分では進まない。それを「実装中」に置くと、稼働していないものが稼働中の群に並ぶ（DEC-683 で潰したのと同じ誤読）。待っている相手が外部の PR であることまで示せば、次に何をすべきかが行から分かる。
+- **Change freedom**: 群の選び方、表示は自由。「進まない lane を進行中の群に置かない」だけが不変。
+- **Anchors**: `packages/idd-core/src/ledger/derive.ts`
+
 ## Consequences / Impact
 
 - 札束（DEC-620）により、一覧で全件を俯瞰する手段は sidebar の lane 一覧だけになる。Inbox 側に一覧表示は持たない。
