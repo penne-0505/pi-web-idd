@@ -41,6 +41,12 @@ export function readPendingReviews(): PendingReview[] {
   return readJsonl<PendingReview>(join(stateDir(), "pending-reviews.jsonl"));
 }
 
+// intent: DEC-663 — 回答済みでも batch 本体は引けるようにする (envelope の正本は問いの側)
+export function readQuestionBatch(iddId: string, batchId: string): PendingQuestionBatch | undefined {
+  return readJsonl<PendingQuestionBatch>(join(stateDir(), "pending-questions.jsonl"))
+    .find((b) => b.idd_id === iddId && b.batch_id === batchId);
+}
+
 export function readOpenQuestions(): PendingQuestionBatch[] {
   const batches = readJsonl<PendingQuestionBatch>(join(stateDir(), "pending-questions.jsonl"));
   const answered = new Set(

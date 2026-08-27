@@ -440,6 +440,8 @@ export class AgentSessionWrapper {
             prompt = this.inner.prompt(command.message as string, {
               ...(promptImages?.length ? { images: promptImages } : {}),
               ...(streamingBehavior ? { streamingBehavior } : {}),
+              // intent: DEC-662 — envelope は agent 生成の文字列を含むので、skill / template 展開を明示的に切れるようにする
+              ...(command.expandPromptTemplates === false ? { expandPromptTemplates: false } : {}),
               source: "rpc",
               // intent: DEC-101 — preflight 承認まで ack を遅延させる pi RPC contract の一致
               preflightResult: (success) => {

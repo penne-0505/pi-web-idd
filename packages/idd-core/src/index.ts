@@ -7,7 +7,7 @@ export type {
 } from "./schema/records.ts";
 export {
   readBacklog, readLatestCronRun, readLifecycle, readOpenQuestions,
-  readPendingReviews, readProgress, readSessions,
+  readPendingReviews, readProgress, readQuestionBatch, readSessions,
 } from "./ledger/read.ts";
 export { deriveStage, elapsedLabel } from "./ledger/derive.ts";
 export type { DecisionKind, LaneGroup } from "./ledger/derive.ts";
@@ -24,3 +24,10 @@ export { listIssues } from "./intake/github.ts";
 export type { GithubIssue } from "./intake/github.ts";
 export { runIntake } from "./intake/run.ts";
 export type { DuplicateDetector, IntakeResult } from "./intake/run.ts";
+export { agentBaseUrl, agentToken, checkAgentToken } from "./agent/token.ts";
+export { getAgentRunner, setAgentRunner } from "./agent/port.ts";
+export type { AgentRunner } from "./agent/port.ts";
+export { deliverPending, pendingEnvelopes, sessionFor } from "./agent/outbox.ts";
+export type { DeliverResult, OutboxRecord } from "./agent/outbox.ts";
+export { agentAskQuestions, agentProgress, agentReady, agentResult } from "./agent/inbound.ts";
+export type { AskedQuestion } from "./agent/inbound.ts";

@@ -92,9 +92,49 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: 平坦化の規則は自由。「正本の area を書き換えない」だけが不変。
 - **Anchors**: `packages/idd-core/src/ledger/write.ts`
 
+### DEC-659: pi session の所有者は runtime を持つ 1 プロセスに限る
+
+- **What**: envelope の配信（`prompt` の実行）は pi runtime を所有するプロセス（Next server）だけが行う。engine は `AgentRunner`（`deliver` / `spawn`）という port しか持たず、実装は `lib/idd-ui/server/agent-runner.ts` に 1 つだけ置く。CLI / cron からの配信は `POST /api/idd/deliver` を叩く。
+- **Why**: pi の session は jsonl file に永続化される。CLI が別プロセスで同じ session を開くと、同一 file を 2 プロセスが書いて壊れる。所有者を 1 つに決めれば、配信の順序も idle 判定も 1 箇所で決まる。
+- **Change freedom**: port の signature、runner の置き場所は自由。「同じ pi session を 2 プロセスが持たない」だけが不変。
+- **Why not**（engine が自分で AgentSession を起こす）: UI と CLI が同時に動く構成で session file が壊れる。壊れ方が静かなので発見も遅れる。
+- **Consequence**: S1 以降の cron は「server が起きている前提」になる。localhost の常駐 app なので実害は無い。intake は外部依存が無いので CLI 単独で動く（DEC-657）。
+- **Anchors**: `packages/idd-core/src/agent/port.ts`、`packages/idd-core/src/agent/outbox.ts`、`lib/idd-ui/server/agent-runner.ts`、`app/api/idd/deliver/route.ts`
+
+### DEC-660: agent 用の書き込み口は token でだけ開く
+
+- **What**: `/api/idd/agent/*` は `Authorization: Bearer <token>` を要求する。token は `IDD_AGENT_TOKEN`、無ければ `state/agent-token`（0600）に生成して保存する。比較は長さと定数時間で行う。
+- **Why**: dev server を `-H 0.0.0.0` で出しているため、無認証の書き込み口は LAN の誰にでも ledger を書かせることになる。ledger は判断の唯一の履歴なので、汚染は復元できない。
+- **Change freedom**: token の生成・保管・header 名は自由。「agent の書き込み口が無認証で開かない」だけが不変。
+- **Revisit when**: server を localhost 専用に閉じるなら方式を見直してよい。
+- **Anchors**: `packages/idd-core/src/agent/token.ts`、`lib/idd-ui/server/agent-auth.ts`
+
+### DEC-661: agent → engine は 4 つの口だけ。envelope は書き戻し先を同梱する
+
+- **What**: agent が engine に書ける経路は `questions` / `ready` / `progress` / `result` の 4 つに限る。いずれも lane の実在を確認し、自分の lane の state しか書けない。envelope には `<callback>`（base-url / token / endpoint 一覧）を同梱する。
+- **Why**: 口が増えるほど「agent が勝手に進める」余地が増える。判断（GO / 承認 / 中止）は人間の側にあり、agent 用の口には存在しない。envelope に書き戻し先を同梱するのは handoff の self-containment 原則の履行で、agent 側の設定に依存させないため。
+- **Change freedom**: 口の実装、payload の形は自由。「判断を発生させる口を agent に与えない」だけが不変。
+- **Anchors**: `packages/idd-core/src/agent/inbound.ts`、`app/api/idd/agent/*/route.ts`、`packages/idd-core/src/ledger/write.ts`（buildEnvelope）
+
+### DEC-662: envelope は followUp で入れ、prompt template の展開を切る
+
+- **What**: 配信は `prompt(xml, { streamingBehavior: "followUp", expandPromptTemplates: false })`。稼働中なら現在の turn の完了後、待機中ならその場で新しい turn になる。
+- **Why**: handoff の「user prompt 前挿入方式」は pi の SDK にそのまま存在した（open-questions #1 の答え）。`steer` は実行中の turn を割り込むので、判断の通知には強すぎる。`expandPromptTemplates` の既定は true で、envelope には agent 生成の文字列が載るため、skill command や template として解釈される余地を残せない。
+- **Change freedom**: streaming 中の扱いは自由。「割り込まない」「envelope の中身をコマンドとして解釈させない」の 2 点が不変。
+- **Anchors**: `lib/idd-ui/server/agent-runner.ts`、`lib/rpc-manager.ts`（expandPromptTemplates の受け渡し）
+
+### DEC-663: envelope に載る問いと選択肢は pending-questions を正本にする
+
+- **What**: 回答時の envelope は UI の payload ではなく `pending-questions.jsonl` の batch から問い・context・選択肢を引く。回答済みの batch も引けるようにする。
+- **Why**: UI は選択肢の index しか送らない（送る必要が無い）。payload を正本にすると、envelope の問いが空になるか、UI 側の表示文字列が正本になってしまう。agent に届く envelope は agent 自身が発した問いと一致していなければならない。
+- **Change freedom**: 引き方は自由。「envelope の問いが agent の発した問いと一致する」だけが不変。
+- **Anchors**: `packages/idd-core/src/ledger/read.ts`（readQuestionBatch）、`packages/idd-core/src/ledger/write.ts`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。
+- envelope の配信は server が起きている必要がある（DEC-659）。`POST /api/idd/deliver` が入口で、未達は `outbox.jsonl` の `delivered_at: null` として残る。
+- `state/agent-token` が生成される（DEC-660）。state dir を共有する全プロセスが同じ token を見る。
 - 取り込みは `gh` CLI に依存する（DEC-654）。CI や別ホストで動かすには `gh` の認証が要る。
 - engine の import は `.ts` 拡張子付きにした。`node --experimental-strip-types` で CLI を build 無しに実行するため（tsconfig の `allowImportingTsExtensions`）。
 - `packages/*` を npm workspace として追加した。`@idd/core` は TypeScript のまま解決される（build 段階を持たない）ため、Next の bundler がそのまま取り込む。
@@ -117,5 +157,6 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Rollback**: `packages/idd-core` を `lib/idd-ui/server/` へ戻せば、workspace 追加前の構成に復帰する（依存は一方向なので機械的に戻せる）。
 - **Follow-ups**:
   - 意味類似の重複判定（DEC-656 の detector）を実装する
+  - worker pool（Workspace DEC-007 の実体）を runtime 側に置き、planner / executor を role 付きで起こす
   - S1（planner）を実装し、取り込んだ lane を下調べに載せる
   - cron を systemd timer などに登録する（現状は手動実行）
