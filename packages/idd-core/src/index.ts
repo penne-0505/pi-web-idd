@@ -37,3 +37,5 @@ export type { LaneActivity, PrepResult } from "./plan/prep.ts";
 export { executorBrief, executorConcurrency, lanesAwaitingExec, runExec, runningExecutors } from "./plan/exec.ts";
 export type { ExecResult } from "./plan/exec.ts";
 export { headCommit } from "./worktree/ensure.ts";
+export { resumeBrief, resumeTargetFor, runResume } from "./plan/resume.ts";
+export type { ResumeTarget } from "./plan/resume.ts";

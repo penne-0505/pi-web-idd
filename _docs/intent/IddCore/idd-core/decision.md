@@ -215,6 +215,22 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: brief の文面、並列上限、model は自由。「契約を渡す」「契約が無ければ起こさない」「起点 commit を残す」の 3 点が不変。
 - **Anchors**: `packages/idd-core/src/plan/exec.ts`、`app/api/idd/exec/route.ts`、`packages/idd-core/src/worktree/ensure.ts`（headCommit）
 
+### DEC-686: 中断した agent は session file から起こして続きを頼む
+
+- **What**: `POST /api/idd/resume` で、lane の session を file から起こし、「作業は worktree に残っている。`git status` / `git diff` で自分の進み具合を確認してから続けろ」という envelope を届ける。executor の場合は `s2_recovery_attempt` を append する。
+- **Why**: runtime が落ちれば session は全て死ぬが、agent が書いたものは worktree に残る。作業を捨てて最初からやり直させるのは、時間だけでなく判断（既に人間が答えた質問の反映など）も捨てることになる。handoff の agents.md が「server 再起動時に jsonl から resume」と書いているのは、この経路のこと。
+- **Change freedom**: 文面、再開の契機（手動 / 自動検出）は自由。「途中の作業を前提に再開する」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/resume.ts`、`app/api/idd/resume/route.ts`
+
+### DEC-687: agent にホストの共有物を触らせない
+
+- **What**: executor の brief に host-rules を置き、pattern による `pkill` / `killall` を禁じ、検証用 server は未使用 port + PID 指定でのみ止めるよう指示する。IDD の runtime が使う port は名指しで「触るな」と書く。
+- **Why**: 実際に executor が後片付けのつもりで `pkill -f "next dev"` を実行し、**自分の session を載せている runtime ごと落とした**。lane の分離は worktree（DEC-670）でファイル系だけを分けており、プロセスは共有のまま。範囲の広い停止操作は自分自身に届く。
+- **Change freedom**: 文面は自由。「共有のプロセス空間に対する破壊的操作を禁じる」だけが不変。
+- **Why not**（bash を取り上げる）: 実装には build と test が要る。
+- **Revisit when**: lane ごとに検証 server を管理する script を用意できたら、指示ではなくその script だけを使わせる形にする（構造で守る）。
+- **Anchors**: `packages/idd-core/src/plan/exec.ts`（executorBrief の host-rules）
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。
