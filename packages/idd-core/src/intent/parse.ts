@@ -8,13 +8,24 @@ import type { BacklogRecord } from "../schema/records.ts";
 
 const HEADING = /^#{2,3}\s*((?:DEC|QA|INV)-[\w.]+)\s*[—–:-]?\s*(.+?)\s*$/;
 
-export function parseIntent(area: string, slug: string): {
+// intent: DEC-673 — area は repo 名を含みうるが、intent の path 要素は最後の 1 語だけを使う
+export function areaSegment(area: string): string {
+  return area.split("/").pop() || area;
+}
+
+// intent: DEC-681 — 下調べの成果物は lane の worktree にある。読む側も lane の worktree を先に見る
+export function parseIntent(area: string, slug: string, opts: { root?: string } = {}): {
   decisions: { id: string; text: string }[];
   criteria: { id: string; text: string }[];
   invariants: { id: string; text: string }[];
   references: { path: string; why: string }[];
 } {
-  const dir = join(intentRoot(), area, slug);
+  const seg = areaSegment(area);
+  const candidates = [
+    ...(opts.root ? [join(opts.root, "_docs", "intent", seg, slug)] : []),
+    join(intentRoot(), seg, slug),
+  ];
+  const dir = candidates.find((c) => existsSync(c)) ?? candidates[candidates.length - 1];
   const pick = (file: string) => {
     const p = join(dir, file);
     if (!existsSync(p)) return [] as { id: string; text: string }[];

@@ -11,7 +11,7 @@ import { getAgentRunner } from "../agent/port.ts";
 import { readAreas } from "../config/areas.ts";
 import { deriveStage } from "../ledger/derive.ts";
 import { readBacklog, readLifecycle, readSessions } from "../ledger/read.ts";
-import { slugOf } from "../intent/parse.ts";
+import { areaSegment, slugOf } from "../intent/parse.ts";
 import { stateDir } from "../paths.ts";
 import type { BacklogRecord } from "../schema/records.ts";
 import { ensureLaneWorktree } from "../worktree/ensure.ts";
@@ -80,7 +80,7 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 export function plannerBrief(rec: BacklogRecord): string {
   const area = readAreas().areas[rec.area];
   const slug = slugOf(rec);
-  const intentDir = `_docs/intent/${rec.area.split("/").pop() ?? rec.area}/${slug}/`;
+  const intentDir = `_docs/intent/${areaSegment(rec.area)}/${slug}/`;
   return [
     "<idd-system-message>",
     `  <sent-at>${new Date().toISOString()}</sent-at>`,

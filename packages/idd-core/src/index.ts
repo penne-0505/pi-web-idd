@@ -11,7 +11,7 @@ export {
 } from "./ledger/read.ts";
 export { deriveStage, elapsedLabel } from "./ledger/derive.ts";
 export type { DecisionKind, LaneGroup } from "./ledger/derive.ts";
-export { parseIntent, slugOf } from "./intent/parse.ts";
+export { areaSegment, parseIntent, slugOf } from "./intent/parse.ts";
 export { changedFiles, resolveWorktree } from "./worktree/changed-files.ts";
 export {
   appendAnswer, appendLifecycle, applyDecision, buildEnvelope,

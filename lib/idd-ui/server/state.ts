@@ -2,7 +2,7 @@
 // intent: DEC-650 — ledger の読み書き・stage 判定・intent parse は @idd/core が持つ
 
 import {
-  changedFiles, deriveStage, elapsedLabel, parseIntent, readBacklog, readLatestCronRun,
+  areaSegment, changedFiles, deriveStage, elapsedLabel, parseIntent, readBacklog, readLatestCronRun,
   readAnswers, readLifecycle, readOpenQuestions, readPendingReviews, readProgress, readSessions, slugOf,
 } from "@idd/core";
 import type { BacklogRecord, LaneGroup, LifecycleRecord } from "@idd/core";
@@ -12,6 +12,14 @@ import type {
   CriterionState, InboxItem, LaneDetailView, LaneRow, LaneSection, SourceRef, StateFact,
 } from "../types";
 import { buildTimeline } from "./events-display";
+
+// intent: DEC-681 — lane の成果物は worktree にあるので、その root を intent の探索に渡す
+function laneRoot(iddId: string): string | undefined {
+  const executor = readSessions("executor").filter((r) => r.idd_id === iddId).pop();
+  if (executor?.worktree_path) return executor.worktree_path;
+  const planner = readSessions("planner").filter((r) => r.idd_id === iddId).pop();
+  return planner?.worktree_path;
+}
 
 function sourceOf(rec: BacklogRecord): SourceRef | undefined {
   if (rec.linear_issue_url) {
@@ -126,7 +134,7 @@ export function buildState(): IddState {
     const evs = byLane.get(rec.idd_id) ?? [];
     const d = deriveStage(evs);
     if (d.decision === "go") {
-      const intent = parseIntent(rec.area, slugOf(rec));
+      const intent = parseIntent(rec.area, slugOf(rec), { root: laneRoot(rec.idd_id) });
       items.push({
         kind: "go",
         iddId: rec.idd_id,
@@ -136,11 +144,11 @@ export function buildState(): IddState {
         criteria: intent.criteria,
         intentPath: intent.decisions.length || intent.criteria.length
           ? undefined
-          : `_docs/intent/${rec.area.split("/").pop() ?? rec.area}/${slugOf(rec)}/`,
+          : `_docs/intent/${areaSegment(rec.area)}/${slugOf(rec)}/`,
       });
     }
     if (d.decision === "review") {
-      const intent = parseIntent(rec.area, slugOf(rec));
+      const intent = parseIntent(rec.area, slugOf(rec), { root: laneRoot(rec.idd_id) });
       const progress = readProgress(rec.idd_id);
       items.push({
         kind: "review",
@@ -185,7 +193,7 @@ export function buildLaneDetail(iddId: string): LaneDetailView | null {
   if (!rec) return null;
   const evs = readLifecycle().filter((e) => e.idd_id === iddId);
   const d = deriveStage(evs);
-  const intent = parseIntent(rec.area, slugOf(rec));
+  const intent = parseIntent(rec.area, slugOf(rec), { root: laneRoot(rec.idd_id) });
   const progress = readProgress(iddId);
 
   const criteria = intent.criteria.map((c) => {

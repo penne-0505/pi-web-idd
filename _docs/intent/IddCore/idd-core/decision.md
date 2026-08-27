@@ -180,6 +180,20 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: 解決の方法は自由。「届け先が意図した session であることを確認してから配信する」だけが不変。
 - **Anchors**: `lib/idd-ui/server/agent-runner.ts`
 
+### DEC-679: lane は「消す」のではなく lane_close で終端へ送る
+
+- **What**: UI から lane を畳む操作（中止 / 取り消し）は `lane_close` を append し、attrs に `outcome: "aborted" | "dropped"` と理由を残す。backlog record も event も削除しない。`deriveStage` は `lane_close` を終端として扱うので、lane は sidebar の「終端 (直近)」へ移り、判断キューからは消える。
+- **Why**: ledger は append-only で、判断の唯一の履歴（INV-003）。record を消すと「その lane が存在した」ことごと消え、なぜ消したかも残らない。UI に必要なのは視界から外すことであって、履歴から消すことではない。誤って取り込んだ lane（`dropped`）と、やると決めた上で止めた lane（`aborted`）は後で区別できる必要があるので、同じ event の attrs で分ける。
+- **Change freedom**: 呼び名、attrs、どこから押せるかは自由。「record を削除しない」「畳んだ理由が残る」の 2 点が不変。
+- **Anchors**: `packages/idd-core/src/ledger/write.ts`（lane_abort / lane_drop）、`packages/idd-core/src/ledger/derive.ts`
+
+### DEC-681: 下調べの成果物は lane の worktree にある。読む側もそこを先に見る
+
+- **What**: `parseIntent` は lane の worktree（`planner/executor-sessions.jsonl` の `worktree_path`）配下の `_docs/intent/<Area>/<slug>/` を先に探し、無ければ server の intent root を見る。`<Area>` の path 要素は `areaSegment()`（area の最後の 1 語）で統一し、書く側（planner への指示）・読む側・「成果物が無い」表示の 3 箇所で同じ関数を使う。
+- **Why**: planner は lane の worktree で作業するので、成果物は commit されるまでそこにしかない。server の cwd だけを見ていると、`s1_ready` が来ているのに GO card が空になる。area は `penne-0505/pi-web-idd` のように repo 名を含みうるため、書き込み先と読み取り先が食い違っていた（実際に食い違って空表示になった）。同じ規則を 3 箇所で別々に書いたことが原因なので、関数に寄せる。
+- **Change freedom**: 探索順、helper の置き場所は自由。「書く側と読む側が同じ規則を共有する」だけが不変。
+- **Anchors**: `packages/idd-core/src/intent/parse.ts`（areaSegment / parseIntent）、`lib/idd-ui/server/state.ts`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。

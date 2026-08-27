@@ -165,6 +165,17 @@ export async function applyDecision(action: string, payload: Record<string, unkn
       wrote.push(await appendLifecycle("s1_go", iddId, { at_by: "user" }));
       return { ok: true, wrote };
 
+    // intent: DEC-679 — lane を UI から畳む口。append-only なので「消す」ではなく lane_close で終端へ送る
+    case "lane_abort":
+    case "lane_drop": {
+      const outcome = action === "lane_drop" ? "dropped" : "aborted";
+      wrote.push(await appendLifecycle("lane_close", iddId, {
+        outcome,
+        reason: String(payload.reason ?? ""),
+      }));
+      return { ok: true, wrote };
+    }
+
     case "s1_defer": {
       wrote.push(await appendLifecycle("s1_defer", iddId, { reason: String(payload.reason ?? "") }));
       const id = await queueEnvelope(iddId, "lane_deferred",

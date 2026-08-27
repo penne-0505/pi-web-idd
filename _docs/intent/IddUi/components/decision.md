@@ -188,6 +188,13 @@ view / state 層の判断は `_docs/intent/IddUi/lib/decision.md`。
 - **Change freedom**: 開き方、表の形は自由。「開ける記号は開く」だけが不変。
 - **Anchors**: `components/idd/cards/parts.tsx`（CollapsedFacts）、`lib/idd-ui/server/state.ts`
 
+### DEC-680: 畳める印を出すなら実際に畳める
+
+- **What**: sidebar の section 見出しに `▾` を出すのは畳める section だけにし、押すと開閉する。「終端 (直近)」は既定で畳む。
+- **Why**: `▸` / `▾` は開閉の約束であり、動かない印は嘘になる（質問 card の「現状」と同じ間違いを sidebar でもしていた）。終端は普段の判断に要らないので既定で畳み、追いたいときだけ開く。
+- **Change freedom**: 既定の開閉、印の形は自由。「畳める印は畳める」だけが不変。
+- **Anchors**: `components/idd/LaneList.tsx`
+
 ## Consequences / Impact
 
 - 札束（DEC-620）により、一覧で全件を俯瞰する手段は sidebar の lane 一覧だけになる。Inbox 側に一覧表示は持たない。
