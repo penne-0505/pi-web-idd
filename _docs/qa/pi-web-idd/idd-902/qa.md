@@ -20,12 +20,12 @@ related_prs: []
 
 ## Acceptance Criteria
 
-- AC-001 (QA-1): `outbox.jsonl` に `delivered_at: null` の envelope が n 件あるとき、`GET /api/idd/state` のレスポンスに総数 n が含まれる
-- AC-002 (QA-2): ある lane に紐づく未達が m 件あるとき、`GET /api/idd/lane/[id]` のレスポンスに m が含まれる (他 lane の未達は含まない)
-- AC-003 (QA-3): Inbox の「判断キュー」見出し行に「未達 n 件」が出る。0 件のときは出ない (または chrome として読ませない水準に留まる)
-- AC-004 (QA-4): lane detail の見出しに「未達 m 件」がその lane 分だけ出る
-- AC-005 (QA-5): `delivered_at` 設定済みの envelope は件数に含まれない (同一 `envelope_id` の後続レコードで merge される `pendingEnvelopes()` の既存動作を壊さない)
-- AC-006 (QA-6): 未達のうち error 付き (配送失敗) があるとき、総数とは別に失敗分であることが表示から読み取れる (DEC-665)
+- AC-001 (QA-1): 未達 n 件のとき state レスポンスに総数 n が含まれる
+- AC-002 (QA-2): lane detail レスポンスはその lane の未達 m 件を含む
+- AC-003 (QA-3): Inbox の見出し行に未達 n 件が出る
+- AC-004 (QA-4): lane detail の見出しに未達 m 件がその lane 分だけ出る
+- AC-005 (QA-5): delivered_at 設定済みの envelope は件数に含まれない
+- AC-006 (QA-6): error 付きの未達は表示で失敗と区別できる
 
 ## Checks
 

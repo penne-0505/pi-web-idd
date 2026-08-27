@@ -24,19 +24,19 @@ related_prs: []
 
 ## Decisions
 
-### DEC-664: 未達は Inbox 見出し行に総数、lane detail 見出しに lane 分を出す
+### DEC-664: 未達は Inbox と lane detail の見出しに出す
 
 - **What**: Inbox の「判断キュー」見出し行 (CronStatus の隣) に全 lane 合計の「未達 n 件」、lane detail の見出しにその lane の件数を出す (質問 q1 の回答: 両方)。
 - **Why**: 配送失敗の主因は lane 単位 (`no session for lane` / runner 不在) で、全体の滞留と個別 lane の滞留は別の情報。Inbox だけでは「どの lane が詰まっているか」に辿り着けず、lane detail だけではそもそも滞留があることに気づけない。
 - **Change freedom**: 右端の並び順、チップか素文字か等の表現は自由。「判断ではない情報は見出し行の端へ逃がす」(DEC-635) だけは守る。
 
-### DEC-665: 件数は delivered_at null 全件で数え、error 付きは表示上区別する
+### DEC-665: 未達は全件数え error 付きを区別する
 
 - **What**: `pendingEnvelopes()` (= `delivered_at: null` の最新レコード) を全件数える。`error` フィールドを持つ分は「配送失敗」として表示上見分けられるようにする (質問 q2 の回答: 全件出すが error 有無を見分ける)。
 - **Why**: queued 直後の正常滞留まで隠すと「積まれたがまだ試されていない」詰まりを検知できない。かといって失敗と滞留を同じ見た目にすると、人間が介入すべきもの (失敗) と cron が捌くもの (滞留) の urgency が読めない。
 - **Change freedom**: 区別の表現 (内訳数「未達 3 (失敗 2)」、色、アイコン) は自由。全件を母数にすることと、失敗が読み取れることだけが不変。
 
-### DEC-666: 件数は buildState / buildLaneDetail のレスポンスに載せる
+### DEC-666: 未達件数は state と lane detail のレスポンスに載せる
 
 - **What**: `/api/idd/state` (`buildState()`) と `/api/idd/lane/[id]` (`buildLaneDetail()`) の JSON に未達件数を含め、UI は新しい fetch を増やさない (質問 q3 は「おまかせ」のため planner 判断)。
 - **Why**: Inbox は 15 秒ポーリング、lane detail は mount 時取得という既存経路がある。`GET /api/idd/deliver` を UI から別途叩くと取得タイミングが画面ごとにばらつき、mock/fixture 経路 (DEC-603 / DEC-639) も二重に必要になる。
@@ -70,8 +70,8 @@ related_prs: []
 
 ## Intent-derived Invariants
 
-- INV-008 (from DEC-666): 未達表示は `outbox.jsonl` と `state/outbox/` を読むだけで、outbox への書き込み (`queueEnvelope` / `patch`) と配送 (`deliverPending`) の振る舞いを変えない
-- INV-009 (from DEC-665): 未達件数は `pendingEnvelopes()` の単一実装から導き、UI / route 層で `outbox.jsonl` を再解釈しない
+- INV-008 (from DEC-666): 未達表示は outbox を読むだけで書き込みと配送を変えない
+- INV-009 (from DEC-665): 未達件数は単一実装から導き UI 層で再解釈しない
 
 ## Rollback / Follow-ups
 
