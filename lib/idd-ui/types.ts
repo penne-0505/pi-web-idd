@@ -26,6 +26,8 @@ export interface LaneRow {
   blockedBy?: string;
   priorityTop?: boolean;
   faded?: boolean;
+  // intent: DEC-683 — 進行中の見た目のまま止まっている lane を、動いている lane と区別する
+  activity?: "live" | "stalled" | "unstarted";
 }
 
 export interface LaneSection {

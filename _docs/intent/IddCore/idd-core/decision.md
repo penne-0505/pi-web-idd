@@ -194,6 +194,20 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: 探索順、helper の置き場所は自由。「書く側と読む側が同じ規則を共有する」だけが不変。
 - **Anchors**: `packages/idd-core/src/intent/parse.ts`（areaSegment / parseIntent）、`lib/idd-ui/server/state.ts`
 
+### DEC-682: 成果物の置き場所と書式は repo の docs 規約に従う
+
+- **What**: planner の成果物は `_docs/intent/<Area>/<slug>/decision.md`（full schema、`### DEC-nnn:` + What/Why/Change freedom、INV は Intent-derived Invariants 節）、`_docs/qa/<Area>/<slug>/qa.md`（`- AC-001:` 形式）、`_docs/reference/<Area>/<slug>/reference.md` に置く。brief はこの形だけを指示し、完了条件を `./scripts/check-docs.sh` が通ることとする。読む側（`parseIntent`）は旧い簡易形式も受け付ける。
+- **Why**: handoff は「4 ファイルを intent 配下に置く」と書いているが、この repo の docs validator は intent 配下に `decision.md` 以外を許さず、その decision.md にも full schema を要求する。実際に planner が下調べ中にこの衝突を検出して質問を上げ、CI 優先と決まった（IDD-902 の q6）。書式を守れない指示は、agent が毎回同じ壁にぶつかる。読む側だけ寛容にするのは、移行中の lane を表示できなくしないため。
+- **Change freedom**: 書式の詳細、寛容に受ける範囲は自由。「指示された形が CI を通る」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/prep.ts`（plannerBrief）、`packages/idd-core/src/intent/parse.ts`
+
+### DEC-683: 「進んでいるはず」と「実際に動いている」を分けて出す
+
+- **What**: 下調べ中 / 実装中の lane について、対応する session が runtime に生きているかを見て `live` / `stalled`（session はあるが動いていない）/ `unstarted`（session が無い）を返す。sidebar では stage bar を破線にし、「停止」「未起動」を添える。
+- **Why**: GO を押した lane は「実装中」になるが、executor が起動していなければ誰も何もしない。動いていないものが動いているものと同じ顔で並ぶと、止まっていることに気づけない。生きている session の集合は runtime しか知らないので、engine には集合として渡す（DEC-659 と同じ境界）。
+- **Change freedom**: 判定の粒度、見せ方は自由。「止まっている lane が進行中と同じ見た目にならない」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/prep.ts`（laneActivity）、`lib/idd-ui/server/state.ts`、`components/idd/LaneList.tsx`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。

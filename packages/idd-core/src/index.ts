@@ -32,5 +32,5 @@ export type { DeliverResult, OutboxRecord } from "./agent/outbox.ts";
 export { agentAskQuestions, agentProgress, agentReady, agentResult } from "./agent/inbound.ts";
 export type { AskedQuestion } from "./agent/inbound.ts";
 export { ensureLaneWorktree, lanesRoot } from "./worktree/ensure.ts";
-export { lanesAwaitingPrep, plannerBrief, plannerConcurrency, runningPlanners, runPrep } from "./plan/prep.ts";
-export type { PrepResult } from "./plan/prep.ts";
+export { laneActivity, lanesAwaitingPrep, plannerBrief, plannerConcurrency, runningPlanners, runPrep } from "./plan/prep.ts";
+export type { LaneActivity, PrepResult } from "./plan/prep.ts";

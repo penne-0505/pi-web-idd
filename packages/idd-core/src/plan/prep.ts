@@ -80,7 +80,7 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 export function plannerBrief(rec: BacklogRecord): string {
   const area = readAreas().areas[rec.area];
   const slug = slugOf(rec);
-  const intentDir = `_docs/intent/${areaSegment(rec.area)}/${slug}/`;
+  const seg = areaSegment(rec.area);
   return [
     "<idd-system-message>",
     `  <sent-at>${new Date().toISOString()}</sent-at>`,
@@ -94,16 +94,40 @@ export function plannerBrief(rec: BacklogRecord): string {
     `    <context>${esc(rec.context)}</context>`,
     "  </lane>",
     "  <task>",
-    "    この lane の下調べを行う。実装はしない。読むだけで、コードを変更しない。",
-    `    成果物は ${intentDir} に 4 つ:`,
-    "      decision.md (DEC-n — 一文), invariant.md (INV-n — 一文), qa.md (QA-n — 一文), reference.md",
-    "    見出しは `## DEC-1 — <一文>` の形式にすること (UI がこの形式で読む)。",
-    "    reference.md は `- `path` — なぜ見たか` の一行形式。",
-    "    分からないことがあれば questions で聞く (1 batch 最大 5 問、選択肢は 1-5 個)。",
-    "    選択肢の label は 40 文字以内、label 単体で選べる粒度にすること。",
-    "    下調べが終わったら ready を呼ぶ。呼ぶまで人間の GO 判定は始まらない。",
+    "    この lane の下調べを行う。実装はしない (成果物の文書以外のコードを変更しない)。",
+    "    成果物は repo の docs 規約に従う。`./scripts/check-docs.sh` が通ることが完了条件。",
     "  </task>",
-    "  <callback>",
+    "  <deliverables>",
+    "    <decision>",
+    `      <path>_docs/intent/${seg}/${slug}/decision.md</path>`,
+    "      <format>既存の decision.md と同じ full schema。frontmatter (title/status/intent_schema/created_at/updated_at/references/related_issues/related_prs) +",
+    "        Context / Decisions / Consequences · Impact / Quality Implications / Intent-derived Invariants / Rollback · Follow-ups の 6 節。",
+    "        DEC は `### DEC-nnn: &lt;一文&gt;` で始め、What / Why / Change freedom を必須、Anchors に触る場所を書く。",
+    "        番号は repo 全体で一意にする (既存の最大値を調べてから採番する)。",
+    "        INV は Intent-derived Invariants 節に `- INV-nnn (from DEC-nnn): &lt;一文&gt;` の形で書く。</format>",
+    "    </decision>",
+    "    <qa>",
+    `      <path>_docs/qa/${seg}/${slug}/qa.md</path>`,
+    "      <format>frontmatter に qa_schema: 3 / qa_status: planned / risk: Low|Medium|High|Critical。",
+    "        Acceptance Criteria / Checks / Rounds の 3 節。条件は `- AC-001: &lt;一文&gt;` の形で、観測できる形にする。</format>",
+    "    </qa>",
+    "    <reference>",
+    `      <path>_docs/reference/${seg}/${slug}/reference.md</path>`,
+    "      <format>frontmatter (title/status/created_at/updated_at/references/related_issues/related_prs) +",
+    "        `- \`path\` — なぜ見たか` の一行形式。</format>",
+    "    </reference>",
+    "  </deliverables>",
+    "  <writing>",
+    "    見出しは 1 主張 1 文。読点で節を継ぎ足さない。判断に効かない修飾を落とす。",
+    "    出典や経緯 (「質問 q1 の回答」等) は見出しに混ぜず Why 側に書く。",
+    "    DEC / AC の見出しは UI の card にそのまま出るので、40 文字前後で 1 行に収まる長さにする。",
+    "  </writing>",
+    "  <questions>",
+    "    分からないことがあれば questions で聞く (1 batch 最大 5 問、選択肢は 1-5 個)。",
+    "    選択肢の label は 40 文字以内、label 単体で選べる粒度にする。",
+    "    下調べが終わったら ready を呼ぶ。呼ぶまで人間の GO 判定は始まらない。",
+    "  </questions>",
+  "  <callback>",
     `    <base-url>${esc(agentBaseUrl())}</base-url>`,
     `    <token>${esc(agentToken())}</token>`,
     "    <endpoints>",
@@ -164,4 +188,16 @@ export async function runPrep(): Promise<PrepResult> {
     }
   }
   return result;
+}
+
+// intent: DEC-683 — 「進んでいるはず」と「実際に動いている」は別。session が居ない lane を止まっていると見なす
+export type LaneActivity = "live" | "stalled" | "unstarted";
+
+export function laneActivity(iddId: string, group: string, liveSessionIds: Set<string>): LaneActivity {
+  if (group !== "prep" && group !== "impl") return "live";
+  const kind = group === "impl" ? "executor" : "planner";
+  const rec = readSessions(kind).filter((r) => r.idd_id === iddId).pop();
+  const sessionId = kind === "executor" ? rec?.executor_session_id : rec?.planner_session_id;
+  if (!sessionId) return "unstarted";
+  return liveSessionIds.has(sessionId) ? "live" : "stalled";
 }

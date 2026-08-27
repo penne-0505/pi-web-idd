@@ -35,6 +35,8 @@ const TITLE: Record<Attention, { weight: number; color: string }> = {
 function Row({ lane, selected, onSelect }: { lane: LaneRow; selected?: boolean; onSelect?: (id: string) => void }) {
   const halted = lane.group === "waiting";
   const attn = attentionOf(lane);
+  // intent: DEC-683 — 動いていない lane を、動いている lane と同じ顔で出さない
+  const stalled = lane.activity === "stalled" || lane.activity === "unstarted";
   const title = TITLE[attn];
   return (
     <button
@@ -65,7 +67,8 @@ function Row({ lane, selected, onSelect }: { lane: LaneRow; selected?: boolean; 
       </span>
 
       <span style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", opacity: attn === "act" ? 1 : attn === "done" ? 0.5 : 0.75 }}>
-        <StageBar done={lane.stageDone} current={lane.stageCurrent} halted={halted} faded={lane.faded} />
+        <StageBar done={lane.stageDone} current={lane.stageCurrent} halted={halted || stalled} faded={lane.faded} />
+        {stalled ? <span style={{ fontSize: FS.xs, color: "var(--text-muted)" }}>{lane.activity === "unstarted" ? "未起動" : "停止"}</span> : null}
         <span style={{ flex: 1 }} />
         {lane.blockedBy ? <Icon name="link" size={11} color="var(--text-dim)" /> : null}
         <span style={{ fontSize: FS.xs, color: "var(--text-dim)", flexShrink: 0 }}>

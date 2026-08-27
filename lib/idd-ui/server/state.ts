@@ -2,7 +2,7 @@
 // intent: DEC-650 — ledger の読み書き・stage 判定・intent parse は @idd/core が持つ
 
 import {
-  areaSegment, changedFiles, deriveStage, elapsedLabel, parseIntent, readBacklog, readLatestCronRun,
+  areaSegment, changedFiles, deriveStage, laneActivity, elapsedLabel, parseIntent, readBacklog, readLatestCronRun,
   readAnswers, readLifecycle, readOpenQuestions, readPendingReviews, readProgress, readSessions, slugOf,
 } from "@idd/core";
 import type { BacklogRecord, LaneGroup, LifecycleRecord } from "@idd/core";
@@ -12,6 +12,16 @@ import type {
   CriterionState, InboxItem, LaneDetailView, LaneRow, LaneSection, SourceRef, StateFact,
 } from "../types";
 import { buildTimeline } from "./events-display";
+import { getRunningRpcSessionIds } from "@/lib/rpc-manager";
+
+// intent: DEC-683 — 生きている session は runtime しか知らない。engine には集合として渡す
+function liveSessions(): Set<string> {
+  try {
+    return new Set(getRunningRpcSessionIds());
+  } catch {
+    return new Set();
+  }
+}
 
 // intent: DEC-681 — lane の成果物は worktree にあるので、その root を intent の探索に渡す
 function laneRoot(iddId: string): string | undefined {
@@ -58,6 +68,7 @@ export function buildState(): IddState {
     byLane.set(e.idd_id, list);
   }
 
+  const live = liveSessions();
   const lanes: LaneRow[] = backlog.map((rec) => {
     const evs = byLane.get(rec.idd_id) ?? [];
     const d = deriveStage(evs);
@@ -73,6 +84,7 @@ export function buildState(): IddState {
       source: sourceOf(rec),
       blockedBy: d.blockedBy,
       faded: d.group === "closed",
+      activity: laneActivity(rec.idd_id, d.group, live),
     };
   });
 
