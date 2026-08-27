@@ -274,6 +274,34 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Revisit when**: verifier agent を実装した時点。
 - **Anchors**: `packages/idd-core/src/ledger/derive.ts`、`app/api/idd/decide/route.ts`
 
+### DEC-697: merge は観測して記録するだけ
+
+- **What**: `s4_pr_created` のある lane について `gh pr view --json state` で状態を見に行き、MERGED なら `s4_merged` と `lane_close` を append する。merge 操作そのものは行わない。
+- **Why**: merge は GitHub 側の権限と設定（review 必須、CI 必須など）が支配する領域で、engine が代行すると、そこに置かれた制約を迂回することになる。pipeline の役目は「起きたことを記録する」ところまで。
+- **Change freedom**: 観測の頻度、記録する attrs は自由。「engine が merge しない」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/close.ts`
+
+### DEC-698: 閉じた lane の worktree は撤去する。ただし未 commit の変更が残っていれば残す
+
+- **What**: `lane_close` の後に `git worktree remove` する。`git status --porcelain` が空でなければ撤去せず、残したパスを返す。
+- **Why**: worktree は lane ごとに増え続けるので、閉じたら片付けたい。ただし未 commit の変更は「まだ拾われていない作業」で、消すと復元できない。閉じたかどうかと、拾い終えたかどうかは別。
+- **Change freedom**: 撤去の契機は自由。「未 commit の変更を消さない」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/close.ts`（removeLaneWorktree）
+
+### DEC-699: 閉じた lane 宛ての envelope は未達に数えない
+
+- **What**: `pendingEnvelopes()` は `lane_close` / `s1_defer` / `s3_defer` のある lane 宛てを除外する。
+- **Why**: 閉じた lane には届け先の session が無く、永久に配信されない。それを「未達」として数え続けると、対処すべきものと対処しようのないものが同じ数字に混ざる。
+- **Change freedom**: 除外の判定は自由。「届き得ないものを待ち行列に数えない」だけが不変。
+- **Anchors**: `packages/idd-core/src/agent/outbox.ts`
+
+### DEC-700: 段階を繋ぐのは orchestrator の仕事。tick が 1 巡させる
+
+- **What**: `POST /api/idd/tick`（CLI は `idd tick`）が S0 から順に一巡する: 取り込み → merge 観測 → 衝突確認 → 実装起動 → 下調べ起動 → 未達の配信。**判断が要る段階の手前で止まる** — GO / 承認 / 提出は人間の押下でしか進まない。
+- **Why**: 各段階を個別の endpoint にしただけでは、取り込んだ lane が下調べに載らない（実際に IDD-903 / 904 が取り込まれたまま止まった）。handoff の Orchestrator は「S0 完了直後に S1 を spawn する」もので、その連結が欠けていた。逆に、判断の段階まで自動で越えさせると、人間の役割が判断だという前提が崩れる。
+- **Change freedom**: 順序、tick の契機（cron / 手動）は自由。「判断の手前で止まる」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/tick.ts`、`app/api/idd/tick/route.ts`、`packages/idd-cli/bin/idd.ts`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。
