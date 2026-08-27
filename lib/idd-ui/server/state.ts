@@ -13,16 +13,6 @@ import type {
   CriterionState, InboxItem, LaneDetailView, LaneRow, LaneSection, SourceRef, StateFact,
 } from "../types";
 import { buildTimeline } from "./events-display";
-import { getRunningRpcSessionIds } from "@/lib/rpc-manager";
-
-// intent: DEC-683 — 生きている session は runtime しか知らない。engine には集合として渡す
-function liveSessions(): Set<string> {
-  try {
-    return new Set(getRunningRpcSessionIds());
-  } catch {
-    return new Set();
-  }
-}
 
 // intent: DEC-681 — lane の成果物は worktree にあるので、その root を intent の探索に渡す
 function laneRoot(iddId: string): string | undefined {
@@ -55,7 +45,8 @@ export interface IddState {
   undelivered: UndeliveredCount;
 }
 
-export function buildState(): IddState {
+// intent: DEC-683 — 生きている session は runtime しか知らない。呼ぶ側が集合として渡す
+export function buildState(opts: { liveSessions?: Set<string> } = {}): IddState {
   const dir = stateDir();
   const backlog = readBacklog();
   if (!existsSync(dir) || backlog.length === 0) {
@@ -70,7 +61,7 @@ export function buildState(): IddState {
     byLane.set(e.idd_id, list);
   }
 
-  const live = liveSessions();
+  const live = opts.liveSessions ?? new Set<string>();
   const lanes: LaneRow[] = backlog.map((rec) => {
     const evs = byLane.get(rec.idd_id) ?? [];
     const d = deriveStage(evs);

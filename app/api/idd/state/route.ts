@@ -3,12 +3,13 @@
 
 import { NextResponse } from "next/server";
 import { buildState } from "@/lib/idd-ui/server/state";
+import { getRunningRpcSessionIds } from "@/lib/rpc-manager";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    return NextResponse.json(buildState(), { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(buildState({ liveSessions: new Set(getRunningRpcSessionIds()) }), { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return NextResponse.json(
       { source: "empty", error: String(error), cron: null, sections: [], lanes: [], items: [] },
