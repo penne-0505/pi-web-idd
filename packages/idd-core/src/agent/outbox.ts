@@ -7,7 +7,7 @@ import { join } from "node:path";
 import lockfile from "proper-lockfile";
 
 import { stateDir } from "../paths.ts";
-import { readSessions } from "../ledger/read.ts";
+import { readLifecycle, readSessions } from "../ledger/read.ts";
 import { getAgentRunner } from "./port.ts";
 
 export interface OutboxRecord {
@@ -16,6 +16,7 @@ export interface OutboxRecord {
   type: string;
   queued_at: string;
   delivered_at: string | null;
+  abandoned_at?: string | null;
   session_id?: string;
   error?: string;
 }
@@ -33,10 +34,21 @@ function readOutbox(): OutboxRecord[] {
     });
 }
 
+// intent: DEC-699 — 閉じた lane 宛ては未達に数えない。届く先が無いものを待ち続けているように見せない
+function closedLanes(): Set<string> {
+  const closed = new Set<string>();
+  for (const e of readLifecycle()) {
+    if (e.event === "lane_close" || e.event === "s1_defer" || e.event === "s3_defer") closed.add(e.idd_id);
+  }
+  return closed;
+}
+
 export function pendingEnvelopes(): OutboxRecord[] {
   const latest = new Map<string, OutboxRecord>();
   for (const rec of readOutbox()) latest.set(rec.envelope_id, { ...latest.get(rec.envelope_id), ...rec });
-  return [...latest.values()].filter((rec) => !rec.delivered_at)
+  const closed = closedLanes();
+  return [...latest.values()]
+    .filter((rec) => !rec.delivered_at && !rec.abandoned_at && !closed.has(rec.idd_id))
     .sort((a, b) => a.queued_at.localeCompare(b.queued_at));
 }
 

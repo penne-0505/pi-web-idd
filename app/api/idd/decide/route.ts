@@ -1,7 +1,7 @@
 // intent: DEC-605 — 書けなければ ok:false。UI は押した状態にしない
 
 import { NextResponse } from "next/server";
-import { applyDecision, deliverPending, runShip, startSubmit } from "@idd/core";
+import { applyDecision, deliverPending, runExec, runShip, startSubmit } from "@idd/core";
 import { ensureAgentRunner } from "@/lib/idd-ui/server/agent-runner";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,11 @@ export async function POST(req: Request) {
   try {
     const result = await applyDecision(body.action, body.payload ?? {});
     // intent: DEC-676 — 記録が済んだら即座に配信を試みる。失敗しても記録は成功のまま (未達は outbox に残る)
+    // intent: DEC-702 — GO は「始めてよい」の判断。押した時点で executor を起こす
+    let started: unknown;
+    if (result.ok && body.action === "s1_go") {
+      started = await runExec().catch((err) => ({ error: String(err) }));
+    }
     // intent: DEC-693 — 承認したら提出の準備まで進める。押した人が待たされないため
     let ship: unknown;
     if (result.ok && body.action === "s3_ok") {
@@ -32,7 +37,7 @@ export async function POST(req: Request) {
       ensureAgentRunner();
       delivery = await deliverPending().catch((err) => ({ error: String(err) }));
     }
-    return NextResponse.json({ ...result, delivery, ship }, {
+    return NextResponse.json({ ...result, delivery, ship, started }, {
       status: result.ok ? 200 : 400,
       headers: { "Cache-Control": "no-store" },
     });

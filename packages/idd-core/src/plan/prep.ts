@@ -12,6 +12,7 @@ import { readAreas } from "../config/areas.ts";
 import { deriveStage } from "../ledger/derive.ts";
 import { readBacklog, readLifecycle, readSessions } from "../ledger/read.ts";
 import { areaSegment, slugOf } from "../intent/parse.ts";
+import { allocateBlock, BLOCK } from "../intent/numbering.ts";
 import { stateDir } from "../paths.ts";
 import type { BacklogRecord } from "../schema/records.ts";
 import { ensureLaneWorktree } from "../worktree/ensure.ts";
@@ -77,7 +78,7 @@ async function recordSession(rec: {
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-export function plannerBrief(rec: BacklogRecord): string {
+export function plannerBrief(rec: BacklogRecord, block?: { dec: number; inv: number }): string {
   const area = readAreas().areas[rec.area];
   const slug = slugOf(rec);
   const seg = areaSegment(rec.area);
@@ -103,7 +104,9 @@ export function plannerBrief(rec: BacklogRecord): string {
     "      <format>既存の decision.md と同じ full schema。frontmatter (title/status/intent_schema/created_at/updated_at/references/related_issues/related_prs) +",
     "        Context / Decisions / Consequences · Impact / Quality Implications / Intent-derived Invariants / Rollback · Follow-ups の 6 節。",
     "        DEC は `### DEC-nnn: &lt;一文&gt;` で始め、What / Why / Change freedom を必須、Anchors に触る場所を書く。",
-    "        番号は repo 全体で一意にする (既存の最大値を調べてから採番する)。",
+    block
+      ? `        番号はこの lane に割り当てた帯を使う: DEC-${block.dec} から DEC-${block.dec + BLOCK - 1}、INV-${block.inv} から。自分で最大値を数えない。`
+      : "        番号は repo 全体で一意にする (既存の最大値を調べてから採番する)。",
     "        INV は Intent-derived Invariants 節に `- INV-nnn (from DEC-nnn): &lt;一文&gt;` の形で書く。</format>",
     "    </decision>",
     "    <qa>",
@@ -155,6 +158,7 @@ export async function runPrep(): Promise<PrepResult> {
     return result;
   }
 
+  const allocated: number[] = [];
   for (const rec of lanesAwaitingPrep()) {
     if (result.started.length >= capacity) {
       result.skipped.push({ iddId: rec.idd_id, reason: "concurrency cap" });
@@ -172,6 +176,10 @@ export async function runPrep(): Promise<PrepResult> {
       continue;
     }
 
+    // intent: DEC-701 — 帯は engine が握る。並列に起こす lane ごとにずらす
+    const block = allocateBlock(rec.area, allocated);
+    allocated.push(block.dec + BLOCK - 1);
+
     try {
       const { sessionId } = await runner.spawn({ role: "planner", cwd: worktree.path });
       await recordSession({
@@ -181,7 +189,7 @@ export async function runPrep(): Promise<PrepResult> {
         branch: worktree.branch,
         model: process.env.IDD_PLANNER_MODEL,
       });
-      await runner.deliver(sessionId, plannerBrief(rec), { cwd: worktree.path });
+      await runner.deliver(sessionId, plannerBrief(rec, block), { cwd: worktree.path });
       result.started.push({ iddId: rec.idd_id, sessionId, worktree: worktree.path });
     } catch (err) {
       result.skipped.push({ iddId: rec.idd_id, reason: String(err) });

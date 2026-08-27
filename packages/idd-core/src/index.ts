@@ -43,3 +43,8 @@ export { laneBase, laneDiff, lanesAwaitingCheck, runCheck } from "./plan/review.
 export type { CheckResult, LaneDiff } from "./plan/review.ts";
 export { buildSubmit, lanesAwaitingShip, runShip, startSubmit } from "./plan/ship.ts";
 export type { ShipResult, SubmitView } from "./plan/ship.ts";
+export { lanesAwaitingMerge, removeLaneWorktree, runClose } from "./plan/close.ts";
+export type { CloseResult } from "./plan/close.ts";
+export { runTick } from "./plan/tick.ts";
+export type { TickResult } from "./plan/tick.ts";
+export { allocateBlock, highestIds } from "./intent/numbering.ts";

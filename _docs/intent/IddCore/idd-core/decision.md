@@ -274,6 +274,48 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Revisit when**: verifier agent を実装した時点。
 - **Anchors**: `packages/idd-core/src/ledger/derive.ts`、`app/api/idd/decide/route.ts`
 
+### DEC-697: merge は観測して記録するだけ
+
+- **What**: `s4_pr_created` のある lane について `gh pr view --json state` で状態を見に行き、MERGED なら `s4_merged` と `lane_close` を append する。merge 操作そのものは行わない。
+- **Why**: merge は GitHub 側の権限と設定（review 必須、CI 必須など）が支配する領域で、engine が代行すると、そこに置かれた制約を迂回することになる。pipeline の役目は「起きたことを記録する」ところまで。
+- **Change freedom**: 観測の頻度、記録する attrs は自由。「engine が merge しない」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/close.ts`
+
+### DEC-698: 閉じた lane の worktree は撤去する。ただし未 commit の変更が残っていれば残す
+
+- **What**: `lane_close` の後に `git worktree remove` する。`git status --porcelain` が空でなければ撤去せず、残したパスを返す。
+- **Why**: worktree は lane ごとに増え続けるので、閉じたら片付けたい。ただし未 commit の変更は「まだ拾われていない作業」で、消すと復元できない。閉じたかどうかと、拾い終えたかどうかは別。
+- **Change freedom**: 撤去の契機は自由。「未 commit の変更を消さない」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/close.ts`（removeLaneWorktree）
+
+### DEC-699: 閉じた lane 宛ての envelope は未達に数えない
+
+- **What**: `pendingEnvelopes()` は `lane_close` / `s1_defer` / `s3_defer` のある lane 宛てを除外する。
+- **Why**: 閉じた lane には届け先の session が無く、永久に配信されない。それを「未達」として数え続けると、対処すべきものと対処しようのないものが同じ数字に混ざる。
+- **Change freedom**: 除外の判定は自由。「届き得ないものを待ち行列に数えない」だけが不変。
+- **Anchors**: `packages/idd-core/src/agent/outbox.ts`
+
+### DEC-700: 段階を繋ぐのは orchestrator の仕事。tick が 1 巡させる
+
+- **What**: `POST /api/idd/tick`（CLI は `idd tick`）が S0 から順に一巡する: 取り込み → merge 観測 → 衝突確認 → 実装起動 → 下調べ起動 → 未達の配信。**判断が要る段階の手前で止まる** — GO / 承認 / 提出は人間の押下でしか進まない。
+- **Why**: 各段階を個別の endpoint にしただけでは、取り込んだ lane が下調べに載らない（実際に IDD-903 / 904 が取り込まれたまま止まった）。handoff の Orchestrator は「S0 完了直後に S1 を spawn する」もので、その連結が欠けていた。逆に、判断の段階まで自動で越えさせると、人間の役割が判断だという前提が崩れる。
+- **Change freedom**: 順序、tick の契機（cron / 手動）は自由。「判断の手前で止まる」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/tick.ts`、`app/api/idd/tick/route.ts`、`packages/idd-cli/bin/idd.ts`
+
+### DEC-701: 記号の採番は engine が lane ごとに帯で割り当てる
+
+- **What**: prep の時点で lane ごとに DEC の帯（20 個）と INV の開始番号を決め、brief に「この帯を使え。自分で最大値を数えるな」と書く。帯の計算は repo と**切ってある全 lane worktree の両方**を走査した最大値から行い、同じ tick で起こす lane 同士はさらにずらす。
+- **Why**: 並列に走った planner がそれぞれ repo の最大値を読むと、**全員が同じ番号から採番する**（実際に IDD-903 と IDD-904 が DEC-701〜705 を二重に取った）。ファイルが別なので git の衝突にはならず、意味の衝突だけが残る — merge 後にコードのポインタ `// intent: DEC-701` がどちらを指すか決められなくなる。未 commit の lane worktree も走査対象に含めないと、同じ穴が残る。
+- **Change freedom**: 帯の幅、割り当ての契機は自由。「採番を並列 agent の観測に任せない」だけが不変。
+- **Anchors**: `packages/idd-core/src/intent/numbering.ts`、`packages/idd-core/src/plan/prep.ts`
+
+### DEC-702: GO を押したら executor が起きる
+
+- **What**: `s1_go` の記録に続けて `runExec()` を呼ぶ。tick を待たない。
+- **Why**: GO は「実装を始めてよい」という判断そのもので、押したのに何も始まらないなら判断が宙に浮く（実際に IDD-903 / 904 が GO 済みのまま停止した）。回答を押した時点で配信する（DEC-676）のと同じ理由。
+- **Change freedom**: 起動の場所は自由。「判断と実行の間に手動の一手を挟まない」だけが不変。
+- **Anchors**: `app/api/idd/decide/route.ts`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。
