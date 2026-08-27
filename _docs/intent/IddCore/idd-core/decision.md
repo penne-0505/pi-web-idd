@@ -208,6 +208,13 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: 判定の粒度、見せ方は自由。「止まっている lane が進行中と同じ見た目にならない」だけが不変。
 - **Anchors**: `packages/idd-core/src/plan/prep.ts`（laneActivity）、`lib/idd-ui/server/state.ts`、`components/idd/LaneList.tsx`
 
+### DEC-685: S2 は契約を渡して実装させ、結果を ledger に戻す
+
+- **What**: GO の付いた lane に executor session を起こす。lane の worktree（S1 で作ったものを再利用）で動かし、brief には契約（DEC / AC / INV の本文）と完了条件（`check-docs.sh` と `tsc --noEmit` が通る、変更を commit する）と callback（progress / result / questions）を載せる。起動時に `s2_start` を、起点 commit 付きで append する。**契約が空の lane には executor を起こさない。**
+- **Why**: executor に渡すべきものは issue ではなく契約。契約が空のまま起こすと、agent は自分で目的を決めることになり、GO が意味を失う（UI 側で GO を止めているのと同じ理由 / IddUi DEC-674）。起点 commit を残すのは、差分の基準がないと「この lane が何を書いたか」を後から復元できないため。
+- **Change freedom**: brief の文面、並列上限、model は自由。「契約を渡す」「契約が無ければ起こさない」「起点 commit を残す」の 3 点が不変。
+- **Anchors**: `packages/idd-core/src/plan/exec.ts`、`app/api/idd/exec/route.ts`、`packages/idd-core/src/worktree/ensure.ts`（headCommit）
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。

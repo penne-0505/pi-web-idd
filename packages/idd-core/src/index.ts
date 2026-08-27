@@ -34,3 +34,6 @@ export type { AskedQuestion } from "./agent/inbound.ts";
 export { ensureLaneWorktree, lanesRoot } from "./worktree/ensure.ts";
 export { laneActivity, lanesAwaitingPrep, plannerBrief, plannerConcurrency, runningPlanners, runPrep } from "./plan/prep.ts";
 export type { LaneActivity, PrepResult } from "./plan/prep.ts";
+export { executorBrief, executorConcurrency, lanesAwaitingExec, runExec, runningExecutors } from "./plan/exec.ts";
+export type { ExecResult } from "./plan/exec.ts";
+export { headCommit } from "./worktree/ensure.ts";

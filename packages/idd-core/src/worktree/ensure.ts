@@ -44,3 +44,12 @@ export function ensureLaneWorktree(area: string, iddId: string): LaneWorktree | 
     : ["worktree", "add", "-b", branch, path]);
   return { path, branch };
 }
+
+// intent: DEC-685 — 実装の起点 commit を記録する。差分の基準がないと「何を書いたか」が後から復元できない
+export function headCommit(worktreePath: string): string | null {
+  try {
+    return git(worktreePath, ["rev-parse", "HEAD"]).trim() || null;
+  } catch {
+    return null;
+  }
+}

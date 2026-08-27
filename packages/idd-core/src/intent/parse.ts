@@ -52,13 +52,13 @@ export function parseIntent(area: string, slug: string, opts: { root?: string } 
   ];
 
   const invariants = [
-    ...pick(decisionSrc, /^-\s+(INV-[\w.]+)\s*\(from [^)]+\):\s*(.+?)\s*$/),
+    ...pick(decisionSrc, /^-\s+(INV-[\w.]+)\s*(?:\([^)]*\))?:\s*(.+?)\s*$/),
     ...pick(readIntent("invariant.md"), HEADING),
   ];
 
   const qaSrc = read(join("_docs", "qa", seg, slug, "qa.md"));
   const criteria = [
-    ...pick(qaSrc, /^-\s+(AC-\d+):\s*(.+?)\s*$/),
+    ...pick(qaSrc, /^-\s+(AC-\d+)(?:\s*\([^)]*\))?:\s*(.+?)\s*$/),
     ...pick(readIntent("qa.md"), HEADING),
   ];
 
