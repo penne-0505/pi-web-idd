@@ -2,7 +2,7 @@
 // intent: DEC-650 — ledger の読み書き・stage 判定・intent parse は @idd/core が持つ
 
 import {
-  areaSegment, changedFiles, deriveStage, laneActivity, laneBase, laneDiff, elapsedLabel, parseIntent, readBacklog, readLatestCronRun,
+  areaSegment, buildSubmit, changedFiles, deriveStage, laneActivity, laneBase, laneDiff, elapsedLabel, parseIntent, readBacklog, readLatestCronRun,
   readAnswers, readLifecycle, readOpenQuestions, readPendingReviews, readProgress, readSessions, slugOf,
 } from "@idd/core";
 import type { BacklogRecord, LaneGroup, LifecycleRecord } from "@idd/core";
@@ -158,6 +158,21 @@ export function buildState(): IddState {
           ? undefined
           : `_docs/intent/${areaSegment(rec.area)}/${slugOf(rec)}/`,
       });
+    }
+    if (d.decision === "ship") {
+      // intent: DEC-690 — 提出物は lane の実物から組み立てる
+      const submit = buildSubmit(rec.idd_id);
+      if (submit) {
+        items.push({
+          kind: "ship",
+          iddId: rec.idd_id,
+          title: submit.title,
+          source: sourceOf(rec),
+          branch: submit.branch,
+          pr: submit.pr,
+          checks: submit.checks,
+        });
+      }
     }
     if (d.decision === "review") {
       const intent = parseIntent(rec.area, slugOf(rec), { root: laneRoot(rec.idd_id) });

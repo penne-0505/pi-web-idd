@@ -245,6 +245,35 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: 表示する行数、ファイルの選び方は自由。「基準が分岐点」「実物から作る」の 2 点が不変。
 - **Anchors**: `packages/idd-core/src/plan/review.ts`（laneBase / laneDiff）、`lib/idd-ui/server/state.ts`
 
+### DEC-690: 提出物は lane の実物から機械的に組み立てる
+
+- **What**: PR の title は先頭 commit の subject、body は「起票の URL + 契約の DEC の一文」、commit 一覧は `git log <merge-base>..HEAD`。AI に要約させない。IDD の語彙（`DEC-` / `AC-` / `IDD-` 等）が残っている行は flag して card 上で見せる。
+- **Why**: 提出物は外に出るもので、内部語彙が漏れると読み手に意味が通らない。かといって AI に書き直させると、**実物と提出物がずれる**（何を出したのかが commit と一致しなくなる）。実物から組み立てて、内部語彙が残っている箇所だけを人間に見せるのが、ずれを作らずに読める形にする最短経路。
+- **Change freedom**: 本文の組み立て、flag の対象は自由。「提出物が実物と一致する」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/ship.ts`（buildSubmit）
+
+### DEC-691: verifier の検査は実際に走らせられるものだけを並べる
+
+- **What**: 提出前の検査は 5 つ（未 commit の変更が無い / commit がある / 満たすべき条件がすべて確認済み / PR 本文に IDD の語彙が残っていない / commit message が規約に沿う）。すべて実際に判定する。判定できないものは項目に出さない。
+- **Why**: 検査項目は「通ったことにできてしまう」もっとも危険な表示。実行できない項目を並べると、緑のチェックが判断の根拠として機能しなくなる。
+- **Change freedom**: 項目の増減は自由。「並べた項目はすべて実際に判定される」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/ship.ts`
+
+### DEC-692: push と PR 作成は人間が押したときだけ
+
+- **What**: `git push` と `gh pr create` は `s4_verify_clean`（「このまま出す」）を人間が押したときにのみ実行する。engine 側の自動処理からは呼ばない。
+- **Why**: この 2 つがこの pipeline で唯一「外に出る」操作で、取り消せない（IddUi DEC-628 の緩衝材が付いているのもこの押下）。自動化の対象にすると、判断を人間に絞るという前提そのものが崩れる。
+- **Change freedom**: 実行の場所、失敗時の扱いは自由。「人間の押下以外で外に出ない」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/ship.ts`（runShip）、`app/api/idd/decide/route.ts`
+
+### DEC-693: verifier agent が未実装の間は、提出前の検査を人間が兼ねる
+
+- **What**: `s4_submit_started` の後、`s4_verify_clean` が無い間は提出前確認の判断待ちにする（handoff では verifier agent の態度 3 のときだけ人間に上がる）。承認（`s3_ok`）を押した時点で提出の準備まで進める。
+- **Why**: verifier agent は未実装だが、検査項目は機械的に判定できている（DEC-691）。agent を待たずに人間が同じ材料で判断できる。**未実装を「素通し」で埋めない**ための暫定であり、agent が入ったら人間に上がる条件を handoff 通りに戻す。
+- **Change freedom**: 暫定の期間、条件は自由。「未実装の段階を素通しにしない」だけが不変。
+- **Revisit when**: verifier agent を実装した時点。
+- **Anchors**: `packages/idd-core/src/ledger/derive.ts`、`app/api/idd/decide/route.ts`
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。

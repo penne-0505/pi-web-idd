@@ -24,10 +24,9 @@ export function deriveStage(events: LifecycleRecord[]): {
     const dep = lastOf("blocked_by_dependency")?.attrs?.depends_on;
     return { group: "waiting", stageDone: 2, stageCurrent: 2, blockedBy: Array.isArray(dep) ? String(dep[0]) : undefined };
   }
+  // intent: DEC-693 — verifier agent が未実装の間は、提出前の検査を人間が兼ねる
   if (has("s4_submit_started")) {
-    if (has("s4_verify_user_judgment_requested") && !has("s4_verify_clean")) {
-      return { group: "judge", stageDone: 4, stageCurrent: 4, decision: "ship" };
-    }
+    if (!has("s4_verify_clean")) return { group: "judge", stageDone: 4, stageCurrent: 4, decision: "ship" };
     return { group: "impl", stageDone: 4, stageCurrent: 4 };
   }
   if (has("s3_ready")) {
