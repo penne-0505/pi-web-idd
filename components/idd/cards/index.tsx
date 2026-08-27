@@ -3,7 +3,7 @@
 // intent: DEC-637 — 固定ラベルの操作はボタン、可変内容はリスト。押したら確定
 // intent: DEC-628 — 取り返しのつかない 4 つにだけ確認を挟む
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   DuplicateItem, GoItem, InboxItem, QuestionItem, ReviewItem, ShipItem,
 } from "@/lib/idd-ui/types";
@@ -11,7 +11,7 @@ import {
   ActionButton, Card, ConfirmGate, Field, IconButton, OptionRow, SegmentedPair,
 } from "../primitives";
 import {
-  Actions, CollapsedFacts, Comparison, DuplicatePair, FactTable, Identity, IdList, InfoBlocks, DiffView, Meter, SharedItems, Subject,
+  Actions, CollapsedFacts, Comparison, DuplicatePair, FactTable, Identity, IdList, InfoBlocks, DiffView, Meter, MissingContract, SharedItems, Subject,
 } from "./parts";
 import { FS } from "@/lib/idd-ui/scale";
 
@@ -58,27 +58,40 @@ export function DuplicateCard({ item, onDecide, onAsk, compact }: CardProps<Dupl
 }
 
 export function QuestionCard({ item, onDecide, compact }: CardProps<QuestionItem>) {
+  const current = item.open[0];
   const [selected, setSelected] = useState<number | null>(null);
   const [other, setOther] = useState("");
   const [reason, setReason] = useState("");
   const answered = selected !== null || other.trim().length > 0;
+  const last = item.open.length === 1;
+  const position = item.answeredCount + 1;
+
+  // intent: DEC-677 — 次の問いへ移ったら入力を空にする (前の回答が残ると誤送信になる)
+  useEffect(() => {
+    setSelected(null);
+    setOther("");
+    setReason("");
+  }, [current?.questionId]);
+
+  if (!current) return null;
 
   return (
     <Card>
       <Identity
         phase="質問"
+        chips={item.askedTotal > 1 ? [`${position} / ${item.askedTotal}`] : undefined}
         iddId={item.iddId}
         stage={{ done: 1, current: 1 }}
         subject={item.laneTitle}
         subjectWeak
         refs={item.source ? [item.source] : undefined}
       />
-      <Subject text={item.question} />
+      <Subject text={current.question} />
       <InfoBlocks>
-        <CollapsedFacts count={item.facts.length} primary={item.primaryRef} />
+        <CollapsedFacts count={current.facts.length} primary={item.primaryRef} facts={current.facts} />
       </InfoBlocks>
       <div style={{ display: "flex", flexDirection: "column", gap: compact ? 10 : 6 }}>
-        {item.options.map((o) => (
+        {current.options.map((o) => (
           <OptionRow
             key={o.index}
             label={o.label}
@@ -89,7 +102,7 @@ export function QuestionCard({ item, onDecide, compact }: CardProps<QuestionItem
         ))}
         <OptionRow
           label="その他"
-          index={item.options.length + 1}
+          index={current.options.length + 1}
           selected={other.trim().length > 0}
           onClick={() => setSelected(null)}
         >
@@ -108,19 +121,25 @@ export function QuestionCard({ item, onDecide, compact }: CardProps<QuestionItem
       <Field label="理由" hint="任意だが推奨。判断の意図がそのまま DEC に反映される" rows={2} value={reason} onChange={setReason} />
       <Actions compact={compact}>
         <ActionButton
-          icon="go"
-          label="回答して再開させる"
+          icon={last ? "go" : "down"}
+          label={last ? "回答して再開させる" : "次の質問へ"}
           variant="primary"
           fullWidth={compact}
           disabled={!answered}
           onClick={() => onDecide("answer", {
             iddId: item.iddId,
             batchId: item.batchId,
+            questionId: current.questionId,
             selection: selected !== null ? { index: selected } : { label: "その他" },
             reason: reason || undefined,
             notes: other || undefined,
           })}
         />
+        {last ? null : (
+          <span style={{ fontSize: FS.sm, color: "var(--text-dim)" }}>
+            残り {item.open.length - 1}
+          </span>
+        )}
       </Actions>
     </Card>
   );
@@ -138,12 +157,18 @@ export function GoCard({ item, onDecide, onAsk, compact }: CardProps<GoItem>) {
         refs={item.source ? [item.source] : undefined}
       />
       <InfoBlocks>
-        <IdList label="やること (方針)" items={item.decisions.map((d) => ({ id: d.id, text: d.text }))} />
-        <IdList label="満たすべき条件" items={item.criteria.map((c) => ({ id: c.id, text: c.text }))} />
+        {item.intentPath ? (
+          <MissingContract path={item.intentPath} />
+        ) : (
+          <>
+            <IdList label="やること (方針)" items={item.decisions.map((d) => ({ id: d.id, text: d.text }))} />
+            <IdList label="満たすべき条件" items={item.criteria.map((c) => ({ id: c.id, text: c.text }))} />
+          </>
+        )}
       </InfoBlocks>
       <Actions compact={compact}>
         <span style={{ display: "flex", gap: 12, width: compact ? "100%" : undefined }}>
-          <ActionButton icon="go" label="GO" variant="primary" minWidth={92} fullWidth={compact} onClick={() => onDecide("s1_go", { iddId: item.iddId })} />
+          <ActionButton icon="go" label="GO" variant="primary" minWidth={92} fullWidth={compact} disabled={Boolean(item.intentPath)} onClick={() => onDecide("s1_go", { iddId: item.iddId })} />
           <ActionButton icon="abort" label="中止" minWidth={92} fullWidth={compact} onClick={() => onDecide("s1_defer", { iddId: item.iddId })} />
         </span>
         <span style={{ flex: compact ? undefined : 1 }} />

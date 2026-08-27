@@ -3,8 +3,9 @@
 // intent: DEC-631 — 1 行 1 入口。群ごとに重みを単調に落とす
 // intent: DEC-638 — 状態は語ではなく section と stage bar とアイコンで示す
 
+import { useState } from "react";
 import type { DecisionKind, LaneRow, LaneSection } from "@/lib/idd-ui/types";
-import { Icon, StageBar, type IconName } from "./primitives";
+import { Icon, StageBar, StatusDot, type IconName } from "./primitives";
 import { FS } from "@/lib/idd-ui/scale";
 
 const DECISION_ICON: Record<DecisionKind, IconName> = {
@@ -34,6 +35,8 @@ const TITLE: Record<Attention, { weight: number; color: string }> = {
 function Row({ lane, selected, onSelect }: { lane: LaneRow; selected?: boolean; onSelect?: (id: string) => void }) {
   const halted = lane.group === "waiting";
   const attn = attentionOf(lane);
+  // intent: DEC-684 — 稼働の有無を問えるのは下調べ中 / 実装中の lane だけ
+  const working = lane.group === "prep" || lane.group === "impl";
   const title = TITLE[attn];
   return (
     <button
@@ -64,6 +67,12 @@ function Row({ lane, selected, onSelect }: { lane: LaneRow; selected?: boolean; 
       </span>
 
       <span style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", opacity: attn === "act" ? 1 : attn === "done" ? 0.5 : 0.75 }}>
+        {working ? (
+          <StatusDot
+            state={lane.activity === "live" ? "live" : lane.activity === "stalled" ? "pending" : "idle"}
+            title={lane.activity === "live" ? "稼働中" : lane.activity === "stalled" ? "待機 (session はあるが動いていない)" : "未起動"}
+          />
+        ) : null}
         <StageBar done={lane.stageDone} current={lane.stageCurrent} halted={halted} faded={lane.faded} />
         <span style={{ flex: 1 }} />
         {lane.blockedBy ? <Icon name="link" size={11} color="var(--text-dim)" /> : null}
@@ -71,6 +80,32 @@ function Row({ lane, selected, onSelect }: { lane: LaneRow; selected?: boolean; 
           {lane.blockedBy ?? (halted ? "空き待ち" : lane.elapsed)}
         </span>
       </span>
+    </button>
+  );
+}
+
+// intent: DEC-680 — 畳める印 (▾) を出すなら実際に畳める。終端は既定で畳む
+function SectionHeading({ section, open, onToggle }: {
+  section: LaneSection;
+  open: boolean;
+  onToggle?: () => void;
+}) {
+  const body = (
+    <>
+      <span style={{ fontSize: FS.xs, fontWeight: 600, letterSpacing: "0.04em", color: "var(--text-muted)" }}>
+        {section.label}
+      </span>
+      <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>
+        {section.cap ? `${section.count} / ${section.cap}` : section.count}
+      </span>
+      {onToggle ? <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>{open ? "▴" : "▾"}</span> : null}
+    </>
+  );
+  const style = { display: "flex", alignItems: "baseline", gap: 6, padding: "20px 12px 6px 14px", width: "100%" } as const;
+  if (!onToggle) return <div style={style}>{body}</div>;
+  return (
+    <button onClick={onToggle} className="idd-row" style={{ ...style, background: "transparent", border: "none", textAlign: "left", cursor: "pointer" }}>
+      {body}
     </button>
   );
 }
@@ -84,6 +119,7 @@ export function LaneList({ sections, lanes, selectedId, areaLabel, onSelect, onI
   onIntake?: () => void;
   intakeBusy?: boolean;
 }) {
+  const [open, setOpen] = useState<Set<string>>(() => new Set());
   return (
     <div className="idd" style={{ display: "contents" }}>
       <div style={{ flexShrink: 0, padding: "10px 12px", borderBottom: "1px solid var(--border)" }}>
@@ -106,16 +142,16 @@ export function LaneList({ sections, lanes, selectedId, areaLabel, onSelect, onI
           return (
             <div key={section.group}>
               {i > 0 ? <div style={{ height: 1, background: "var(--border)" }} /> : null}
-              <div style={{ display: "flex", alignItems: "baseline", gap: 6, padding: "20px 12px 6px 14px" }}>
-                <span style={{ fontSize: FS.xs, fontWeight: 600, letterSpacing: "0.04em", color: "var(--text-muted)" }}>
-                  {section.label}
-                </span>
-                <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>
-                  {section.cap ? `${section.count} / ${section.cap}` : section.count}
-                </span>
-                {section.collapsed ? <span style={{ fontSize: FS.xs, color: "var(--text-dim)" }}>▾</span> : null}
-              </div>
-              {rows.map((lane) => (
+              <SectionHeading
+                section={section}
+                open={!section.collapsed || open.has(section.group)}
+                onToggle={section.collapsed ? () => setOpen((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(section.group)) next.delete(section.group); else next.add(section.group);
+                  return next;
+                }) : undefined}
+              />
+              {(!section.collapsed || open.has(section.group)) && rows.map((lane) => (
                 <Row key={lane.iddId} lane={lane} selected={selectedId === lane.iddId} onSelect={onSelect} />
               ))}
             </div>

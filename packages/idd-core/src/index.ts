@@ -6,12 +6,12 @@ export type {
   PendingAnswer, PendingQuestionBatch, PendingReview, SessionRecord,
 } from "./schema/records.ts";
 export {
-  readBacklog, readLatestCronRun, readLifecycle, readOpenQuestions,
+  readAnswers, readBacklog, readLatestCronRun, readLifecycle, readOpenQuestions,
   readPendingReviews, readProgress, readQuestionBatch, readSessions,
 } from "./ledger/read.ts";
 export { deriveStage, elapsedLabel } from "./ledger/derive.ts";
 export type { DecisionKind, LaneGroup } from "./ledger/derive.ts";
-export { parseIntent, slugOf } from "./intent/parse.ts";
+export { areaSegment, parseIntent, slugOf } from "./intent/parse.ts";
 export { changedFiles, resolveWorktree } from "./worktree/changed-files.ts";
 export {
   appendAnswer, appendLifecycle, applyDecision, buildEnvelope,
@@ -31,3 +31,9 @@ export { deliverPending, pendingEnvelopes, sessionFor } from "./agent/outbox.ts"
 export type { DeliverResult, OutboxRecord } from "./agent/outbox.ts";
 export { agentAskQuestions, agentProgress, agentReady, agentResult } from "./agent/inbound.ts";
 export type { AskedQuestion } from "./agent/inbound.ts";
+export { ensureLaneWorktree, lanesRoot } from "./worktree/ensure.ts";
+export { laneActivity, lanesAwaitingPrep, plannerBrief, plannerConcurrency, runningPlanners, runPrep } from "./plan/prep.ts";
+export type { LaneActivity, PrepResult } from "./plan/prep.ts";
+export { executorBrief, executorConcurrency, lanesAwaitingExec, runExec, runningExecutors } from "./plan/exec.ts";
+export type { ExecResult } from "./plan/exec.ts";
+export { headCommit } from "./worktree/ensure.ts";

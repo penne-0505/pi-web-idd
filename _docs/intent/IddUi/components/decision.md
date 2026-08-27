@@ -174,6 +174,34 @@ view / state 層の判断は `_docs/intent/IddUi/lib/decision.md`。
 - **Change freedom**: 閾値、リセット時間は自由。「札の中と外で意味が衝突しない」だけが不変。
 - **Anchors**: `components/idd/InboxDeck.tsx`
 
+### DEC-674: 契約が空の GO は止める。空欄ではなく、どこが空かを出す
+
+- **What**: GO 待ちの card で「やること」「満たすべき条件」が両方空のとき、空の見出しを並べる代わりに「下調べの成果物が無い」と探した場所（`_docs/intent/<Area>/<slug>/`）を出し、GO ボタンを押せなくする。中止と問い合わせは残す。
+- **Why**: 契約が空の GO は、executor に何も指示しないまま実装を始めさせる。空欄のまま押せる UI は「見落とした人間」の責任にするが、実際には planner が書いていないか slug がずれているかのどちらかで、原因は場所を出せば分かる。
+- **Change freedom**: 見せ方は自由。「判断材料が無い判断を押させない」「なぜ無いかを追える情報を出す」の 2 点が不変。
+- **Anchors**: `components/idd/cards/parts.tsx`（MissingContract）、`components/idd/cards/index.tsx`（GoCard）、`lib/idd-ui/server/state.ts`
+
+### DEC-675: 畳んだ現状は開ける
+
+- **What**: 質問 card の「▸ 現状 n」は押すと事実の表が開く。事実が無いときは押せない見た目にする。
+- **Why**: 畳まれた記号（▸）は開くことを約束する。開かないなら、その記号を出してはいけない。context は planner が書く自由文で、判断の材料になりうるので捨てずに全文を持つ。
+- **Change freedom**: 開き方、表の形は自由。「開ける記号は開く」だけが不変。
+- **Anchors**: `components/idd/cards/parts.tsx`（CollapsedFacts）、`lib/idd-ui/server/state.ts`
+
+### DEC-680: 畳める印を出すなら実際に畳める
+
+- **What**: sidebar の section 見出しに `▾` を出すのは畳める section だけにし、押すと開閉する。「終端 (直近)」は既定で畳む。
+- **Why**: `▸` / `▾` は開閉の約束であり、動かない印は嘘になる（質問 card の「現状」と同じ間違いを sidebar でもしていた）。終端は普段の判断に要らないので既定で畳み、追いたいときだけ開く。
+- **Change freedom**: 既定の開閉、印の形は自由。「畳める印は畳める」だけが不変。
+- **Anchors**: `components/idd/LaneList.tsx`
+
+### DEC-684: 稼働の有無だけは色で示す（無彩色の唯一の例外）
+
+- **What**: 下調べ中 / 実装中の lane 行に 7px の点を置き、**稼働中 = 薄い緑 / 待機 = 黄 / 未起動 = 輪郭だけの灰**の 3 値で示す。色は `--status-live` / `--status-pending` / `--status-idle` として持ち、この 3 値以外には使わない。
+- **Why**: palette は無彩色に統一している（DEC の対象外だが repo 全体の前提）。ただし「動いている / 待っている / 動いていない」は**判断ではなく事実の観測**で、形や濃度で表すと stage bar や群の重みと channel が衝突する。ここだけ色を独立した channel として使う。語（「停止」「未起動」）で書くと、一覧の 1 行 1 入口（DEC-631）を崩す。
+- **Change freedom**: 色相、点の寸法、tip の文言は自由。「3 値以外に色を使わない」「判断待ちの表現には使わない」の 2 点が不変。
+- **Anchors**: `components/idd/primitives.tsx`（StatusDot）、`components/idd/LaneList.tsx`、`app/globals.css`
+
 ## Consequences / Impact
 
 - 札束（DEC-620）により、一覧で全件を俯瞰する手段は sidebar の lane 一覧だけになる。Inbox 側に一覧表示は持たない。

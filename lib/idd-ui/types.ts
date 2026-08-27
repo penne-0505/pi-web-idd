@@ -26,6 +26,8 @@ export interface LaneRow {
   blockedBy?: string;
   priorityTop?: boolean;
   faded?: boolean;
+  // intent: DEC-683 — 進行中の見た目のまま止まっている lane を、動いている lane と区別する
+  activity?: "live" | "stalled" | "unstarted";
 }
 
 export interface LaneSection {
@@ -71,15 +73,21 @@ export interface DuplicateItem extends InboxBase {
   shared?: string[];
 }
 
+export interface QuestionEntry {
+  questionId: string;
+  question: string;
+  facts: StateFact[];
+  options: QuestionOption[];
+}
+
 export interface QuestionItem extends InboxBase {
   kind: "question";
   batchId: string;
-  askedIndex: number;
+  // intent: DEC-677 — batch は 1 card。未回答の問いを順に出し、揃ったときだけ planner が再開する
+  open: QuestionEntry[];
   askedTotal: number;
-  question: string;
-  facts: StateFact[];
+  answeredCount: number;
   primaryRef?: SourceRef;
-  options: QuestionOption[];
 }
 
 export interface GoItem extends InboxBase {
@@ -88,6 +96,8 @@ export interface GoItem extends InboxBase {
   decisions: { id: string; text: string }[];
   criteria: { id: string; text: string }[];
   priorityTop?: boolean;
+  // intent: DEC-674 — 契約が空のとき、どこが空かを示せるように出所を持たせる
+  intentPath?: string;
 }
 
 export type CriterionState = "done" | "doing" | "todo";

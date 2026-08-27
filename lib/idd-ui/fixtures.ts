@@ -35,19 +35,33 @@ export const MOCK_INBOX: InboxItem[] = [
     laneTitle: "テーマ切替の追加",
     source: { kind: "github", label: "gh medo#88" },
     batchId: "B-001",
-    askedIndex: 1,
     askedTotal: 2,
-    question: "ダークモードのトグルはどこに配置しますか?",
-    facts: [
-      { label: "設定パネル", value: "3 tab", ref: { kind: "file", label: "SettingsPanel.tsx" } },
-      { label: "テーマ切替", value: "未実装" },
-      { label: "theme key", value: "参照あり", ref: { kind: "file", label: "ThemeInitializer.ts" } },
-    ],
+    answeredCount: 0,
     primaryRef: { kind: "file", label: "SettingsPanel.tsx" },
-    options: [
-      { index: 1, label: "既存の設定パネル内に追加する" },
-      { index: 2, label: "header の右上に独立配置する" },
-      { index: 3, label: "既存パネルを再構成してから追加する" },
+    open: [
+      {
+        questionId: "Q-001",
+        question: "ダークモードのトグルはどこに配置しますか?",
+        facts: [
+          { label: "設定パネル", value: "3 tab", ref: { kind: "file", label: "SettingsPanel.tsx" } },
+          { label: "テーマ切替", value: "未実装" },
+          { label: "theme key", value: "参照あり", ref: { kind: "file", label: "ThemeInitializer.ts" } },
+        ],
+        options: [
+          { index: 1, label: "既存の設定パネル内に追加する" },
+          { index: 2, label: "header の右上に独立配置する" },
+          { index: 3, label: "既存パネルを再構成してから追加する" },
+        ],
+      },
+      {
+        questionId: "Q-002",
+        question: "切替の既定値は何にしますか?",
+        facts: [{ label: "OS 設定", value: "追従なし" }],
+        options: [
+          { index: 1, label: "OS 設定に追従する" },
+          { index: 2, label: "常に light で始める" },
+        ],
+      },
     ],
   },
   {

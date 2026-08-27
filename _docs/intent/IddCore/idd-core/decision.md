@@ -130,9 +130,95 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Change freedom**: 引き方は自由。「envelope の問いが agent の発した問いと一致する」だけが不変。
 - **Anchors**: `packages/idd-core/src/ledger/read.ts`（readQuestionBatch）、`packages/idd-core/src/ledger/write.ts`
 
+### DEC-670: lane ごとに git worktree を切る
+
+- **What**: 下調べ / 実装は `<local_path>-lanes/<IDD-ID>` の worktree で行い、branch は area の `branch_name_pattern`（既定 `idd/{idd_id}`）で作る。area に `local_path` が無い場合は prep を skip する。
+- **Why**: 並列 lane が同じ working tree を踏むと、片方の編集がもう片方の観測を壊す。worktree なら分離が物理で担保され、S3 の衝突確認も「別 branch 同士の merge」として素直に書ける。
+- **Change freedom**: 置き場所、branch 名、既存 branch の扱いは自由。「lane 同士が同じ working tree を共有しない」だけが不変。
+- **Anchors**: `packages/idd-core/src/worktree/ensure.ts`、`config/areas.json`
+
+### DEC-671: 下調べに載せる lane の選定は engine、session を起こすのは runtime
+
+- **What**: どの lane を下調べに載せるか（待ち行列・並列上限 `IDD_PLANNER_CONCURRENCY`）は engine が決め、pi session を起こすのは runtime 側の `AgentRunner.spawn` だけ。起動した session は `planner-sessions.jsonl` に記録する。
+- **Why**: 並列上限は pipeline の規律（handoff の S1）であって runtime の都合ではない。逆に session の起こし方は runtime の都合であって pipeline の規律ではない。DEC-659（session の所有者は 1 プロセス）と同じ境界をここでも引く。
+- **Change freedom**: 選定の順序付け、上限の既定値は自由。「engine が session を直接起こさない」「上限を runtime 側で解釈しない」の 2 点が不変。
+- **Revisit when**: handoff の優先度 ranking（11 段階）が確定したら、現在の起票順 FIFO を置き換える。
+- **Anchors**: `packages/idd-core/src/plan/prep.ts`、`lib/idd-ui/server/agent-runner.ts`、`app/api/idd/prep/route.ts`
+
+### DEC-672: planner への最初の指示も envelope にする
+
+- **What**: 下調べの開始指示は `<idd-system-message type="s1_prep_start">` として組み立て、lane の題名・source URL・context・成果物の置き場所・書式の制約・質問の作法・callback を 1 通に含める。
+- **Why**: agent 側に前提知識を置かないという envelope の self-containment 原則を、最初の 1 通にも適用する。書式の制約（`## DEC-1 — <一文>`、選択肢 label 40 文字以内）は UI がその形で読む以上、指示に含まれていないと守られない。
+- **Change freedom**: 文面と含める項目は自由。「agent 側の設定に依存しない」「UI が要求する書式が指示に含まれる」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/prep.ts`（plannerBrief）
+
+### DEC-673: intent の置き場所は題名ではなく lane id から作る
+
+- **What**: `_docs/intent/<Area>/<slug>/` の slug は lane id（`idd-902`）から作る。
+- **Why**: 題名は日本語を含むが、docs 規約の canonical path は `[a-z0-9]+(-[a-z0-9]+)*` を要求する。題名由来の slug では planner が作る intent が validator を通らない。lane id なら ASCII で一意、かつ lane と 1:1 に対応する。
+- **Change freedom**: slug の形は自由。「ASCII で、lane と 1:1 で、題名の変更で動かない」だけが不変。
+- **Anchors**: `packages/idd-core/src/intent/parse.ts`（slugOf）
+
+### DEC-676: 判断を記録したら、その場で配信を試みる
+
+- **What**: `POST /api/idd/decide` は記録に成功したら続けて `deliverPending()` を呼ぶ。配信の失敗は記録の成功を取り消さず、未達は outbox に残る。
+- **Why**: 記録と送信を分ける（DEC-606）のは「送れなくても記録は残す」ためであって、「送るのを後回しにする」ためではない。人間が回答したのに planner が動き出さない時間は、そのまま lane の停滞になる。押した時点で試すのが最も短い。
+- **Change freedom**: 呼ぶ場所、再送の戦略は自由。「配信の失敗が記録の成功を巻き戻さない」だけが不変。
+- **Anchors**: `app/api/idd/decide/route.ts`
+
+### DEC-677: 質問は 1 問ずつ判断し、planner を起こすのは batch が揃ってから
+
+- **What**: batch は **1 枚の card** として出し、その中で未回答の問いを 1 問ずつ順に見せる。主ボタンは残りがある間は「次の質問へ」、最後の 1 問で「回答して再開させる」。回答は 1 問ごとに `pending-answers.jsonl` へ記録し、全問が揃ったときにだけ `question_batch_answered` event と envelope を 1 通生成する。
+- **Why**: handoff の S1 は「batch 内最大 5 問」「planner の resume 条件は全問が揃ったとき」。判断の単位（1 問）と再開の単位（1 batch）は別物だが、**1 問 = 1 card にすると同じ lane の札が 5 枚並び**、1 画面 1 判断の趣旨（IddUi DEC-620）に反する上、「4 枚答えたが何も進んでいない」状態がキューに散らばる。card 間に依存関係を持たせる案は、めくる操作の意味まで変えるので採らない。batch という単位が既にあるのだから、その中で完結させる。
+- **Change freedom**: card 内の進み方、進捗の見せ方は自由。「1 問ずつ判断できる」「全問揃うまで agent を起こさない」「同じ batch が複数の札に割れない」の 3 点が不変。
+- **Anchors**: `lib/idd-ui/server/state.ts`、`packages/idd-core/src/ledger/write.ts`（applyDecision の answer）
+
+### DEC-678: 眠った session は file から起こす。起こし直しで id が変わったら配信しない
+
+- **What**: 配信先の session が registry に生きていない場合、session id から session file を解決して起こす。file が見つからない、または起こした結果 id が変わった場合は配信せず、未達として残す。
+- **Why**: `startRpcSession(id, "", cwd)` は file を指定しないと**新しい session を作る**。pi の session は 10 分で idle 破棄されるため、回答が届く頃には眠っているのが普通で、この経路を踏むと「届いた」と記録されたまま、質問を知らない別の session に投げ込まれる。届かなかったことが観測できない配信は、未達より悪い。
+- **Change freedom**: 解決の方法は自由。「届け先が意図した session であることを確認してから配信する」だけが不変。
+- **Anchors**: `lib/idd-ui/server/agent-runner.ts`
+
+### DEC-679: lane は「消す」のではなく lane_close で終端へ送る
+
+- **What**: UI から lane を畳む操作（中止 / 取り消し）は `lane_close` を append し、attrs に `outcome: "aborted" | "dropped"` と理由を残す。backlog record も event も削除しない。`deriveStage` は `lane_close` を終端として扱うので、lane は sidebar の「終端 (直近)」へ移り、判断キューからは消える。
+- **Why**: ledger は append-only で、判断の唯一の履歴（INV-003）。record を消すと「その lane が存在した」ことごと消え、なぜ消したかも残らない。UI に必要なのは視界から外すことであって、履歴から消すことではない。誤って取り込んだ lane（`dropped`）と、やると決めた上で止めた lane（`aborted`）は後で区別できる必要があるので、同じ event の attrs で分ける。
+- **Change freedom**: 呼び名、attrs、どこから押せるかは自由。「record を削除しない」「畳んだ理由が残る」の 2 点が不変。
+- **Anchors**: `packages/idd-core/src/ledger/write.ts`（lane_abort / lane_drop）、`packages/idd-core/src/ledger/derive.ts`
+
+### DEC-681: 下調べの成果物は lane の worktree にある。読む側もそこを先に見る
+
+- **What**: `parseIntent` は lane の worktree（`planner/executor-sessions.jsonl` の `worktree_path`）配下の `_docs/intent/<Area>/<slug>/` を先に探し、無ければ server の intent root を見る。`<Area>` の path 要素は `areaSegment()`（area の最後の 1 語）で統一し、書く側（planner への指示）・読む側・「成果物が無い」表示の 3 箇所で同じ関数を使う。
+- **Why**: planner は lane の worktree で作業するので、成果物は commit されるまでそこにしかない。server の cwd だけを見ていると、`s1_ready` が来ているのに GO card が空になる。area は `penne-0505/pi-web-idd` のように repo 名を含みうるため、書き込み先と読み取り先が食い違っていた（実際に食い違って空表示になった）。同じ規則を 3 箇所で別々に書いたことが原因なので、関数に寄せる。
+- **Change freedom**: 探索順、helper の置き場所は自由。「書く側と読む側が同じ規則を共有する」だけが不変。
+- **Anchors**: `packages/idd-core/src/intent/parse.ts`（areaSegment / parseIntent）、`lib/idd-ui/server/state.ts`
+
+### DEC-682: 成果物の置き場所と書式は repo の docs 規約に従う
+
+- **What**: planner の成果物は `_docs/intent/<Area>/<slug>/decision.md`（full schema、`### DEC-nnn:` + What/Why/Change freedom、INV は Intent-derived Invariants 節）、`_docs/qa/<Area>/<slug>/qa.md`（`- AC-001:` 形式）、`_docs/reference/<Area>/<slug>/reference.md` に置く。brief はこの形だけを指示し、完了条件を `./scripts/check-docs.sh` が通ることとする。読む側（`parseIntent`）は旧い簡易形式も受け付ける。
+- **Why**: handoff は「4 ファイルを intent 配下に置く」と書いているが、この repo の docs validator は intent 配下に `decision.md` 以外を許さず、その decision.md にも full schema を要求する。実際に planner が下調べ中にこの衝突を検出して質問を上げ、CI 優先と決まった（IDD-902 の q6）。書式を守れない指示は、agent が毎回同じ壁にぶつかる。読む側だけ寛容にするのは、移行中の lane を表示できなくしないため。
+- **Change freedom**: 書式の詳細、寛容に受ける範囲は自由。「指示された形が CI を通る」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/prep.ts`（plannerBrief）、`packages/idd-core/src/intent/parse.ts`
+
+### DEC-683: 「進んでいるはず」と「実際に動いている」を分けて出す
+
+- **What**: 下調べ中 / 実装中の lane について、対応する session が runtime に生きているかを見て `live` / `stalled`（session はあるが動いていない）/ `unstarted`（session が無い）を返す。sidebar では stage bar を破線にし、「停止」「未起動」を添える。
+- **Why**: GO を押した lane は「実装中」になるが、executor が起動していなければ誰も何もしない。動いていないものが動いているものと同じ顔で並ぶと、止まっていることに気づけない。生きている session の集合は runtime しか知らないので、engine には集合として渡す（DEC-659 と同じ境界）。
+- **Change freedom**: 判定の粒度、見せ方は自由。「止まっている lane が進行中と同じ見た目にならない」だけが不変。
+- **Anchors**: `packages/idd-core/src/plan/prep.ts`（laneActivity）、`lib/idd-ui/server/state.ts`、`components/idd/LaneList.tsx`
+
+### DEC-685: S2 は契約を渡して実装させ、結果を ledger に戻す
+
+- **What**: GO の付いた lane に executor session を起こす。lane の worktree（S1 で作ったものを再利用）で動かし、brief には契約（DEC / AC / INV の本文）と完了条件（`check-docs.sh` と `tsc --noEmit` が通る、変更を commit する）と callback（progress / result / questions）を載せる。起動時に `s2_start` を、起点 commit 付きで append する。**契約が空の lane には executor を起こさない。**
+- **Why**: executor に渡すべきものは issue ではなく契約。契約が空のまま起こすと、agent は自分で目的を決めることになり、GO が意味を失う（UI 側で GO を止めているのと同じ理由 / IddUi DEC-674）。起点 commit を残すのは、差分の基準がないと「この lane が何を書いたか」を後から復元できないため。
+- **Change freedom**: brief の文面、並列上限、model は自由。「契約を渡す」「契約が無ければ起こさない」「起点 commit を残す」の 3 点が不変。
+- **Anchors**: `packages/idd-core/src/plan/exec.ts`、`app/api/idd/exec/route.ts`、`packages/idd-core/src/worktree/ensure.ts`（headCommit）
+
 ## Consequences / Impact
 
 - `lib/idd-ui/server/` から ledger の読み書きが消え、UI 側は engine の公開面だけを見る。state file の schema 変更は engine に閉じる。
+- 下調べは lane ごとに worktree を作る（DEC-670）。`<repo>-lanes/` が増えるので、lane を閉じたときの撤去が要る。
 - envelope の配信は server が起きている必要がある（DEC-659）。`POST /api/idd/deliver` が入口で、未達は `outbox.jsonl` の `delivered_at: null` として残る。
 - `state/agent-token` が生成される（DEC-660）。state dir を共有する全プロセスが同じ token を見る。
 - 取り込みは `gh` CLI に依存する（DEC-654）。CI や別ホストで動かすには `gh` の認証が要る。
@@ -157,6 +243,8 @@ UI 側の判断は `_docs/intent/IddUi/`。
 - **Rollback**: `packages/idd-core` を `lib/idd-ui/server/` へ戻せば、workspace 追加前の構成に復帰する（依存は一方向なので機械的に戻せる）。
 - **Follow-ups**:
   - 意味類似の重複判定（DEC-656 の detector）を実装する
-  - worker pool（Workspace DEC-007 の実体）を runtime 側に置き、planner / executor を role 付きで起こす
+  - S2（executor）を同じ形で足す。worker pool（Workspace DEC-007 の実体）は `AgentRunner.spawn` が最小形として担っている
+  - lane を閉じたときに worktree を撤去する
+  - 優先度 ranking（11 段階）の確定後に FIFO を置き換える（DEC-671）
   - S1（planner）を実装し、取り込んだ lane を下調べに載せる
   - cron を systemd timer などに登録する（現状は手動実行）

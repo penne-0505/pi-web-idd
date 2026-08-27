@@ -7,8 +7,12 @@
       "branch_name_source": "config",
       "branch_name_pattern": "idd/{idd_id}",
       "intake_filter": {
-        "github_labels": ["idd-ready"]
-      }
+        "github_labels": [
+          "idd-ready"
+        ]
+      },
+      "local_path": "/home/penne/dev/active/pi-web-idd",
+      "lanes_root": null
     },
     "penne-0505/medo": {
       "context": "personal",
@@ -17,8 +21,12 @@
       "branch_name_source": "config",
       "branch_name_pattern": "idd/{idd_id}",
       "intake_filter": {
-        "github_labels": ["idd-ready"]
-      }
+        "github_labels": [
+          "idd-ready"
+        ]
+      },
+      "local_path": "/home/penne/dev/active/medo",
+      "lanes_root": null
     }
   }
 }

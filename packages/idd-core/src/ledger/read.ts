@@ -47,6 +47,10 @@ export function readQuestionBatch(iddId: string, batchId: string): PendingQuesti
     .find((b) => b.idd_id === iddId && b.batch_id === batchId);
 }
 
+export function readAnswers(): PendingAnswer[] {
+  return readJsonl<PendingAnswer>(join(stateDir(), "pending-answers.jsonl"));
+}
+
 export function readOpenQuestions(): PendingQuestionBatch[] {
   const batches = readJsonl<PendingQuestionBatch>(join(stateDir(), "pending-questions.jsonl"));
   const answered = new Set(
