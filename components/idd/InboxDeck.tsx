@@ -36,11 +36,12 @@ const MARKER_DECAY = 0.55;
 const MARKER_ICON = 22;
 
 /** 残りの札。上から下が処理順で、札束の積み方向と同じ縦に並べる。 */
-function Remaining({ items, index, onJump, row }: {
+function Remaining({ items, index, onJump, row, locked }: {
   items: InboxItem[];
   index: number;
   onJump: (i: number) => void;
   row?: boolean;
+  locked?: boolean;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: row ? "row" : "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
@@ -57,6 +58,7 @@ function Remaining({ items, index, onJump, row }: {
           <button
             key={`${item.kind}-${item.iddId}`}
             onClick={() => onJump(i)}
+            disabled={locked}
             title={itemLabel(item)}
             aria-current={on || undefined}
             className="idd-marker"
@@ -65,7 +67,7 @@ function Remaining({ items, index, onJump, row }: {
               width: box, height: box, padding: 0,
               background: "transparent", border: "none",
               color: on ? "var(--text)" : d === 1 ? "var(--text-muted)" : "var(--text-dim)",
-              cursor: "pointer", flexShrink: 0,
+              cursor: locked ? "default" : "pointer", flexShrink: 0,
             }}
           >
             {/* 寸法ではなく倍率で変える。大きさの変化がそのまま動きになる */}
@@ -149,14 +151,19 @@ export function InboxDeck({ items, onDecide, onAsk, compact, variant = "frame", 
   const at = Math.min(index, last);
   useEffect(() => { if (index > last) setIndex(last); }, [index, last]);
 
+  // 記録中は焦点を動かさない。結果が返る場所から目を離させないため
+  const locked = Boolean(pendingId);
+
   const move = useCallback((d: number) => {
+    if (locked) return;
     setDir(d < 0 ? "prev" : "next");
     setIndex((i) => Math.min(Math.max(0, Math.min(i, last) + d), last));
-  }, [last]);
+  }, [last, locked]);
 
   const jump = useCallback((i: number) => {
+    if (locked) return;
     setIndex((prev) => { setDir(i < prev ? "prev" : "next"); return i; });
-  }, []);
+  }, [locked]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -201,7 +208,7 @@ export function InboxDeck({ items, onDecide, onAsk, compact, variant = "frame", 
   if (variant === "flow") {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <Remaining items={items} index={at} onJump={jump} row />
+        <Remaining items={items} index={at} onJump={jump} row locked={locked} />
         <div style={{ position: "relative", paddingRight: behind * 10 }}>
           {Array.from({ length: behind }, (_, i) => behind - i).map((n) => (
             <div
@@ -224,9 +231,9 @@ export function InboxDeck({ items, onDecide, onAsk, compact, variant = "frame", 
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
-          <Flip icon="prev" label="前の札" showLabel disabled={at === 0} onClick={() => move(-1)} />
+          <Flip icon="prev" label="前の札" showLabel disabled={locked || at === 0} onClick={() => move(-1)} />
           <span style={{ flex: 1 }} />
-          <Flip icon="next" label="後で見る" showLabel disabled={at >= last} onClick={() => move(1)} />
+          <Flip icon="next" label="後で見る" showLabel disabled={locked || at >= last} onClick={() => move(1)} />
         </div>
       </div>
     );
@@ -234,7 +241,7 @@ export function InboxDeck({ items, onDecide, onAsk, compact, variant = "frame", 
 
   return (
     <div style={{ display: "flex", alignItems: "stretch", gap: 16 }}>
-      <Remaining items={items} index={at} onJump={jump} />
+      <Remaining items={items} index={at} onJump={jump} locked={locked} />
 
       <div style={{ flex: 1, minWidth: 0, position: "relative", height: FRAME_HEIGHT, paddingBottom: behind * 8 }}>
         {/* 背後の札。次は下で待っていて、↓ で手前に来る */}
@@ -297,8 +304,8 @@ export function InboxDeck({ items, onDecide, onAsk, compact, variant = "frame", 
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexShrink: 0 }}>
-        <Flip icon="up" label="前の札" disabled={at === 0} onClick={() => move(-1)} />
-        <Flip icon="down" label="後で見る" disabled={at >= last} onClick={() => move(1)} />
+        <Flip icon="up" label="前の札" disabled={locked || at === 0} onClick={() => move(-1)} />
+        <Flip icon="down" label="後で見る" disabled={locked || at >= last} onClick={() => move(1)} />
       </div>
     </div>
   );
