@@ -48,3 +48,7 @@ export type { CloseResult } from "./plan/close.ts";
 export { runTick } from "./plan/tick.ts";
 export type { TickResult } from "./plan/tick.ts";
 export { allocateBlock, highestIds } from "./intent/numbering.ts";
+export { MANIFEST_FILE, isOverlayPath, readManifest, splitByManifest } from "./overlay/manifest.ts";
+export type { Manifest, ManifestIssue } from "./overlay/manifest.ts";
+export { exportLane, laneLocations, propose } from "./overlay/export.ts";
+export type { ExportResult, ProposeView } from "./overlay/export.ts";
