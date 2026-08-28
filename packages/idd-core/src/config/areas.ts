@@ -11,6 +11,7 @@ export interface AreaConfig {
   branch_name_pattern?: string;
   // intent: DEC-670 — worktree を切る元。無い area は下調べに載せない
   local_path?: string;
+  upstream_path?: string;
   lanes_root?: string | null;
   intake_filter?: {
     github_labels?: string[];

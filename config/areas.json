@@ -11,8 +11,9 @@
           "idd-ready"
         ]
       },
-      "local_path": "/home/penne/dev/active/pi-web-idd",
-      "lanes_root": null
+      "local_path": "/home/penne/dev/active/work/pi-web-idd",
+      "lanes_root": null,
+      "upstream_path": "/home/penne/dev/active/upstream/pi-web-idd"
     },
     "penne-0505/medo": {
       "context": "personal",

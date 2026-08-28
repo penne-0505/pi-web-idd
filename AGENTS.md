@@ -1,27 +1,3 @@
-# AGENTS.md
-
-`starter/` が存在する = このリポジトリはまだ初期化されていません。
-あなたがどちらの立場かを最初に判定してください。
-
-## このテンプレートを使って新規プロジェクトを始める場合
-
-[QUICKSTART.md](QUICKSTART.md) の「0. 初期化」に従って `starter/` を展開してください。
-展開すると、このファイルは `starter/AGENTS.md` の内容へ置き換わり、以降はそちらが唯一の規約になります。
-展開前に実装を始めないでください。
-
-## このテンプレート自体を開発する場合
-
-`starter/` 配下は出荷物です。あなたへの指示ではありません。
-
-- テンプレート自身の変更について、`_docs/intent/`、`_docs/plan/`、`_docs/qa/`、`starter/TODO.md` にエントリを作らないこと。
-  これらは利用者の作業領域であり、ここへ書いたものは新規プロジェクトへそのまま複製されます。
-- 設計根拠は commit message と PR に残してください。
-- 作業管理は GitHub Issues / PR で行います。ファイルベースの TODO は持ちません。
-- 検証は `./scripts/check-docs.sh` です。
-
-
----
-
 # pi-web AGENTS.md (v0.8.9, agegr, MIT)
 
 # Pi Web - Development Notes

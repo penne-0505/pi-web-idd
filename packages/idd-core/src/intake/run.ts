@@ -9,7 +9,7 @@ import lockfile from "proper-lockfile";
 import { githubAreas } from "../config/areas.ts";
 import { stateDir } from "../paths.ts";
 import type { BacklogRecord } from "../schema/records.ts";
-import { readBacklog } from "../ledger/read.ts";
+import { readBacklog, readLifecycle } from "../ledger/read.ts";
 import { appendLifecycle } from "../ledger/write.ts";
 import { listIssues, type GithubIssue } from "./github.ts";
 
@@ -89,8 +89,18 @@ async function openPendingReview(rec: {
   });
 }
 
-function urlDuplicate(issue: GithubIssue, backlog: BacklogRecord[]): BacklogRecord | undefined {
-  return backlog.find((rec) => rec.gh_issue_url === issue.url || rec.linear_issue_url === issue.url);
+// intent: DEC-706 — 中止した lane の起票は次の取り込みで拾い直す。判断は日をまたげば変わりうる
+function closedLaneIds(): Set<string> {
+  const closed = new Set<string>();
+  for (const e of readLifecycle()) {
+    if (e.event === "lane_close" || e.event === "s1_defer" || e.event === "s3_defer") closed.add(e.idd_id);
+  }
+  return closed;
+}
+
+function urlDuplicate(issue: GithubIssue, backlog: BacklogRecord[], closed: Set<string>): BacklogRecord | undefined {
+  return backlog.find((rec) =>
+    !closed.has(rec.idd_id) && (rec.gh_issue_url === issue.url || rec.linear_issue_url === issue.url));
 }
 
 export async function runIntake(opts: { detector?: DuplicateDetector } = {}): Promise<IntakeResult> {
@@ -101,6 +111,7 @@ export async function runIntake(opts: { detector?: DuplicateDetector } = {}): Pr
 
   const areas = githubAreas();
   const backlog = readBacklog();
+  const closed = closedLaneIds();
   let seq = nextIddId(backlog);
 
   for (const area of areas) {
@@ -114,7 +125,7 @@ export async function runIntake(opts: { detector?: DuplicateDetector } = {}): Pr
     result.scanned += issues.length;
 
     for (const issue of issues) {
-      const already = urlDuplicate(issue, backlog);
+      const already = urlDuplicate(issue, backlog, closed);
       if (already) {
         result.duplicates.push({ iddId: already.idd_id, url: issue.url });
         continue;
@@ -136,9 +147,11 @@ export async function runIntake(opts: { detector?: DuplicateDetector } = {}): Pr
 
       const iddId = `IDD-${String(seq).padStart(3, "0")}`;
       seq += 1;
+      // intent: DEC-706 — 拾い直しは前の lane を親に持つ。同じ起票が何度巡ったかを辿れる
+      const previous = backlog.filter((r) => r.gh_issue_url === issue.url).pop();
       const rec: BacklogRecord = {
         idd_id: iddId,
-        parent_id: null,
+        parent_id: previous?.idd_id ?? null,
         created_at: nowIso(),
         linear_issue_url: null,
         gh_issue_url: issue.url,
@@ -154,6 +167,7 @@ export async function runIntake(opts: { detector?: DuplicateDetector } = {}): Pr
         source_type: "github",
         area: area.area,
         gh_issue_url: issue.url,
+        ...(previous ? { requeued_from: previous.idd_id } : {}),
       });
       result.added.push(iddId);
     }
