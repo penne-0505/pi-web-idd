@@ -1,0 +1,180 @@
+{"event": "lane_open", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_ready", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"depth": "deep", "size": "M", "harm": 1}}
+{"event": "s1_granularity_proposed", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "split", "reason": "1 本では判定できない", "children": [{"title": "A", "whole": "A が済む", "places": ["a.ts"], "after": []}, {"title": "B", "whole": "B が済む", "places": ["b.ts"], "after": [0]}]}}
+{"event": "s1_granularity_answered", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"decision": "approve", "instruction": "進めて"}}
+{"event": "s1_plan_review_started", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"run_ids": ["r1", ""], "run_id": "legacy"}}
+{"event": "s1_plan_review_done", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"must": 1, "should": 1, "sent_back": true}}
+{"event": "s1_ready", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"depth": "deep"}}
+{"event": "s1_go", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"purposes": [{"id": "P-4"}]}}
+{"event": "s2_start", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s2_result", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"outcome": "failed", "changed_files": ["a.ts"]}}
+{"event": "s2_order_waiting", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"since": "2026-10-19T00:00:00+09:00", "opponents": [{"lane": "IDD-902", "head": "abc", "files": ["a.ts", "b.ts", "c.ts", "d.ts"]}, {"lane": "", "files": "x"}, {"head": "h"}]}}
+{"event": "s2_order_passed", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"order_at": 1700000000000}}
+{"event": "s2_map_started", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 1, "run_id": "m1", "head": "abc"}}
+{"event": "s2_map_done", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 1, "head": "abc", "routes": [{"id": "R-1", "paths": ["a.ts"], "question": "q", "harms": ["authority", "bogus"]}, {"paths": ["b.ts"], "question": "q2"}, {"id": "", "paths": [], "question": "no files"}, {"paths": ["c.ts"], "question": ""}]}}
+{"event": "s2_review_started", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 1, "depth": "deep", "close_on": "must_and_fix", "max_fix_rounds": 3, "max_should_fix": 1, "head": "abc", "fallbacks": [{"role": "blind", "fallback": "blind"}], "extras": ["high_risk"]}}
+{"event": "s2_review_findings", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 1, "files": ["a.ts"], "run_ids": ["r1"], "failed_runs": 0, "fallbacks": [{"role": "blind", "fallback": "opus"}]}}
+{"event": "s4_review_comment_received", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"files": ["b.ts"]}}
+{"event": "s2_triage_started", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "feedback", "round": 1, "run_id": "t0"}}
+{"event": "s2_triage_done", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "feedback", "round": 1, "accepted": [{"ref": "F-1", "severity": "must", "claim": "x", "path": "a.ts", "line": 3, "action": "fix"}, {"ref": "F-2", "severity": "should", "claim": "y", "action": "fix", "fix_basis": "authority"}, {"ref": "F-3", "severity": "nit", "claim": "n", "action": "skip", "reason": "fine"}], "rejected": [{"claim": "r", "severity": "should", "followup": true, "reason": "later"}], "prior": [{"ref": "F-1", "resolved": false}, {"ref": ""}, {"ref": 2}]}}
+{"event": "s2_fix_sent", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"refs": ["F-1", "F-2"], "boundary_refs": ["F-9"]}}
+{"event": "s2_result", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"outcome": "ok", "changed_files": ["a.ts"]}}
+{"event": "s2_confirm_started", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"round": 1, "run_id": "c1"}}
+{"event": "s2_confirm_done", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"round": 1, "new_blocking": 0, "unresolved_requests": 1, "unresolved_boundaries": 0, "unresolved_must": 0, "unresolved_should": 1, "unresolved_refs": ["F-2"], "files": ["a.ts"]}}
+{"event": "s2_triage_done", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "confirm", "round": 1, "accepted": [{"ref": "F-2", "severity": "should", "claim": "y", "action": "followup"}], "prior": [{"ref": "F-2", "resolved": false}], "oscillations": [{"ref": "F-9", "severity": "should", "claim": "z", "path": "a.ts", "prior_ref": "F-8", "prior": "p", "current": "c"}]}}
+{"event": "s2_triage_started", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "confirm", "round": 1, "run_id": "t2"}}
+{"event": "s2_triage_done", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "confirm", "round": 1, "failed": true, "error": "boom"}}
+{"event": "s2_review_escalated", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"reason": "stop", "retry_state": {"kind": "blind", "round": 1, "state": "start_blind"}, "quota_wait": {"role": "planner", "resets_at": 1700000000000, "reason": "windows"}}}
+{"event": "s2_review_resumed", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"decision": "continue", "note": "補足", "boundaries": [{"ref": "F-9", "choice": "current", "text": "今のまま"}]}}
+{"event": "s2_fix_sent", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"refs": ["F-9"], "boundary_refs": []}}
+{"event": "s2_confirm_done", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"round": 1, "new_blocking": 1, "unresolved_requests": 0, "unresolved_boundaries": 1, "unresolved_must": 1, "unresolved_should": 0, "unresolved_refs": ["F-3"], "files": ["a.ts"]}}
+{"event": "s2_review_converged", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s2_device_started", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"round": 1, "run_id": "d1"}}
+{"event": "s2_device_done", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"round": 1, "blocking": 1, "files": ["a.ts"], "failed": false}}
+{"event": "s2_triage_done", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "device", "round": 1, "accepted": [{"ref": "F-3", "severity": "should", "claim": "dev", "action": "fix"}]}}
+{"event": "s2_review_skipped", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s2_intent_checked", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s2_records_conflict", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s2_result", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"outcome": "ok", "changed_files": ["a.ts"]}}
+{"event": "s2_records_reopened", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s2_records_instructed", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s2_hand_fixed", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s2_review_base_conflict", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"awaiting": true}}
+{"event": "s2_review_base_conflict", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"awaiting": false}}
+{"event": "s2_review_started", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 2, "diff_scope": "conflict"}}
+{"event": "s2_review_converged", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s4_verify_user_judgment_answered", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"outcome": "revise", "by": "harness"}}
+{"event": "s3_check_conflict", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s4_submit_started", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"head": "abc"}}
+{"event": "s4_verify_user_judgment_answered", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"outcome": "revise", "by": "penne"}}
+{"event": "s3_reject", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s4_land_conflict", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"head": "def"}}
+{"event": "s4_land_merged", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s4_merged", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s4_ship_failed", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"reason": "x"}}
+{"event": "s4_pr_created", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"pr_number": 12}}
+{"event": "lane_close", "idd_id": "IDD-901", "at": "2026-10-19T10:00:00+09:00", "attrs": {"outcome": "merged", "merged_commit": "abc"}}
+{"event": "lane_open", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_ready", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_plan_review_started", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": "not an object"}
+{"event": "s1_plan_review_done", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"must": "3", "should": null, "sent_back": "yes"}}
+{"event": "s1_plan_review_started", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"run_id": ""}}
+{"event": "s1_plan_review_done", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"must": null, "sent_back": false}}
+{"event": "s1_revise_requested", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s1_ready", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": []}
+{"event": "s1_go", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s2_start", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s2_result", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"outcome": "failed", "changed_files": []}}
+{"event": "s2_review_started", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "weird", "round": "2"}}
+{"event": "s2_map_started", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "other", "round": "x", "head": 0}}
+{"event": "s2_map_head_moved", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "final", "round": 2}}
+{"event": "s2_map_dropped", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "final", "round": null}}
+{"event": "s2_review_started", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": 2, "round": null}}
+{"event": "s2_review_findings", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"files": "not-a-list"}}
+{"event": "s2_triage_done", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "unheard-of", "round": "x", "accepted": "no", "escalated_claims": "x"}}
+{"event": "s2_review_escalated", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"reason": null, "retry_state": "state-string", "quota_wait": {"reason": 3}}}
+{"event": "s2_review_resumed", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"decision": "hand_fix"}}
+{"event": "s2_review_escalated", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"reason": "r", "retry_state": {"round": 2, "state": "start_blind"}}}
+{"event": "s2_review_resumed", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"decision": "continue", "note": 3}}
+{"event": "s2_review_escalated", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"reason": "r", "retry_state": {"inputs": ["a"], "kind": "final", "round": 3, "state": "escalated", "retry": {"state": "send_fix", "round": 3}}, "quota_wait": []}}
+{"event": "s2_review_resumed", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"decision": "continue"}}
+{"event": "s2_review_escalated", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"reason": "r", "retry_state": {"state": "awaiting_order", "round": 1, "opponents": [{"lane": "IDD-901", "files": ["a.ts"]}]}}}
+{"event": "s2_review_resumed", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"decision": "continue"}}
+{"event": "s2_review_escalated", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"reason": "r", "retry_state": {"state": "unheard-of", "round": 1}}}
+{"event": "s2_review_resumed", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"decision": "continue"}}
+{"event": "s2_review_escalated", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"reason": "r", "retry_state": [], "quota_wait": {"reason": "w", "role": 2, "resets_at": "soon"}}}
+{"event": "s2_review_resumed", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"decision": "accept"}}
+{"event": "s2_device_started", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": "oops"}
+{"event": "s2_device_done", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"failed": true, "error": {"nested": 1}}}
+{"event": "s2_review_resumed", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"decision": "continue", "note": null}}
+{"event": "s2_device_done", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"judge": "human", "blocking": "x"}}
+{"event": "s2_device_done", "idd_id": "IDD-902", "at": "2026-10-19T10:00:00+09:00", "attrs": {"blocking": 0}}
+{"event": "lane_open", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s1_ready", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"depth": "shallow"}}
+{"event": "s1_granularity_recorded", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "split", "reason": "r"}}
+{"event": "s1_plan_review_skipped", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s1_go", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s2_start", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s2_review_skipped", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s2_hand_fixed", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s2_map_dropped", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 1}}
+{"event": "s2_map_head_moved", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 2}}
+{"event": "s2_order_unknown", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"order_at": "2026-10-19T01:00:00+09:00"}}
+{"event": "s3_reject", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s4_ship_failed", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "blocked_by_dependency", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"depends_on": ["IDD-901", "IDD-902"]}}
+{"event": "s1_defer", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"reason": "later"}}
+{"event": "s3_defer", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "lane_close", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"outcome": "local"}}
+{"event": "s9_weird_event", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"x": 1}}
+{"event": "s2_review_started", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 1}}
+{"event": "s2_review_started", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "final", "round": 1}}
+{"event": "s2_triage_done", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "final", "round": 1, "accepted": []}}
+{"event": "s2_triage_done", "idd_id": "IDD-903", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "kept", "round": 1, "accepted": []}}
+{"event": "lane_open", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s2_start", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "lane_over_budget", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {"cost": 5.031, "limit": 5}}
+{"event": "lane_budget_extended", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {"limit": 10}}
+{"event": "lane_stalled", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {"role": "executor", "cause": "net", "reason": "落ちた"}}
+{"event": "question_batch_asked", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {"questions": ["q"]}}
+{"event": "lane_stall_resumed", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "lane_stall_detected", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {"stage": "review", "since": "2026-10-19T00:00:00+09:00", "last_event": {"event": "s2_result", "at": "2026-10-19T00:30:00+09:00"}, "reason": "止まった", "causes": ["a", "b"], "can_send_back": true}}
+{"event": "s2_result", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {"outcome": "ok", "changed_files": ["a.ts"]}}
+{"event": "lane_stall_detected", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {"stage": "review", "last_event": "not-an-object", "reason": "again"}}
+{"event": "s4_submit_started", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s4_pr_created", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {"pr_number": 7}}
+{"event": "lane_over_budget", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {"cost": 5.465, "limit": 5}}
+{"event": "lane_over_budget", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {"cost": 6.5, "limit": 6}}
+{"event": "lane_budget_extended", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {"limit": 0}}
+{"event": "lane_stalled", "idd_id": "IDD-904", "at": "2026-10-19T10:00:00+09:00", "attrs": {"role": null, "cause": null, "reason": null}}
+{"event": "lane_open", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_ready", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"depth": "standard"}}
+{"event": "s1_granularity_proposed", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "single", "reason": "one"}}
+{"event": "s1_granularity_proposed", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "merge", "reason": "m", "merge_target": {"ref": "#1"}}}
+{"event": "s1_granularity_answered", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"decision": "revise", "instruction": "i"}}
+{"event": "s1_granularity_answered", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"decision": "unheard-of"}}
+{"event": "s1_granularity_proposed", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "split", "reason": "s", "children": [{"title": "", "whole": "w", "places": ["a"]}]}}
+{"event": "s1_granularity_proposed", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "split", "reason": "s", "children": [{"title": "t", "whole": "w", "places": ["a"]}, {"title": "t2", "whole": "w", "places": []}]}}
+{"event": "s1_granularity_proposed", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "split", "reason": "s", "children": [{"title": "t", "whole": "w", "places": ["a"]}]}}
+{"event": "s1_granularity_answered", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"decision": "approve"}}
+{"event": "s1_ready", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"depth": "standard"}}
+{"event": "s1_plan_review_started", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"run_ids": ["a", "b"]}}
+{"event": "s1_plan_review_done", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"must": 0, "should": 2, "sent_back": null}}
+{"event": "s1_plan_review_done", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"must": 0, "should": 0, "sent_back": false}}
+{"event": "s1_revise_requested", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s1_ready", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {"depth": "standard"}}
+{"event": "s1_plan_review_skipped", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s1_go", "idd_id": "IDD-905", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "lane_open", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_ready", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_go", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s2_start", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s2_result", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {"outcome": "ok", "changed_files": ["a.ts"]}}
+{"event": "s2_order_waiting", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {"since": null, "opponents": "not-a-list"}}
+{"event": "s2_order_waiting", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {"since": 1700000000000, "opponents": [{"lane": null}, {"lane": "IDD-904", "head": 2, "files": ["x.ts", 3]}, []]}}
+{"event": "s2_order_limit", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {"order_at": "not-a-time"}}
+{"event": "s2_order_released", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {"order_at": null}}
+{"event": "s2_review_started", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 1}}
+{"event": "s2_review_started", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "final", "round": 1, "whole_run_ids": ["w"]}}
+{"event": "s2_triage_done", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "final", "round": 1, "accepted": [{"ref": "F-1", "severity": "should", "claim": "c", "action": "followup"}]}}
+{"event": "s2_review_converged", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s4_review_comment_received", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s2_triage_done", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "confirm", "round": 2, "accepted": [{"ref": "F-2", "severity": "should", "claim": "d", "action": "fix"}]}}
+{"event": "s2_confirm_done", "idd_id": "IDD-906", "at": "2026-10-19T10:00:00+09:00", "attrs": {"round": 2, "new_blocking": 0, "unresolved_requests": 0, "unresolved_boundaries": 0, "unresolved_must": 0, "unresolved_should": 0}}
+{"event": "lane_open", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_ready", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_go", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s2_start", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00", "attrs": {}}
+{"event": "s2_result", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00", "attrs": {"outcome": "ok", "changed_files": ["a.ts"]}}
+{"event": "s2_review_started", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 1}}
+{"event": "s2_review_run_failed", "idd_id": "IDD-907", "at": "2026-10-19T10:01:00+09:00", "attrs": {"reason": "x"}}
+{"event": "s2_review_run_failed", "idd_id": "IDD-907", "at": "2026-10-19T10:02:00+09:00", "attrs": {"reason": "x"}}
+{"event": "s2_review_run_failed", "idd_id": "IDD-907", "at": "2026-10-19T10:03:00+09:00", "attrs": {"reason": "x"}}
+{"event": "s2_fix_sent", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00", "attrs": {"refs": ["F-1"]}}
+{"event": "s2_review_run_failed", "idd_id": "IDD-907", "at": "not-a-time", "attrs": {"reason": "x"}}
+{"event": "s2_triage_done", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 1, "accepted": [{"ref": "F-1", "severity": "must", "claim": "m", "action": "fix"}], "prior": [{"ref": "F-1", "resolved": true}]}}
+{"event": "s2_fix_sent", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00", "attrs": {"refs": ["F-1"]}}
+{"event": "s2_triage_done", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 2, "accepted": [{"ref": "F-1", "severity": "must", "claim": "m", "action": "fix"}]}}
+{"event": "s2_fix_sent", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00", "attrs": {"refs": ["F-1"]}}
+{"event": "s2_triage_done", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00", "attrs": {"kind": "blind", "round": 3, "accepted": [{"ref": "F-1", "severity": "must", "claim": "m", "action": "fix"}]}}
+{"event": "lane_close", "idd_id": "IDD-907", "at": "2026-10-19T10:00:00+09:00", "attrs": {"outcome": "aborted"}}

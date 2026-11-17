@@ -1,10 +1,12 @@
-// intent: DEC-609 — 根の解決だけを分けて循環 import を避ける
-// intent: DEC-650 — engine が知ってよい外界は state dir と intent root だけ
 
 import { join } from "node:path";
 
+import { checkoutRoot } from "./config/files.ts";
+import { resolveStateDir } from "./install/pointers.ts";
+
+/** the state every reader and writer of this process shares; the decision is `resolveStateDir`'s, not made here */
 export function stateDir(): string {
-  return process.env.IDD_STATE_DIR?.trim() || join(process.cwd(), "state");
+  return resolveStateDir({ checkout: checkoutRoot() });
 }
 
 export function intentRoot(): string {

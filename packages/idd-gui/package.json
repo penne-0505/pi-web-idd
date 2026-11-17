@@ -1,0 +1,10 @@
+{
+  "name": "@idd/gui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "propter の新しい画面（engine の HTTP の API だけを読む）",
+  "type": "module",
+  "scripts": {
+    "build": "bun run build.ts"
+  }
+}

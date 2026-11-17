@@ -1,7 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+# a link as well as a directory: the setup of a lane and of a review copy links node_modules
+node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -13,12 +14,13 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
-
 # production
 /build
+
+# the screen's bundle and the place it is built in before it replaces `dist/` (packages/idd-gui/build.ts)
+/packages/idd-gui/dist/
+/packages/idd-gui/dist.next/
+/packages/idd-gui/dist.old/
 
 # misc
 .DS_Store
@@ -33,10 +35,11 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# vercel
-.vercel
-
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 .factory
+/state/
+/_meta/scratch/
+
+# eslint の cache（npm run lint の --cache）。worktree ごとに置く
+.eslintcache

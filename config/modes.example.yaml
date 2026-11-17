@@ -1,0 +1,35 @@
+# セッションのモード（pi-web の「モードで新規」）。model / routing の値と選定理由は roles.yaml の role 側に書き、ここには復唱しない。
+# モード = workspace + そこにある規範文書（AGENTS.md）+ role（model / thinking / routing / tools）。
+# pi-web が落ちても、同じ workspace を pi CLI や Claude Code で開けば同じモードになる（ハーネス非依存の 4 つ組: workspace / 規範文書 / tools / memory）。
+# memory は workspace の下の dir（既定は <workspace>/memory）。階層と索引の形は docs/memory.md の約束に従う。
+# engine は会話の pi を起こすたびに、最上位の索引と記憶の dir の所在を system prompt への追記で渡す（本文は注入しない）。
+# この例は既定の形。workspace は自分の場に合わせて書き替える（install はこの例を ~/.config/idd/modes.yaml に写す）。
+modes:
+  chat:
+    label: チャット
+    role: chat
+    workspace: ~/text/chat
+    description: 日常の対話と思考の場（既定のチャット）。メモリは workspace の中に置く
+    types:
+      chat:
+        label: チャット
+      idea:
+        label: アイデア
+        dir: ideas
+        template: _template.md
+  chat-k3:
+    label: チャット (K3)
+    role: chat-k3
+    workspace: ~/text/chat
+    description: 同じ場を別モデルで（比較用）
+  chat-glmflash:
+    label: チャット (GLM-f)
+    role: chat-glmflash
+    workspace: ~/text/chat
+    description: 同じ場を別モデルで（比較用）
+
+  idea:
+    label: アイデア
+    role: chat
+    workspace: ~/text/ideas
+    description: 頭の中のアイデアを対話でアイデア文書に固め、4 点ゲートを通して出口（Issue 等）の文面まで書く。投稿はしない

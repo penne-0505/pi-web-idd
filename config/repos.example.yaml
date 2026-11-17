@@ -1,0 +1,159 @@
+# config/repos.yaml の例。1 プロジェクト = 1 項目。upstream と work の 2 clone は必須。
+# 使い終わったファイルの片づけ（既定は OFF。書かない限り何も消さない）。
+# cleanup は全体の ON/OFF、min_free_gb は空きのしきい値（GB、既定 10）。
+# archive_dir を書くと、役の実行の記録と段の入出力を lane ごとの 1 つの .tar.zst に固めて保存先へ写してから消す。
+# places の下に置き場ごとの cleanup と keep_days / keep_hours を書く。名前は review_copies / run_records /
+# stage_files / outbox / cron_runs / build_outputs。既定は review_copies が 0、build_outputs が 6 時間、ほかは 7 日。
+# storage:
+#   cleanup: false
+#   min_free_gb: 10
+#   archive_dir: /run/media/you/drive/propter-raw
+#   places:
+#     run_records: { cleanup: true, keep_days: 7 }
+#     build_outputs: { cleanup: true, keep_hours: 6 }
+repos:
+  owner/project:
+    name: project
+    upstream: ~/dev/upstream/project
+    work: ~/dev/work/project
+    public_base: main
+    work_base: work-main
+    # 取り込みの承認に GitHub の Issue の close を含めるか（既定 true）。false を書いた repo だけが欄を持ち、
+    # false なら merge の後に「Issue を閉じる」送出カードを積む。Linear の lane では効かない
+    # land: { close_issue: false }
+    # 対外文書（PR・起票・レビュー返信）の言語。省略は日本語
+    public_language: en
+    # 記録側の語のうち、このプロジェクトが自分の意味で使うもの（PR 本文の警告から外す）
+    public_vocabulary_allow: []
+    # 公開する commit の message の型。省略は PR の題名。使える値は下の branch_name_pattern の値に加えて
+    # {title}（承認した PR の題名）と {summary}（題名の末尾の自分の Issue の「(APP-2240)」「(#12)」を外したもの）。
+    # 作者は upstream の clone の git の user.name / user.email（無ければ提出が止まる）
+    # commit_message: "{summary} ({linear_identifier})"
+    # Linear の lane の PR 本文での Issue の書き方。link（[APP-2240](URL) の行）/ closes（Closes URL）/ none（既定。書かない）
+    # pr_linear_reference: link
+    # この repo の Project と Issue を外の tracker から取り込む。省略した repo は外を読まない。外へは何も書かない。
+    #   target: 読む先（github = milestone を Project の対に読む / linear = Linear の Project を対に読む）
+    #   linear_team: target が linear のとき、読むチームの key（APP など）
+    #   interval_minutes: tick が読む間隔の下限（省略は 15 分）
+    # 外だけが変えた Project の本文と Issue の所属・状態は、承認なしで propter に取り込む。両方が別の値に変えた物は
+    # 取り込まず、ぶつかりの card に外の今・前回一致した値・propter の今を並べる。Project の対は、対が無いときだけ名前
+    # （大文字小文字を区別しない完全一致）で結び、以後は外の番号か id で辿る。外にだけある Project は propter に作らない
+    # tracker_sync:
+    #   target: github
+    remote: origin
+    review_root: ~/.cache/review-wt/project
+    copy: []
+    setup: []
+    # この repo の Claude Code の run の prompt cache の保持（1h = 1 時間、5m = 5 分）。省略は run の種類の既定
+    # （会話は 1h、それ以外は 5m）。role の cache_ttl が上に立ち、長い検査（5 分超）を回す repo だけ 1h を書く
+    # cache_ttl: 1h
+    # planner に executor への作業指示（_docs/plan/<seg>/<slug>/plan.md）を頼むか。
+    # plan を書くと planner が plan.md も作り、ハーネスが提出の前に archive へ移す。decision（既定、書かない）は今までどおり
+    # work_instruction: plan
+    # 写しの設定。projections は描く種類の一覧（A / B / C、既定は [A]。空の一覧は何も描かない）、
+    # visibility_default は本文に visibility の無い Choice が取る値（private / public、既定は private）。
+    # 知らない種類と private / public 以外の既定は設定の誤り。area の設定の外に持つので hash は変わらない
+    # intent: { projections: [A], visibility_default: private }
+    # 検査の scope は public（公開面の検査）か records（_docs/ や intent など、lane の記録を読む検査）。省略は public で、
+    # records 以外の値も public として扱う。records と宣言した検査は、記録を剥がした複製（overlay.manifest の行がある repo の
+    # blind・最後のレビュー）を読む run の brief には載らない。記録が残る複製（overlay.manifest の行が無い repo）と、
+    # 記録を読む段（仕様の照合・confirm・feedback_confirm）の brief には載る。省略すると、記録の無い複製でも案内されて失敗する。
+    # brief に載せる一覧だけを絞る。関所（idd gate）と idd wait-run --check の検査は絞らない。
+    # 例: - { name: docs, command: "bash scripts/check-docs.sh", required: false, scope: records }
+    # failure_id_pattern（落ちた出力の 1 行に当てる正規表現。1 つ目の group が失敗の識別子）を書いた必須の公開の検査が
+    # 提出の head で落ちると、公開 base の先端でも同じ検査を回し、識別子の集合で比べる。公開 base でも同じ識別子で落ちる
+    # 失敗は push を止めずに card の注意へ出す。欄の無い検査は比べずに止める。complete_pattern（任意）は最後まで走った
+    # run だけが出す行で、その行の無い run は比べない。例（Flutter の expanded reporter）:
+    #   failure_id_pattern: '^\d+:\d{2} \+\d+(?: ~\d+)?(?: -\d+)?: (.+?)(?: - did not complete)? \[E\]$'
+    #   complete_pattern: '^(?:\d+:\d{2} \+\d+(?: ~\d+)?(?: -\d+)?: (?:Some tests failed\.|All tests passed!|All tests skipped\.)|No tests ran\.)$'
+    # 検査の項目の知らない欄は設定の誤り
+    checks:
+      - { name: test, command: "npm test", required: true, timeout_minutes: 20 }
+    # 取り込みで本流より増えてはいけない数（増分の検査）。command の出力を count の形で読み、本流の先端と
+    # 取り込む merge commit の両方で測る。取り込む側が多いと、その取り込みは止まる（required: true）。
+    # count: eslint-json（eslint -f json の warningCount を合計）/ number（出力の最後の行の整数）。
+    # 本流の側が測れないときも止まる。欄の無い repo は増分の検査を回さない。
+    # 例: increments:
+    #       - { name: eslint-warnings, command: "npx eslint . -f json", count: eslint-json, required: true, timeout_minutes: 15 }
+    # 源から決まる生成物（commit している build 済みの JS など）と、作り直すコマンド。取り込みの段が、lane か本流のどちらかが
+    # paths を変えた取り込みで、merge の tree の源から command を回して paths を置き換えてから検査に渡す（生成物だけの衝突は
+    # lane に戻らない）。paths の外に command が書いたものは tree に入れない。command が落ちる・道具が無いときは作り直さず、
+    # 今までの扱い（生成物だけの衝突は差し戻し）に戻る。command は検査の build と同じ手順にする。
+    # 知らない欄・file でない path・2 回書かれた path は設定の誤り。欄の無い repo は何も作り直さない。area の設定の外に持つので hash は変わらない
+    # 例: generated_files:
+    #       - { paths: [dist/app.js], command: "bash scripts/build-dist.sh", timeout_minutes: 5 }
+    # 公開する commit の message の形。提出前確認の card が、実際に出る 1 つの message の 1 行目を、この宣言の型と形に当てる
+    # （合わなければ card の検査の行が fail と理由を出す。承認は止めない）。types は先頭に置ける type の一覧、scope は
+    # type(scope): の形も許すか（既定 false）、source はこの形を書いている所（ファイルと節。card の理由に並ぶ）で必須。
+    # 直近の公開 commit がこの宣言に沿っていないときは、その違いも同じ理由に出る（宣言を前例に合わせて黙って直さない）。
+    # 知らない欄・型の違う値・source の無い宣言は設定の誤り。欄の無い repo は規約の行を出さない（判定していない行を pass と出さない）。
+    # area の設定の外に持つので hash は変わらない
+    # 例: commit_convention: { types: [feat, fix, docs, chore], scope: false, source: "CONTRIBUTING.md の Commit message" }
+    # チームの規約が skill や AGENTS の文に埋まっている repo は、規約の文を写さず「どの file のどの節か」を指す。
+    # 種類は commit（commit message）/ pr（PR の題と本文）/ issue（起票）。file は repo の root からの相対、section は節の見出しを
+    # # も含めて書く（次の同じ深さか浅い見出しまでが節）。下書き係は、公開側の base の版からその節の文だけを読む
+    # （公開 clone の作業ツリーの版ではない）。節の中の AI の印の行（🤖 …、Co-Authored-By:）は渡さない。
+    # 指した種類では探索（AGENTS.md・skills・PR template など）に戻らない。欄の無い repo は今までどおり探索で読む。
+    # 指した file か節が base に無いときは、提出前確認の card がその file と節を名指して fail の行を出す（承認は止めない）。
+    # 前回の下書きから節の文が変わったときは、card がその節と宣言している値（commit の型・branch 名の型・公開側の言語）を並べる。
+    # 節の文は設定にも記録にも写さない（持つのは hash だけ）。知らない種類・欄、見出しでない section は設定の誤り。
+    # commit を指すときは commit_convention の source を書かない（同じ規約を 2 か所で指せない。書くと設定の誤り）。出どころはこの指す所になる。
+    # commit_convention があるときは、直近に merge された PR の題もその形に当て、外れていれば件数と例を card に出す
+    # （宣言を実例に合わせて黙って直さない。どちらに合わせるかは人が決める）。area の設定の外に持つので hash は変わらない
+    # 例: conventions:
+    #       commit: { file: ".agents/skills/create-pr/SKILL.md", section: "## コミットメッセージ規約" }
+    #       pr: { file: ".agents/skills/create-pr/SKILL.md", section: "## PR本文テンプレート" }
+    # 後から直せない害の種類ごとに、危ないパスを repo の root からの相対で並べる（前方一致）。
+    # 種類: auth（認証）/ authz（認可）/ billing（課金）/ permission（権限）/ data_loss（データ損失）/ secret（secret の扱い）。
+    # 触れた変更は、申告に関わらず Risk High として扱い、High 以上の qa を求める。定義は workflow.md の Risk 分類。
+    # 未 commit の変更は validator の下限が当たり、レビューの巡を始める処理が lane のレビューの起点から head までの
+    # commit 済みの差分の全体を当てる（本流から取り込んだ変更は数えない）。
+    # 未知の種類と配列でない値は設定の誤り。欄の無い repo と空の宣言は「宣言なし」で、どのパスも Risk を上げない
+    # （検査は既定の危ないパスを持たない）。よくある候補: CI の定義（.github/）、規約と skills の置き場（_docs/standards/、
+    # .claude/、.agents/、AGENTS.md）、検査の script（scripts/）、認証と課金の処理。候補は例であって既定ではない。
+    # 例: risk_paths:
+    #       auth: [src/auth/]
+    #       permission: [.github/, AGENTS.md]
+    #       data_loss: [src/migrations/]
+    # この repo で何が害で、どの等級かの具体例（harm: 1〜3、example: 1 文）と、頻度に関わらず must にする条件（always_must）。
+    # engine の判定の文面は一般の語なので、repo ごとの等級をここに書く。判定（triage）と守られたかの確かめの役にだけ渡る。
+    # engine はこの欄に書き戻さない。欄の無い repo は engine の表だけで判定する。
+    # 例: harm_examples:
+    #       [{ harm: 3, example: "利用者のデータや文面が黙って欠ける" }]
+    #     always_must: []
+    issue_lane:
+      context: personal
+      source_type_priority: github
+      # lane の branch 名の規則。省略は feature/ 系（Linear の lane は feature/{linear_id}、ほかは feature/{idd_id_lower}）。
+      # 使える値: {idd_id}（IDD-012）{idd_id_lower}（idd-012）{linear_id}（app-2240）{linear_identifier}（APP-2240）
+      # {issue_number}（GitHub の Issue の番号）。取り込み元ごとに分けるなら { linear: "...", github: "..." }。
+      # 作った lane は、後で規則を変えても作ったときの branch を使い続ける。
+      # 書いた repo は、提出前確認の card に押す branch の名前と規則が並び、規則が与える名前と違えば fail の行になる（承認は止めない）。
+      # 書かない repo の既定の名前は判定しない
+      branch_name_pattern: "idd/{idd_id}"
+      intake_filter: { github_labels: [idd-ready] }
+  # Linear を主にする例。アサインされた Todo の Issue をチームのキーで振り分ける（鍵は ~/.config/idd/linear-api-key）。
+  # Linear のチームは 1 つの repo にだけ書く（同じチームを 2 つの repo に書くと読み込みで止まる）
+  # intake_filter の Linear の欄:
+  #   linear_teams        この repo に振り分けるチームのキー（1 チーム 1 repo）
+  #   linear_statuses     取り込む状態の名前（既定 [Todo]）
+  #   linear_labels       すべて付いていることが要るラベル
+  #   linear_exclude_labels  1 つでも付いていたら取り込まないラベル（名指しの取り込みには掛からない）
+  #   linear_include_unassigned  true なら、そのチームの未アサインの Issue も同じ条件で取り込む（既定は取り込まない）
+  # owner/linear-project:
+  #   ...
+  #   # レビューを投稿したときに付け替えるラベル。種類ごとに remove（外す）と add（付ける）。
+  #   # remove のどれかが付いているときだけ付け替え、remove が空なら常に add を付ける。書かない種類では触らない
+  #   review_labels:
+  #     comment: { remove: [awaiting review], add: [feedback] }
+  #     request_changes: { remove: [awaiting review], add: [feedback] }
+  #   # 公開する commit の message の型。Meltly の運用では Linear の識別子を末尾に付ける
+  #   commit_message: "{summary} ({linear_identifier})"
+  #   issue_lane:
+  #     context: personal
+  #     source_type_priority: linear
+  #     branch_name_pattern: "feature/{linear_id}"
+  #     intake_filter: { linear_teams: [APP], linear_statuses: [Todo], linear_exclude_labels: [deferred] }
+  #     # 未アサインの Issue も取り込むなら linear_include_unassigned: true を足す。
+  #     # `idd intake --list` は Linear の行に見積りと優先度を出し、`--unassigned` を付けると、
+  #     # 取り込まない設定の repo の未アサインの Issue も [未アサイン] の印で分けて出す（その行は lane にならない）

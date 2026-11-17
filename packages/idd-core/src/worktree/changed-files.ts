@@ -1,4 +1,3 @@
-// intent: DEC-607 — 触っているファイルは worktree の git から取り、起点が無ければ空を返す
 
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -31,24 +30,31 @@ export function resolveWorktree(path: string): string | null {
 const cache = new Map<string, { at: number; files: { path: string; delta: string }[] }>();
 const TTL_MS = 5000;
 
-export function changedFiles(worktreePath: string, fromCommit?: string): { path: string; delta: string }[] {
-  const cwd = resolveWorktree(worktreePath);
+/**
+ * The files a lane changed, against where it started. A lane whose worktree was retired is read from `branch`
+ * (its committed state) in place of the worktree.
+ */
+export function changedFiles(worktreePath: string, fromCommit?: string, branch?: { repo: string; ref: string }): { path: string; delta: string }[] {
+  const tree = resolveWorktree(worktreePath);
+  const cwd = tree ?? (branch && existsSync(branch.repo) ? branch.repo : null);
   if (!cwd) return [];
+  const head = tree ? "HEAD" : branch!.ref;
 
-  const key = `${cwd}::${fromCommit ?? ""}`;
+  const key = `${cwd}::${head}::${fromCommit ?? ""}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.files;
 
   let base = fromCommit?.trim();
   if (!base) {
     for (const ref of ["origin/main", "main", "origin/master", "master"]) {
-      const merged = git(cwd, ["merge-base", "HEAD", ref])?.trim();
+      const merged = git(cwd, ["merge-base", head, ref])?.trim();
       if (merged) { base = merged; break; }
     }
   }
   if (!base) return [];
 
-  const out = git(cwd, ["diff", "--numstat", base]);
+  // the worktree's uncommitted edits count; a branch has only what it committed
+  const out = git(cwd, tree ? ["diff", "--numstat", base] : ["diff", "--numstat", base, head]);
   if (out === null) return [];
 
   const files = out

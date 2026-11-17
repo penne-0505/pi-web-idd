@@ -1,0 +1,64 @@
+{"event": "lane_open", "idd_id": "IDD-920", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "question_batch_asked", "idd_id": "IDD-920", "at": "2026-10-19T10:01:00+09:00", "attrs": {"batch_id": "b1"}}
+{"event": "question_batch_asked", "idd_id": "IDD-920", "at": "2026-10-19T10:02:00+09:00", "attrs": {"batch_id": "b2"}}
+{"event": "question_batch_answered", "idd_id": "IDD-920", "at": "2026-10-19T10:03:00+09:00", "attrs": {"batch_id": "b1"}}
+{"event": "lane_open", "idd_id": "IDD-921", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "question_batch_asked", "idd_id": "IDD-921", "at": "2026-10-19T10:01:00+09:00"}
+{"event": "question_batch_asked", "idd_id": "IDD-921", "at": "2026-10-19T10:02:00+09:00", "attrs": {"batch_id": 7}}
+{"event": "question_batch_answered", "idd_id": "IDD-921", "at": "2026-10-19T10:03:00+09:00", "attrs": {"batch_id": 7}}
+{"event": "question_batch_asked", "idd_id": "IDD-921", "at": "2026-10-19T10:04:00+09:00", "attrs": {"batch_id": {"nested": true}}}
+{"event": "lane_open", "idd_id": "IDD-922", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_go", "idd_id": "IDD-922", "at": "2026-10-19T10:01:00+09:00"}
+{"event": "s2_start", "idd_id": "IDD-922", "at": "2026-10-19T10:02:00+09:00"}
+{"event": "s2_result", "idd_id": "IDD-922", "at": "2026-10-19T10:03:00+09:00"}
+{"event": "s2_fix_sent", "idd_id": "IDD-922", "at": "2026-10-19T10:04:00+09:00"}
+{"event": "question_batch_asked", "idd_id": "IDD-922", "at": "2026-10-19T10:05:00+09:00", "attrs": {"batch_id": "b9"}}
+{"event": "lane_open", "idd_id": "IDD-923", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_go", "idd_id": "IDD-923", "at": "2026-10-19T10:01:00+09:00"}
+{"event": "s2_start", "idd_id": "IDD-923", "at": "2026-10-19T10:02:00+09:00"}
+{"event": "claude_quota_wait", "idd_id": "IDD-923", "at": "2026-10-19T10:03:00+09:00", "attrs": {"stage": "review", "reason": "枠が埋まっている", "resets_at": 1792473600}}
+{"event": "lane_open", "idd_id": "IDD-924", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s9_weird_event", "idd_id": "IDD-924", "at": "2026-10-19T10:01:00+09:00", "attrs": {"anything": 1}}
+{"event": "question_batch_asked", "idd_id": "IDD-924", "at": "2026-10-19T10:02:00+09:00", "attrs": {"batch_id": 12}}
+{"event": "lane_open", "idd_id": "IDD-925", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "lane_close", "idd_id": "IDD-925", "at": "2026-10-19T10:01:00+09:00", "attrs": {"outcome": "merged", "merged_commit": "abc123"}}
+{"event": "lane_open", "idd_id": "IDD-926", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_go", "idd_id": "IDD-926", "at": "2026-10-19T10:01:00+09:00"}
+{"event": "s2_start", "idd_id": "IDD-926", "at": "2026-10-19T10:02:00+09:00"}
+{"event": "s2_result", "idd_id": "IDD-926", "at": "2026-10-19T10:03:00+09:00"}
+{"event": "s2_review_converged", "idd_id": "IDD-926", "at": "2026-10-19T10:04:00+09:00"}
+{"event": "s2_device_skipped", "idd_id": "IDD-926", "at": "2026-10-19T10:05:00+09:00"}
+{"event": "s3_ready", "idd_id": "IDD-926", "at": "2026-10-19T10:06:00+09:00"}
+{"event": "s3_ok", "idd_id": "IDD-926", "at": "2026-10-19T10:07:00+09:00"}
+{"event": "s4_submit_started", "idd_id": "IDD-926", "at": "2026-10-19T10:08:00+09:00"}
+{"event": "s4_land_approved", "idd_id": "IDD-926", "at": "2026-10-19T10:09:00+09:00", "attrs": {"signed": true, "head": "abc123"}}
+{"event": "lane_open", "idd_id": "IDD-927", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_ready", "idd_id": "IDD-927", "at": "2026-10-19T10:01:00+09:00", "attrs": {"depth": "shallow", "size": "S", "harm": 0}}
+{"event": "s1_plan_review_done", "idd_id": "IDD-927", "at": "2026-10-19T10:02:00+09:00", "attrs": {"must": 0, "should": 0}}
+{"event": "lane_open", "idd_id": "IDD-928", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "blocked_by_dependency", "idd_id": "IDD-928", "at": "2026-10-19T10:01:00+09:00", "attrs": {"depends_on": ["#12"], "reason": "待っている"}}
+{"event": "lane_open", "idd_id": "IDD-929", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_go", "idd_id": "IDD-929", "at": "2026-10-19T10:01:00+09:00"}
+{"event": "s2_start", "idd_id": "IDD-929", "at": "2026-10-19T10:02:00+09:00"}
+{"event": "s2_result", "idd_id": "IDD-929", "at": "2026-10-19T10:03:00+09:00"}
+{"event": "s2_review_converged", "idd_id": "IDD-929", "at": "2026-10-19T10:04:00+09:00"}
+{"event": "s2_device_skipped", "idd_id": "IDD-929", "at": "2026-10-19T10:05:00+09:00"}
+{"event": "s3_ready", "idd_id": "IDD-929", "at": "2026-10-19T10:06:00+09:00"}
+{"event": "s3_ok", "idd_id": "IDD-929", "at": "2026-10-19T10:07:00+09:00"}
+{"event": "s4_submit_started", "idd_id": "IDD-929", "at": "2026-10-19T10:08:00+09:00"}
+{"event": "s4_pr_created", "idd_id": "IDD-929", "at": "2026-10-19T10:09:00+09:00", "attrs": {"pr_number": 3, "pr_url": "https://github.com/penne-0505/pi-web-idd/pull/3"}}
+{"event": "lane_open", "idd_id": "IDD-930", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_ready", "idd_id": "IDD-930", "at": "2026-10-19T10:01:00+09:00", "attrs": {"depth": "shallow", "size": "S", "harm": 0}}
+{"event": "s1_plan_review_started", "idd_id": "IDD-930", "at": "2026-10-19T10:02:00+09:00", "attrs": {"run_ids": ["r1"]}}
+{"event": "lane_open", "idd_id": "IDD-931", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_ready", "idd_id": "IDD-931", "at": "2026-10-19T10:01:00+09:00", "attrs": {"depth": "shallow", "size": "S", "harm": 0}}
+{"event": "s1_plan_review_done", "idd_id": "IDD-931", "at": "2026-10-19T10:02:00+09:00", "attrs": {"must": 1, "should": 0, "sent_back": true}}
+{"event": "lane_open", "idd_id": "IDD-932", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "s1_go", "idd_id": "IDD-932", "at": "2026-10-19T10:01:00+09:00"}
+{"event": "s2_start", "idd_id": "IDD-932", "at": "2026-10-19T10:02:00+09:00"}
+{"event": "s2_result", "idd_id": "IDD-932", "at": "2026-10-19T10:03:00+09:00", "attrs": {"outcome": "failed", "changed_files": []}}
+{"event": "lane_stall_detected", "idd_id": "IDD-932", "at": "2026-10-19T10:04:00+09:00", "attrs": {"stage": "S2", "reason": "止まった"}}
+{"event": "lane_stall_instructed", "idd_id": "IDD-933", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "lane_open", "idd_id": "IDD-934", "at": "2026-10-19T10:00:00+09:00"}
+{"event": "question_batch_asked", "idd_id": "IDD-934", "at": "2026-10-19T10:01:00+09:00", "attrs": {"batch_id": null}}
+{"event": "question_batch_answered", "idd_id": "IDD-934", "at": "2026-10-19T10:02:00+09:00"}

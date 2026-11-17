@@ -1,0 +1,1480 @@
+[
+ {
+  "idd_id": "IDD-092",
+  "event": "lane_open",
+  "at": "2026-10-05T23:48:51+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "question_batch_asked",
+  "at": "2026-10-05T23:59:03+09:00",
+  "attrs": {
+   "batch_id": "9e027293-fd02-47c8-9086-db70233caf51"
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "question_batch_answered",
+  "at": "2026-10-06T00:26:46+09:00",
+  "attrs": {
+   "batch_id": "9e027293-fd02-47c8-9086-db70233caf51"
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s1_ready",
+  "at": "2026-10-06T00:33:18+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s1_plan_review_started",
+  "at": "2026-10-06T00:33:26+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s1_plan_review_done",
+  "at": "2026-10-06T00:46:09+09:00",
+  "attrs": {
+   "must": 7,
+   "should": 12,
+   "nit": 3,
+   "sent_back": true
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s1_ready",
+  "at": "2026-10-06T00:48:20+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s1_go",
+  "at": "2026-10-06T00:48:59+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_interjection",
+  "at": "2026-10-06T01:06:16+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s1_ready",
+  "at": "2026-10-06T01:08:53+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_start",
+  "at": "2026-10-06T01:43:02+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_result",
+  "at": "2026-10-06T02:34:02+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T02:35:35+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-078"
+    },
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-089"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T02:41:48+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-078"
+    },
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-089"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T02:49:23+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-078"
+    },
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-089"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T03:01:13+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-089"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T03:07:34+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-094"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T03:16:31+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-094"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T03:16:39+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-094"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T03:36:29+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-094"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T03:44:41+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-094"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T03:47:51+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-094"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T03:50:23+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T03:54:13+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T04:02:10+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T04:09:50+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-095"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T04:16:17+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-095"
+    },
+    {
+     "lane": "IDD-096"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T04:25:42+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-095"
+    },
+    {
+     "lane": "IDD-096"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T04:26:24+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-080"
+    },
+    {
+     "lane": "IDD-095"
+    },
+    {
+     "lane": "IDD-096"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T04:34:21+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-086"
+    },
+    {
+     "lane": "IDD-095"
+    },
+    {
+     "lane": "IDD-096"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T04:41:33+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-086"
+    },
+    {
+     "lane": "IDD-095"
+    },
+    {
+     "lane": "IDD-096"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T04:42:06+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-086"
+    },
+    {
+     "lane": "IDD-095"
+    },
+    {
+     "lane": "IDD-096"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T04:48:39+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-086"
+    },
+    {
+     "lane": "IDD-095"
+    },
+    {
+     "lane": "IDD-096"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T04:50:22+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-086"
+    },
+    {
+     "lane": "IDD-095"
+    },
+    {
+     "lane": "IDD-096"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T05:01:09+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-086"
+    },
+    {
+     "lane": "IDD-096"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T05:07:27+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-086"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T05:08:17+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-086"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T05:16:12+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-086"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T05:18:08+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-085"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_waiting",
+  "at": "2026-10-06T05:22:03+09:00",
+  "attrs": {
+   "opponents": [
+    {
+     "lane": "IDD-085"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_order_released",
+  "at": "2026-10-06T05:26:12+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_base_conflict",
+  "at": "2026-10-06T05:26:19+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_base_instructed",
+  "at": "2026-10-06T05:26:19+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_result",
+  "at": "2026-10-06T05:44:04+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_base_merged",
+  "at": "2026-10-06T05:44:35+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_started",
+  "at": "2026-10-06T05:44:36+09:00",
+  "attrs": {
+   "kind": "blind",
+   "round": 1,
+   "risk": "High",
+   "max_fix_rounds": 2,
+   "close_on": "must"
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_findings",
+  "at": "2026-10-06T05:57:59+09:00",
+  "attrs": {
+   "kind": "blind",
+   "round": 1,
+   "failed_runs": 0
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_triage_started",
+  "at": "2026-10-06T05:58:05+09:00",
+  "attrs": {
+   "kind": "blind",
+   "round": 1
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_triage_done",
+  "at": "2026-10-06T05:59:18+09:00",
+  "attrs": {
+   "kind": "blind",
+   "round": 1,
+   "accepted": [
+    {
+     "ref": "F-1",
+     "severity": "must",
+     "action": "fix",
+     "claim": "c4"
+    },
+    {
+     "ref": "F-2",
+     "severity": "should",
+     "action": "fix",
+     "claim": "c5"
+    },
+    {
+     "ref": "F-3",
+     "severity": "should",
+     "action": "fix",
+     "claim": "c6"
+    },
+    {
+     "ref": "F-4",
+     "severity": "should",
+     "action": "fix",
+     "claim": "c7"
+    },
+    {
+     "ref": "F-5",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c8"
+    },
+    {
+     "ref": "F-6",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c9"
+    },
+    {
+     "ref": "F-7",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c10"
+    },
+    {
+     "ref": "F-8",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c11"
+    },
+    {
+     "ref": "F-9",
+     "severity": "nit",
+     "action": "followup",
+     "claim": "c12"
+    },
+    {
+     "ref": "F-10",
+     "severity": "nit",
+     "action": "followup",
+     "claim": "c13"
+    },
+    {
+     "ref": "F-11",
+     "severity": "nit",
+     "action": "followup",
+     "claim": "c14"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_fix_sent",
+  "at": "2026-10-06T05:59:21+09:00",
+  "attrs": {
+   "round": 1
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_result",
+  "at": "2026-10-06T06:13:43+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_confirm_started",
+  "at": "2026-10-06T06:14:08+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_confirm_done",
+  "at": "2026-10-06T06:14:59+09:00",
+  "attrs": {
+   "new_blocking": 0,
+   "unresolved_must": 0,
+   "unresolved_should": 0
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_started",
+  "at": "2026-10-06T06:15:02+09:00",
+  "attrs": {
+   "kind": "final",
+   "round": 2,
+   "risk": "High"
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_findings",
+  "at": "2026-10-06T06:33:59+09:00",
+  "attrs": {
+   "kind": "final",
+   "round": 2,
+   "failed_runs": 0
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_triage_started",
+  "at": "2026-10-06T06:34:05+09:00",
+  "attrs": {
+   "kind": "final",
+   "round": 2
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_triage_done",
+  "at": "2026-10-06T06:35:16+09:00",
+  "attrs": {
+   "kind": "final",
+   "round": 2,
+   "accepted": [
+    {
+     "ref": "F-1",
+     "severity": "must",
+     "action": "fix",
+     "claim": "c15"
+    },
+    {
+     "ref": "F-2",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c16"
+    },
+    {
+     "ref": "F-3",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c17"
+    },
+    {
+     "ref": "F-4",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c18"
+    },
+    {
+     "ref": "F-5",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c19"
+    },
+    {
+     "ref": "F-6",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c20"
+    },
+    {
+     "ref": "F-7",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c21"
+    },
+    {
+     "ref": "F-8",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c22"
+    },
+    {
+     "ref": "F-9",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c23"
+    },
+    {
+     "ref": "F-10",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c24"
+    },
+    {
+     "ref": "F-11",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c25"
+    },
+    {
+     "ref": "F-12",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c26"
+    },
+    {
+     "ref": "F-13",
+     "severity": "nit",
+     "action": "followup",
+     "claim": "c27"
+    },
+    {
+     "ref": "F-14",
+     "severity": "nit",
+     "action": "followup",
+     "claim": "c28"
+    },
+    {
+     "ref": "F-15",
+     "severity": "nit",
+     "action": "followup",
+     "claim": "c29"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_fix_sent",
+  "at": "2026-10-06T06:35:19+09:00",
+  "attrs": {
+   "round": 2
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_result",
+  "at": "2026-10-06T06:50:45+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_confirm_started",
+  "at": "2026-10-06T06:51:05+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_confirm_done",
+  "at": "2026-10-06T06:51:59+09:00",
+  "attrs": {
+   "new_blocking": 0,
+   "unresolved_must": 0,
+   "unresolved_should": 0
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_started",
+  "at": "2026-10-06T06:52:03+09:00",
+  "attrs": {
+   "kind": "final",
+   "round": 3,
+   "risk": "High"
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_findings",
+  "at": "2026-10-06T07:13:10+09:00",
+  "attrs": {
+   "kind": "final",
+   "round": 3,
+   "failed_runs": 0
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_triage_started",
+  "at": "2026-10-06T07:13:13+09:00",
+  "attrs": {
+   "kind": "final",
+   "round": 3
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_triage_done",
+  "at": "2026-10-06T07:14:01+09:00",
+  "attrs": {
+   "kind": "final",
+   "round": 3,
+   "accepted": [
+    {
+     "ref": "F-1",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c30"
+    },
+    {
+     "ref": "F-2",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c31"
+    },
+    {
+     "ref": "F-3",
+     "severity": "nit",
+     "action": "skip",
+     "claim": "c32"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_converged",
+  "at": "2026-10-06T07:14:04+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_device_skipped",
+  "at": "2026-10-06T07:14:07+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_check_in_progress",
+  "at": "2026-10-06T07:14:08+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_ready",
+  "at": "2026-10-06T07:14:08+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_check_clean",
+  "at": "2026-10-06T07:14:08+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_plan_archived",
+  "at": "2026-10-06T07:14:08+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_r2_started",
+  "at": "2026-10-06T07:14:08+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_r2_done",
+  "at": "2026-10-06T07:16:01+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_r2_recorded",
+  "at": "2026-10-06T07:16:06+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_followups_not_written",
+  "at": "2026-10-06T07:16:16+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_ok",
+  "at": "2026-10-06T07:16:16+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_submit_started",
+  "at": "2026-10-06T07:16:16+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_verify_started",
+  "at": "2026-10-06T07:16:16+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_verify_user_judgment_answered",
+  "at": "2026-10-06T07:37:58+09:00",
+  "attrs": {
+   "outcome": "revise"
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_result",
+  "at": "2026-10-06T08:18:30+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_started",
+  "at": "2026-10-06T08:22:13+09:00",
+  "attrs": {
+   "kind": "blind",
+   "round": 3,
+   "risk": "High",
+   "max_fix_rounds": 2,
+   "close_on": "must"
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_findings",
+  "at": "2026-10-06T08:40:27+09:00",
+  "attrs": {
+   "kind": "blind",
+   "round": 3,
+   "failed_runs": 0
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_run_failed",
+  "at": "2026-10-06T08:40:30+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_run_failed",
+  "at": "2026-10-06T08:46:25+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_run_failed",
+  "at": "2026-10-06T08:52:25+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_escalated",
+  "at": "2026-10-06T08:52:25+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_resumed",
+  "at": "2026-10-06T12:16:32+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_triage_started",
+  "at": "2026-10-06T12:16:35+09:00",
+  "attrs": {
+   "kind": "blind",
+   "round": 3
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_triage_done",
+  "at": "2026-10-06T12:17:17+09:00",
+  "attrs": {
+   "kind": "blind",
+   "round": 3,
+   "accepted": [
+    {
+     "ref": "F-1",
+     "severity": "must",
+     "action": "fix",
+     "claim": "c33"
+    },
+    {
+     "ref": "F-2",
+     "severity": "should",
+     "action": "fix",
+     "claim": "c34"
+    },
+    {
+     "ref": "F-3",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c35"
+    },
+    {
+     "ref": "F-4",
+     "severity": "should",
+     "action": "fix",
+     "claim": "c36"
+    },
+    {
+     "ref": "F-5",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c37"
+    },
+    {
+     "ref": "F-6",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c38"
+    },
+    {
+     "ref": "F-7",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c39"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_fix_sent",
+  "at": "2026-10-06T12:17:20+09:00",
+  "attrs": {
+   "round": 3
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_result",
+  "at": "2026-10-06T12:34:12+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_confirm_started",
+  "at": "2026-10-06T12:34:43+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_confirm_done",
+  "at": "2026-10-06T12:35:36+09:00",
+  "attrs": {
+   "new_blocking": 0,
+   "unresolved_must": 0,
+   "unresolved_should": 0
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_started",
+  "at": "2026-10-06T12:42:22+09:00",
+  "attrs": {
+   "kind": "final",
+   "round": 4,
+   "risk": "High"
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_findings",
+  "at": "2026-10-06T13:03:38+09:00",
+  "attrs": {
+   "kind": "final",
+   "round": 4,
+   "failed_runs": 0
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_triage_started",
+  "at": "2026-10-06T13:03:41+09:00",
+  "attrs": {
+   "kind": "final",
+   "round": 4
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_triage_done",
+  "at": "2026-10-06T13:04:26+09:00",
+  "attrs": {
+   "kind": "final",
+   "round": 4,
+   "accepted": [
+    {
+     "ref": "F-1",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c40"
+    },
+    {
+     "ref": "F-2",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c41"
+    },
+    {
+     "ref": "F-3",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c42"
+    },
+    {
+     "ref": "F-4",
+     "severity": "should",
+     "action": "followup",
+     "claim": "c43"
+    },
+    {
+     "ref": "F-5",
+     "severity": "nit",
+     "action": "followup",
+     "claim": "c44"
+    },
+    {
+     "ref": "F-6",
+     "severity": "nit",
+     "action": "followup",
+     "claim": "c45"
+    },
+    {
+     "ref": "F-7",
+     "severity": "nit",
+     "action": "followup",
+     "claim": "c46"
+    },
+    {
+     "ref": "F-8",
+     "severity": "nit",
+     "action": "skip",
+     "claim": "c47"
+    },
+    {
+     "ref": "F-9",
+     "severity": "nit",
+     "action": "followup",
+     "claim": "c48"
+    },
+    {
+     "ref": "F-10",
+     "severity": "nit",
+     "action": "followup",
+     "claim": "c49"
+    }
+   ]
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_converged",
+  "at": "2026-10-06T13:04:29+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_device_skipped",
+  "at": "2026-10-06T13:04:32+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_check_in_progress",
+  "at": "2026-10-06T13:04:32+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_ready",
+  "at": "2026-10-06T13:04:32+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_check_conflict",
+  "at": "2026-10-06T13:04:32+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_r2_started",
+  "at": "2026-10-06T13:04:33+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_r2_done",
+  "at": "2026-10-06T13:06:19+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_r2_recorded",
+  "at": "2026-10-06T13:06:24+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_followups_not_written",
+  "at": "2026-10-06T13:06:33+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_ok",
+  "at": "2026-10-06T13:06:33+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_submit_started",
+  "at": "2026-10-06T13:06:33+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_verify_started",
+  "at": "2026-10-06T13:06:33+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_verify_user_judgment_answered",
+  "at": "2026-10-06T13:06:36+09:00",
+  "attrs": {
+   "outcome": "revise"
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_land_conflict",
+  "at": "2026-10-06T13:06:36+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_result",
+  "at": "2026-10-06T13:22:39+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_started",
+  "at": "2026-10-06T13:23:12+09:00",
+  "attrs": {
+   "kind": "blind",
+   "round": 5,
+   "risk": "High",
+   "max_fix_rounds": 2,
+   "close_on": "must"
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_findings",
+  "at": "2026-10-06T13:32:04+09:00",
+  "attrs": {
+   "kind": "blind",
+   "round": 5,
+   "failed_runs": 0
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_triage_started",
+  "at": "2026-10-06T13:32:07+09:00",
+  "attrs": {
+   "kind": "blind",
+   "round": 5
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_triage_done",
+  "at": "2026-10-06T13:32:16+09:00",
+  "attrs": {
+   "kind": "blind",
+   "round": 5,
+   "accepted": []
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_review_converged",
+  "at": "2026-10-06T13:32:19+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s2_device_skipped",
+  "at": "2026-10-06T13:32:22+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_check_in_progress",
+  "at": "2026-10-06T13:32:22+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_ready",
+  "at": "2026-10-06T13:32:22+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_check_clean",
+  "at": "2026-10-06T13:32:22+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_r2_started",
+  "at": "2026-10-06T13:32:23+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_r2_done",
+  "at": "2026-10-06T13:34:04+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_r2_not_recorded",
+  "at": "2026-10-06T13:34:04+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_followups_not_written",
+  "at": "2026-10-06T13:34:15+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s3_ok",
+  "at": "2026-10-06T13:34:15+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_submit_started",
+  "at": "2026-10-06T13:34:15+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_verify_started",
+  "at": "2026-10-06T13:34:15+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_land_approved",
+  "at": "2026-10-06T14:33:28+09:00",
+  "attrs": {
+   "head": "1ec23b0a8f894768696ce53e24b51ca64f4b423d",
+   "signed": true
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_land_hold",
+  "at": "2026-10-06T14:33:28+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_land_merged",
+  "at": "2026-10-06T14:38:52+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "lane_close",
+  "at": "2026-10-06T14:38:52+09:00",
+  "attrs": {
+   "outcome": "local"
+  }
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "s4_land_issue_close_posted",
+  "at": "2026-10-06T14:38:54+09:00",
+  "attrs": {}
+ },
+ {
+  "idd_id": "IDD-092",
+  "event": "lane_worktree_retired",
+  "at": "2026-10-06T14:46:11+09:00",
+  "attrs": {}
+ }
+]

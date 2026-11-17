@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# 拡張 IDD CLI の入口。bun で packages/idd-cli/bin/idd.ts を実行する。
+set -euo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root="$(cd "$here/.." && pwd)"
+# gateway の鍵（AI_GATEWAY_API_KEY など）は penne が置くファイルから読む。環境に既にある値は上書きしない。
+# 値の順は、渡された環境 → install の記録 → この file → 既定（state と pi の指し先は bin/pointers.sh が決める）。
+. "$here/pointers.sh"
+. "$here/gateway-env.sh"
+apply_install_pointers "$root"
+load_gateway_env "${IDD_GATEWAY_ENV:-$HOME/.config/idd/gateway.env}"
+# どこから呼ばれても（チャット / アイデアのモードの cwd など）、この pi-web の state を使う
+# 設定（repos.yaml・roles.yaml・modes.yaml）は checkout の config/ を先に、無ければ ~/.config/idd を読む
+# （解決は @idd/core の configPath に 1 つだけ置く。ここで決め打ちすると、その 1 つの順序から外れる）。
+apply_default_pointers "$root"
+# tick などの送り先は常駐している IDD engine（30144）。IDD_ENGINE_PORT を替えたら宛先も同じ port を指す。
+# 受信箱の URL は engine の /gui で、CLI が IDD_ENGINE_PORT から導く（inboxBaseUrl。ここには置かない）
+engine_port="${IDD_ENGINE_PORT:-30144}"
+export IDD_AGENT_BASE_URL="${IDD_AGENT_BASE_URL:-http://127.0.0.1:$engine_port}"
+exec bun run "$here/../packages/idd-cli/bin/idd.ts" "$@"

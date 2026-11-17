@@ -1,0 +1,638 @@
+# 即席レーンと Issue lane の role プリセットの例。model は models 節の定義の名前（呼び先そのものは models 節にある）。
+# 窓口の指定（OpenRouter の host の順序）も model の定義に書く。設定に書いた呼び先がそのまま呼ばれる呼び先である。
+# tools は書かない。書かない role は pi の built-in 7 つ（read, bash, edit, write, grep, find, ls）をすべて持つ（Claude Code の role には同じ 7 つを Claude の道具名に写して渡し、サブエージェントと Claude だけの道具は渡さない）。
+#   絞りたい role だけ一覧を書く（未知の名前は読み込みで断る）。読むだけの役に書き込みの道具を渡さなくしても守りにならない（bash で書ける）ので、絞りは守りとして使わない
+# require_clean は、終了時の worktree の状態（HEAD・追跡ファイルの中身・未追跡ファイルの一覧と中身）が開始時と同じであることを事後に確かめる。開始時に未 commit の変更があってもよい。
+#   worktree を変えてはいけない role は true、実装・計画・会話・1 発生成のように自分から書く role は false を書く（省くと true）
+# fallback は、この role の経路が使えないときに代わりに起こす role の名前を 1 つか列で書く。harness の向きは問わない
+#   fallback: [reviewer-claude, reviewer-api]   # 定義済みで、同じ report を書き、元の tools をすべて持ち、model のある role
+# 代わりの role 自身の fallback はたどらない。Claude の枠で断られた候補は列の次へ進み、通る候補が無ければ枠を待つ
+# fallback_on は途中の失敗で次の候補へ進む種類（quota | provider | timeout）。省くと 3 つ全部、[] で進まない
+#   fallback_on: [quota, provider]   # 時間切れでは別の role に替えない
+# 代わりで走った run の費用は API なので lane の予算に数える。Claude の費用は予算に数えない
+
+defaults:
+  thinking: medium
+  budget_minutes: 40
+  max_resumes: 1
+  title_context_turns: 3
+  lane_budget_usd: 5
+  claude_quota_stop:
+    five_hour: 0.9
+    seven_day: 0.95
+  # 会話（mode の session）の Claude Code の設定置き場。lane の置き場（claude_config_dir）とも penne 個人の置き場（~/.claude）とも別にする。
+  # 会話は記憶を持たせない lane と違い、置き場を分けないと記憶と設定が混ざる。IDD_CLAUDE_CHAT_CONFIG_DIR で上書きできる。
+  claude_chat_config_dir: ~/.config/idd/claude-chat
+  lane_cpu:
+    slice: idd_lanes.slice
+    cpu_quota: 1000%
+    cpu_weight: 20
+  tool_timeout_minutes: 15
+  # Claude Code の prompt cache の保持（1h = 1 時間、5m = 5 分）。会話の run は 1h、それ以外は 5m が既定。
+  # role の cache_ttl が config/repos.yaml の repo の cache_ttl と既定に勝つ。harness: claude の role だけに書ける
+  shared_daemons:
+    - \badb\b.*\bfork-server\b
+    - org\.gradle\.launcher\.daemon\.bootstrap\.GradleDaemon
+    - org\.jetbrains\.kotlin\.daemon\.KotlinCompileDaemon
+    - (^|/)qemu-system-
+    - (^|/)emulator\s(.*\s)?(-avd\b|@\S)
+    - \bwaydroid\s+session\b
+# model の定義。呼び先（pi に渡すものそのもの）と、その model の窓口（OpenRouter の host の指定）をここに書く。
+# 設定に書いた呼び先がそのまま呼ばれる呼び先である（全体の窓口による読み替えはしない）。
+# 名前: 下の roles と pipeline の段が名指しする。同じ呼び先でも窓口が違えば定義を分ける。
+# provider はモデルプロバイダ側のルーティング指定。OpenRouter の `provider` フィールドにそのまま渡す
+#   provider: { order: [deepseek, novita], allow_fallbacks: false }   # only / ignore も可
+# providers は同じ model を複数の provider で順に試す列（provider との併記は読み込みで断る）
+#   providers: [together, novita/fp8, deepinfra/fp8]   # 1 回の試行は列の 1 つに固定され、外へは回さない
+# fallback は、主の model の資格（価格・枠・provider）が無いときに代わりに使う model 定義の名前。
+#   fallback: commandcode-glm-5.3-flash   # 主が価格を持たないときや、枠が尽きたとき
+# 替わりで走った run の記録には、どちらの model で走ったかが残る。
+models:
+  deepseek-v4.1-flash:
+    model: openrouter/deepseek/deepseek-v4.1-flash
+    provider:
+      order:
+        - fireworks
+        - deepseek
+        - deepinfra/fp8
+      allow_fallbacks: false
+  gemini-3.8-flash:
+    model: openrouter/google/gemini-3.8-flash
+    provider:
+      order:
+        - google-ai-studio
+        - google-vertex/global
+      allow_fallbacks: false
+  gemini-3.8-flash-flex:
+    model: openrouter/google/gemini-3.8-flash
+    provider:
+      order:
+        - google-ai-studio/flex
+        - google-vertex/global
+      allow_fallbacks: false
+  glm-5.3:
+    model: openrouter/z-ai/glm-5.3
+    provider:
+      order:
+        - novita/fp8
+        - phala
+        - modal
+      allow_fallbacks: false
+  glm-5.3-chat:
+    model: openrouter/z-ai/glm-5.3
+    provider:
+      only:
+        - z-ai/fp8
+  glm-5.3-rewriter:
+    model: openrouter/z-ai/glm-5.3
+    provider:
+      order:
+        - novita/fp8
+        - modal
+      allow_fallbacks: false
+  glm-5.3-flash:
+    model: openrouter/z-ai/glm-5.3-flash
+    provider:
+      order:
+        - relace
+        - z-ai/fp8
+      allow_fallbacks: false
+  hy4-preview:
+    model: openrouter/tencent/hy4-preview
+  kimi-k3:
+    model: openrouter/moonshotai/kimi-k3
+    provider:
+      order:
+        - moonshotai
+      allow_fallbacks: false
+  mercury-2.5:
+    model: openrouter/inception/mercury-2.5
+    provider:
+      order:
+        - inception
+      allow_fallbacks: false
+  mimo-v2.6-pro:
+    model: openrouter/xiaomi/mimo-v2.6-pro
+
+roles:
+  blind-reviewer-01:
+    model: glm-5.3-flash
+    thinking: high
+    report: review
+    require_clean: true
+    budget_minutes: 45
+    policy:
+      - 差分を読むだけで終えず、疑った点は実際にコマンドを打って確かめる（旧実装へ戻す、変異を入れる、寸法を実測する）。
+      - 指摘は「本質 1 文 + 根拠」に絞る。提案は 1 行。褒め言葉と前置きは書かない。
+  blind-reviewer-02:
+    model: deepseek-v4.1-flash
+    thinking: high
+    report: review
+    require_clean: true
+    budget_minutes: 45
+    policy:
+      - 差分を読むだけで終えず、疑った点は実際にコマンドを打って確かめる（旧実装へ戻す、変異を入れる、寸法を実測する）。
+      - 指摘は「本質 1 文 + 根拠」に絞る。提案は 1 行。褒め言葉と前置きは書かない。
+  plan-reviewer:
+    model: deepseek-v4.1-flash
+    thinking: high
+    report: review
+    require_clean: true
+    budget_minutes: 30
+    policy:
+      - コードも文書も変更しない。読んで確かめるだけ。
+      - 指摘は「本質 1 文 + 根拠」に絞る。提案は 1 行。褒め言葉と前置きは書かない。
+  blind-reviewer-03:
+    model: hy4-preview
+    thinking: high
+    report: review
+    require_clean: true
+    budget_minutes: 45
+    policy:
+      - 差分を読むだけで終えず、疑った点は実際にコマンドを打って確かめる（旧実装へ戻す、変異を入れる、寸法を実測する）。
+      - 指摘は「本質 1 文 + 根拠」に絞る。提案は 1 行。褒め言葉と前置きは書かない。
+  blind-reviewer-deep:
+    model: glm-5.3
+    thinking: high
+    report: review
+    require_clean: true
+    budget_minutes: 45
+    policy:
+      - 差分を読むだけで終えず、疑った点は実際にコマンドを打って確かめる（旧実装へ戻す、変異を入れる、寸法を実測する）。
+      - 指摘は「本質 1 文 + 根拠」に絞る。提案は 1 行。褒め言葉と前置きは書かない。
+  triage:
+    model: glm-5.3-flash
+    thinking: high
+    report: triage
+    require_clean: true
+    budget_minutes: 30
+    policy:
+      - コードも文書も変更しない。読んで確かめるだけ。
+      - 棄却するときは、確かめた事実を理由に書く。頻度の見立て（常時・条件つき・まれ、とその条件）も、確かめた事実から書く。
+  risk-mapper:
+    model: deepseek-v4.1-flash
+    thinking: high
+    report: map
+    require_clean: true
+    budget_minutes: 20
+    policy:
+      - コマンドは git diff / git show / git log / grep などの読み取りだけにする。テスト・ビルド・書き換えをしない。
+      - 場所の理由は、どの状態・失敗・操作のときに何が起きうるかで書く。問題だと断定しない。
+  # 仕様の照合（pipeline.spec_check）。差分を計画・受け入れ条件・Choice・Purpose に照らし、満たしていない所と壊した所を探す。
+  # confirm（修正の解消の確かめ、report: confirm）とは別の役で、指摘は blind と同じ review 形式で書く。
+  spec-reviewer:
+    model: deepseek-v4.1-flash
+    thinking: high
+    report: review
+    require_clean: true
+    budget_minutes: 45
+    policy:
+      - 差分から指摘を探すのでなく、計画・受け入れ条件・Choice の側から、差分に現れているかを確かめる。疑った点は実際にコマンドを打って確かめる。
+      - 指摘は「本質 1 文 + 根拠」に絞る。提案は 1 行。褒め言葉と前置きは書かない。
+
+  # 形の判断（pipeline.shape_judge）。深さ deep の計画の査読で査読役と並んで 1 本走り、収束しない巡の症状が出た lane と巡が止まった lane の card にも 1 本走る（同じ役、C-252-1）。
+  # 計画の形（同じ事実を決める場所の数、計画の触る範囲）を現物のコードで確かめる。model は書き手（executor、deepseek 系）と別の系統（kimi）にする（C-252-6）。
+  # 走れなかった card は推奨なしの今までの答えで動く。
+  shape-judge:
+    model: kimi-k3
+    thinking: high
+    report: shape
+    require_clean: true
+    budget_minutes: 30
+    policy:
+      - 計画の形を、同じ事実を決める場所の数と、計画の触る範囲に収まるかで見る。疑った点は現物のコードで確かめる。文面の良し悪しは見ない。
+      - 推奨の根拠は rounds.md にある巡の番号・file・数だけを名指す。rounds.md に無い値を根拠にしない。推奨は人の答えを置き換えない。
+
+  confirm-reviewer:
+    model: glm-5.3-flash
+    thinking: high
+    report: confirm
+    require_clean: true
+    budget_minutes: 30
+    policy:
+      - 作者の主張はコードで裏取りしてから「解消」と判定する。数字（件数・行番号）は自分で数え直す。
+  # 修正の巡の直前だけに走る整理役（pipeline.fix_plan）。実装役の新しい session を起こす前に、指示・差分・lane の契約・前の巡の直しを読み、
+  # 直し方を 1 段落に整理する。model は executor と同じにする。分けるのは run の記録で評価してから。
+  fix-planner:
+    model: deepseek-v4.1-flash
+    thinking: high
+    report: fix_plan
+    require_clean: true
+    budget_minutes: 15
+    policy:
+      - コードも文書も変更しない。読んで整理するだけ。
+      - 人が書いた文（instruction・user-note）は言い換えず、前提として扱う。
+  executor:
+    model: deepseek-v4.1-flash
+    thinking: high
+    report: exec
+    require_clean: false
+    budget_minutes: 90
+    policy:
+      - 変更は最小に留め、責務外のリファクタをしない。
+      - テストを先に書き、赤を確認してから実装する（バグ修正の場合）。
+      - 作業の区切りで commit する（メッセージは repo の規約に従う）。push はしない。
+  planner:
+    model: glm-5.3
+    thinking: high
+    report: free
+    require_clean: false
+    budget_minutes: 60
+    policy:
+      - 実装はしない。成果物の文書以外のコードを変更しない。
+      - 既存コードの事実は現物で確かめてから書く。推測は「推測」と明示する。
+  planner-flash:
+    model: glm-5.3-flash
+    thinking: high
+    report: free
+    require_clean: false
+    budget_minutes: 60
+    policy:
+      - 実装はしない。成果物の文書以外のコードを変更しない。
+      - 既存コードの事実は現物で確かめてから書く。推測は「推測」と明示する。
+  planner-deep:
+    model: glm-5.3
+    thinking: max
+    report: free
+    require_clean: false
+    budget_minutes: 60
+    policy:
+      - 実装はしない。成果物の文書以外のコードを変更しない。
+      - 既存コードの事実は現物で確かめてから書く。推測は「推測」と明示する。
+  # 会話の既定（config/modes.yaml の chat モード）。harness: claude はサブスクのログインだけで動き、API では課金しない。
+  # 送る前だけ Model の一覧で pi の role（chat）に替えられる。role の thinking は --effort に写す。
+  chat-claude:
+    harness: claude
+    fallback: chat
+    model: opus
+    thinking: high
+    report: free
+    require_clean: false
+    context_files: true
+    budget_minutes: 480
+  chat:
+    model: glm-5.3-chat
+    thinking: high
+    report: free
+    require_clean: false
+    context_files: true
+    budget_minutes: 480
+  chat-k3:
+    model: kimi-k3
+    thinking: high
+    report: free
+    require_clean: false
+    context_files: true
+    budget_minutes: 480
+  chat-glmflash:
+    model: glm-5.3-flash
+    thinking: high
+    report: free
+    require_clean: false
+    context_files: true
+    budget_minutes: 480
+  chat-v41:
+    model: deepseek-v4.1-flash
+    thinking: high
+    report: free
+    require_clean: false
+    context_files: true
+    budget_minutes: 480
+  chat-mimo:
+    model: mimo-v2.6-pro
+    thinking: high
+    report: free
+    require_clean: false
+    context_files: true
+    budget_minutes: 480
+  chat-inception:
+    model: mercury-2.5
+    thinking: high
+    report: free
+    require_clean: false
+    context_files: true
+    budget_minutes: 480
+  prober:
+    model: glm-5.3-flash
+    thinking: low
+    report: probe
+    require_clean: true
+    budget_minutes: 20
+  scanner:
+    model: glm-5.3-flash
+    thinking: high
+    report: scan
+    require_clean: true
+    budget_minutes: 15
+    policy:
+      - 事実（誰が・いつ・何を）と、判断が要る点だけを書く。推測は「推測」と明示する。
+  rewriter:
+    model: glm-5.3-rewriter
+    thinking: low
+    report: free
+    require_clean: false
+    budget_minutes: 3
+  land-resolver:
+    model: glm-5.3-flash
+    thinking: high
+    report: free
+    budget_minutes: 10
+  titler:
+    model: glm-5.3-flash
+    thinking: low
+    report: free
+    require_clean: false
+    budget_minutes: 2
+  # 受信箱の card の文を書く 1 発生成。card が初めて出たときに 1 度だけ走り、渡された材料の外は読まない。
+  # この役が無い設定でも card は生の欄で出るが、訳した文は得られない。
+  card-writer:
+    model: glm-5.3-flash
+    thinking: low
+    report: free
+    require_clean: true
+    budget_minutes: 2
+  # 計画役の質問の batch を、材料（Choice・Issue の本文・`_docs/standards/` の規範）と突き合わせて振り分ける 1 回きりの判定役（pipeline.question_routing）。
+  # planner・plan-reviewer と同じ v4.1 flash の high。道具は読むだけ（read・grep・find・ls を起動の引数で絞る）で、budget_minutes が時間の上限。
+  # 答えるのは、引用を engine が材料の 1 つの欄と突き合わせて確かめたものだけ。署名と取り返しのつかない判断は常に人に回る
+  question-router:
+    model: deepseek-v4.1-flash
+    thinking: high
+    report: free
+    require_clean: true
+    budget_minutes: 5
+  device-checker:
+    model: gemini-3.8-flash
+    thinking: high
+    report: review
+    require_clean: true
+    budget_minutes: 60
+    policy:
+      - 端末は指定された serial のみ。他の端末・エミュレータに触れない。
+      - タップは 1 回ずつ。screenshot で結果を確認してから次の操作に進む。
+      - '画面・操作に関わらない変更なら、report の JSON に "skipped": "<理由>" を足して終える。'
+  device-operator:
+    model: gemini-3.8-flash-flex
+    thinking: max
+    report: free
+    require_clean: true
+    budget_minutes: 60
+    policy:
+      - 端末は指定された serial のみ。他の端末・エミュレータに触れない。
+      - タップは 1 回ずつ。screenshot で結果を確認してから次の操作に進む。
+      - 開始時に OS テーマ・文字倍率・ロケール・機内モードを記録し、終了時に必ず戻す。
+  escalation:
+    harness: claude
+    model: opus
+    thinking: xhigh
+    report: review
+    require_clean: true
+    budget_minutes: 60
+    policy:
+      - 差分を読むだけで終えず、疑った点は実際にコマンドを打って確かめる（旧実装へ戻す、変異を入れる、寸法を実測する）。
+      - 指摘は「本質 1 文 + 根拠」に絞る。提案は 1 行。褒め言葉と前置きは書かない。
+  planner-claude-opus:
+    harness: claude
+    fallback: planner
+    model: opus
+    thinking: high
+    report: free
+    require_clean: false
+    budget_minutes: 60
+    policy:
+      - 実装はしない。成果物の文書以外のコードを変更しない。
+      - 既存コードの事実は現物で確かめてから書く。推測は「推測」と明示する。
+  executor-claude-opus:
+    harness: claude
+    fallback: executor
+    model: opus
+    thinking: high
+    report: exec
+    require_clean: false
+    budget_minutes: 90
+    policy:
+      - 変更は最小に留め、責務外のリファクタをしない。
+      - テストを先に書き、赤を確認してから実装する（バグ修正の場合）。
+      - 作業の区切りで commit する（メッセージは repo の規約に従う）。push はしない。
+  plan-reviewer-claude-opus:
+    harness: claude
+    fallback: plan-reviewer
+    model: opus
+    thinking: medium
+    report: review
+    require_clean: true
+    budget_minutes: 30
+    policy:
+      - コードも文書も変更しない。読んで確かめるだけ。
+      - 指摘は「本質 1 文 + 根拠」に絞る。提案は 1 行。褒め言葉と前置きは書かない。
+  blind-reviewer-claude-opus:
+    harness: claude
+    fallback: blind-reviewer-deep
+    model: opus
+    thinking: high
+    report: review
+    require_clean: true
+    budget_minutes: 45
+    policy:
+      - 差分を読むだけで終えず、疑った点は実際にコマンドを打って確かめる（旧実装へ戻す、変異を入れる、寸法を実測する）。
+      - 指摘は「本質 1 文 + 根拠」に絞る。提案は 1 行。褒め言葉と前置きは書かない。
+  triage-claude-opus:
+    harness: claude
+    fallback: triage
+    model: opus
+    thinking: high
+    report: triage
+    require_clean: true
+    budget_minutes: 30
+    policy:
+      - コードも文書も変更しない。読んで確かめるだけ。
+      - 棄却するときは、確かめた事実を理由に書く。頻度の見立て（常時・条件つき・まれ、とその条件）も、確かめた事実から書く。
+  triage-claude-sonnet:
+    harness: claude
+    fallback: triage
+    model: sonnet
+    thinking: high
+    report: triage
+    require_clean: true
+    budget_minutes: 30
+    policy:
+      - コードも文書も変更しない。読んで確かめるだけ。
+      - 棄却するときは、確かめた事実を理由に書く。頻度の見立て（常時・条件つき・まれ、とその条件）も、確かめた事実から書く。
+  confirm-reviewer-claude-opus:
+    harness: claude
+    model: opus
+    thinking: medium
+    report: confirm
+    require_clean: true
+    budget_minutes: 30
+    policy:
+      - 作者の主張はコードで裏取りしてから「解消」と判定する。数字（件数・行番号）は自分で数え直す。
+  confirm-reviewer-claude-sonnet:
+    harness: claude
+    fallback: confirm-reviewer
+    model: sonnet
+    thinking: medium
+    report: confirm
+    require_clean: true
+    budget_minutes: 30
+    policy:
+      - 作者の主張はコードで裏取りしてから「解消」と判定する。数字（件数・行番号）は自分で数え直す。
+  device-checker-claude-opus:
+    harness: claude
+    fallback: device-checker
+    model: opus
+    thinking: high
+    report: review
+    require_clean: true
+    budget_minutes: 60
+    policy:
+      - 端末は指定された serial のみ。他の端末・エミュレータに触れない。
+      - タップは 1 回ずつ。screenshot で結果を確認してから次の操作に進む。
+      - '画面・操作に関わらない変更なら、report の JSON に "skipped": "<理由>" を足して終える。'
+profiles:
+  est1:
+    blind:
+      - blind-reviewer-01
+    note: 1 ファイル級。blind 1 本で足りる。confirm は fix が入ったときだけ手で足す
+  est2:
+    blind:
+      - blind-reviewer-01
+      - blind-reviewer-02
+    confirm: confirm-reviewer
+    plan_review: blind-reviewer-02
+    note: >-
+      通常。planner（glm-5.3 high）の plan を v4.1-flash に先にレビューさせて追信で直し（$0.05 / 5 分で購読退行の欠落を must で拾った 2026-09-22）、blind 2 本を
+      idd report merge で畳み、fix 後に confirm
+  est3:
+    blind:
+      - blind-reviewer-01
+      - blind-reviewer-02
+      - blind-reviewer-03
+    confirm: confirm-reviewer
+    plan_review: blind-reviewer-02
+    escalation: escalation
+    note: shared / auth / 設計判断が絡む。blind 3 本（flash 2 + hy4-preview）+ confirm の後に Opus を 1 回
+pipeline:
+  # 深さの表（DEC-113-2）。深さは計画の完了の報告で決まり、段の数はこの表 1 つから引く。role の一覧はこの設定から読み、
+  # 表の本数だけ先頭から使う。申告が機械の読める下限より浅い報告は engine が断る。
+  #   深さ      計画の査読  毎巡のレビュー  仕様の照合  上位の役の最後のレビュー        修正の予算  GO
+  #   shallow   1           1               1           有り（high_risk_extra の 1 本）  1           自動
+  #   standard  2           2               1           有り（high_risk_extra の 1 本）  2           人
+  #   deep      2           2               1           有り（high_risk_extra の 1 本）  3           人
+  # 深さを持つ lane では review_blind.first_round_extra・review_final.when・review_loop.max_fix_rounds は読まない
+  # （鍵は読める形のまま残す）。最後のレビューは high_risk_extra の role 1 本だけで回す（2026-10-19 から shallow / standard も）。
+  # 深さの無い lane は review_blind.final_extra（all | high、既定 high = Risk High の lane だけ）で最後のレビューに上位の役を足すかが決まる。
+  # 粒度の段（計画役が分ける・束ねるの案を出し、人が card で決める段）の on/off は pipeline.granularity の 1 キーで決まる。on のときだけ動き、キーを省くか on と読めない値なら止まる。
+  # 止めている間は、計画役の依頼に粒度の規則と報告の口が載らず、届いた案は lane の記録に残るだけで人には出ない。
+  # 戻すには on にする（code は残っているので、この 1 行で今の動きに戻る）。
+  granularity: off
+  planner:
+    role: planner-claude-opus
+    concurrency: 2
+  executor:
+    role: executor
+    models: [deepseek-v4.1-flash]
+    concurrency: 3
+  # 質問の振り分け。キーを省くと判定役は起きず、質問は今までどおり全部人に回る。
+  # 記録で答えが決まる質問は仕組みが答えて、GO の card の「もう決まっていること」に出る
+  question_routing: { role: question-router }
+  # 修正の巡の直前に整理役を挟む slot。model は executor と同じにする。分けるのは run の記録で評価してから。
+  # 宣言を消すと今までどおり、整理役なしで指示が届く。concurrency は全 lane で同時に走る整理役の数の上限。
+  fix_plan:
+    role: fix-planner
+    models: [deepseek-v4.1-flash]
+    concurrency: 2
+  # 1 つの役を 2 つの model で回す（使い分けは段の宣言の models に書く。model を替えるときは models 節の 1 か所だけ直す）
+  plan_review:
+    role: plan-reviewer
+    models: [deepseek-v4.1-flash, glm-5.3-flash]
+    concurrency: 3
+  # 大きい差分の blind の前に挟む地図の段。入口から出口へのファイルの列（経路）ごとの blind と、残りを読む blind 1 本に分ける。
+  # min_lines 行以上のときだけ走り、経路は多くとも max_routes 本（review_blind の複製の上限 - 1 本も上限）。あふれた経路は残りの 1 本が覆う。
+  # 地図は読むだけで、回の最初の blind（差し戻しや PR の指摘で始まる回を含む）の前にだけ走る。最後の blind と conflict scope の巡は使わない。
+  # 宣言を消すと地図は走らない。concurrency は同時に地図を作る lane の数。
+  risk_map:
+    role: risk-mapper
+    models: [deepseek-v4.1-flash]
+    min_lines: 1000
+    max_routes: 8
+    concurrency: 2
+  review_blind:
+    # 本流の merge で衝突を解いた後の巡は、解いた hunk だけを見るので、roles の先頭 1 本だけで回す。
+    # Opus（high_risk_extra）は Risk High の lane のときだけ足す。high_risk_when: last で、最初の blind には足さず、
+    # 最後の blind（final）に毎回足す（修正が 0 件でも、記録とテストだけの修正でも回す）。
+    # 戻すなら high_risk_when: first かキーを消す（回の最初の blind と、その回でまだ足していない final に足す元の動き）。
+    # Risk は qa の risk: / TODO の Risk / 最後の ready の該当表に加えて、巡を始める時点の lane の差分全体を repo の宣言（repos.yaml の risk_paths）に当てて読む。
+    role: blind-reviewer-02
+    models: [deepseek-v4.1-flash]
+    first_round_extra:
+      - blind-reviewer-claude-opus
+    high_risk_extra:
+      - blind-reviewer-claude-opus
+    high_risk_when: last
+    concurrency: 3
+  review_final:
+    when: behaviour
+    scope: increment
+  review_loop:
+    max_fix_rounds: 2
+    # should_default の値: fix（受理した should を直す）/ followup（should を後続に回し、受理した must が 0 件で閉じる）/ triage（should を既定で後続にしつつ、判定が害の基準を示して fix を勧めた should は must と同じく直す）。
+    # triage のときは max_should_fix が 1 回の判定の上限（既定 2）で、超えた巡は penne に境目を聞く。
+    should_default: followup
+    after_merge: conflict
+    # 最初のレビューの前に、先を走る lane の head と読むだけの試し merge をし、ぶつかる lane を待たせる。
+    # order_wait_hours は待ちの上限（0 で判定しない）。order_exclude_files は既定の TODO.md に足すファイル。
+    order_wait_hours: 6
+    order_exclude_files: []
+    # executor_still_seconds は、実装役の結果の報告の後、レビューの段を始める前に、実装役の会話が応答中でなく
+    # head がこの秒数動かないのを待つ長さ（Issue #159。IDD-153 では報告の 4 分後に commit が足された）。
+    # 待ちの間に commit か報告が来たら待ち直す。欄を外すか 0 で待たない（既定）。
+    executor_still_seconds: 90
+    # fix_plan_skip_when_how が true のとき、盲のレビューが書いた直し方を伴う修正の依頼は整理役を通さない
+    # （Issue #211 の試行。直し方と整理役の案は同じ問いに答えるので、同じ巡で両方は走らせない）。
+    # 省くか true でない値にすると、どの修正の依頼も今までどおり整理役を通る。
+    # fix_plan_skip_when_how: true
+  triage:
+    role: triage-claude-sonnet
+    concurrency: 3
+  confirm:
+    role: confirm-reviewer-claude-sonnet
+    concurrency: 3
+  # 仕様の照合。深さを持つ回の毎巡と最後のレビューで、blind と同じ head に深さの表の本数（今はどの深さも 1 本）が走り、
+  # 差分を計画・受け入れ条件・Choice・Purpose に照らして満たしていない所と壊した所を探す。報告は blind の報告と同じ巡の判定に渡る。
+  # 段の数は深さだけで決まるので、この宣言を消しても本数は変わらない。宣言が無いと、深さを持つ回の起動が失敗する。
+  # 複製の枠は review_blind の concurrency の中で数えるので、concurrency は書かない。
+  spec_check:
+    role: spec-reviewer
+    models: [deepseek-v4.1-flash]
+  # 形の判断（C-252-1）。深さ deep の計画の査読で査読役と並んで 1 本、収束しない巡の症状が出た巡と上限・停滞で止まった巡で 1 本走る。
+  # 宣言が無いと、深さ deep の計画の査読の起動が失敗する（spec_check と同じ）。model は実装役（deepseek 系）と別の系統（kimi）にする。
+  shape_judge:
+    role: shape-judge
+    models: [kimi-k3]
+    concurrency: 1
+  # 「手段が無い」の検出（Issue #143）。道具が「その手段が無い」と断った自分の返事を lane の記録から機械で拾い、
+  # 判定に should の指摘として渡す。画像を読めない model の read は code に組み込みで入っているので設定は要らない。
+  # ここには、端末が無い・外の口に届かないなど、道具と model の組み合わせで増える印を足す。印は道具の名前と、
+  # その道具自身の返事の先頭に結び付ける（印の文を含む文書を読んだだけの結果を拾わないため）。
+  # 道具の名前か prefix の無い印は捨てられ、検出全体は止まらない。
+  #   markers:
+  #     - id: no-terminal            # 検出の名前（省略すると marker-<連番>）
+  #       tool: bash                 # この道具の返事だけを拾う（pi の read と Claude の Read は同じ道具として扱う）
+  #       prefix: "bash: "           # 返事の text がこれで始まるものだけを拾う
+  #       note: "command not found"  # 返事がこれも含むときだけ拾う（省略可）
+  missing_means:
+    markers: []
+  # 止まった lane を engine が見つける見張り（IddCore-Enhance-346）。stall_minutes は engine の番の lane が同じ一歩に居続けた時間の上限、
+  # card_notice_hours は penne 待ちの card が残った時間。どちらも 0 で止める（キーを 0 にするのが戻し方）。負の数や数でない値は既定（45 / 4）に倒す。
+  stall_watch:
+    stall_minutes: 45
+    card_notice_hours: 4
+
+# 文字起こしの API（音声 → 文字）。provider は対応表（今は gemini）で、知らない provider は読み込みで断る。
+# 鍵はここに書かず、api_key_env が指す環境変数（既定 GEMINI_API_KEY）から読む。engine は起動時に値を取り、自分の環境から消す。
+# base_url は省略でき、そのときは provider の公開の URL になる。
+stt:
+  provider: gemini
+  model: gemini-3.5-transcribe
+  api_key_env: GEMINI_API_KEY
+  max_bytes: 20971520

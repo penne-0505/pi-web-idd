@@ -1,0 +1,116 @@
+/* propter GUI — design tokens (トークン.md)
+ *
+ * 色と書体は仮置き（1a）。コンポーネント側は値を直接書かず、役割の名前で参照する。
+ * 差し替えるときはこのファイルだけを直せばよい。
+ *
+ * トークン.md は役割ごとに 1 つの値を挙げているが、収束版のファイルには同じ役割に
+ * 2 つの値が混ざっている箇所があった（朱・藍・緑）。既定の見た目を 1px も変えない
+ * ため、ファイル側のもう 1 つの値は `*-alt` として別に持っている。役割ごとに値を
+ * 揃えたくなったら、`*-alt` を上の役割の値に差し替えるか、上の役割の値を書き換える。
+ *
+ * 書体も仮置きである。prototype と同じ IBM Plex を Google Fonts から読み、名前はここにだけ書く。
+ * 確定したら、この 1 行を repo に置く形へ替える（部品には書体の名前が出てこない）。
+ */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* 墨と地（ニュートラル） */
+  --ink: #1c1b19;
+  --ink-2: #57554f;
+  --ink-3: #8a877f;
+  --line-strong: #d6d3cc;
+  --line: #e3e1db;
+  --line-soft: #ecebe6;
+  --mute-1: #b9b6ae;
+  --mute-2: #c9c6be;
+  --surface: #ffffff;
+  --surface-sunk: #f7f6f2;
+  --surface-warm: oklch(0.975 0.006 85);
+  --surface-warm-line: #ebe8e0;
+  --bg-page: #faf9f6;
+  --bg-inbox: #f5f4f0;
+  --bg-sidebar: #f2f1ec;
+  --bg-panel: #efeee9;
+  --bg-panel-alt: #efede8; /* 内蔵ブラウザの斜線（ChatPanel）。トークン.md には無い */
+  --bg-hover: #e6e4de; /* 行のホバー。トークン.md には無い */
+  --bg-canvas: #e6e5e0; /* 画面の外側。トークン.md には無い */
+
+  /* 役割の色 — 強（印・ボタン）/ 文字（濃）/ 地（淡）
+   * 藍 = 署名が要る、朱 = 判断や注意が要る、緑 = 済み、紫 = 外のサービスへ出る */
+  --attention: oklch(0.6 0.15 40);
+  --attention-alt: oklch(0.55 0.15 40);
+  --attention-text: oklch(0.5 0.14 40);
+  --attention-text-alt: oklch(0.45 0.13 40);
+  --attention-bg: oklch(0.96 0.025 40);
+  --attention-bg-alt: oklch(0.95 0.03 40);
+  --attention-bg-soft: oklch(0.985 0.008 40); /* 長く留まっている lane の行 */
+  --attention-border: oklch(0.75 0.1 40); /* 「推奨」の札 */
+
+  --sign: oklch(0.55 0.15 265);
+  --sign-text: oklch(0.42 0.14 265);
+  --sign-text-alt: oklch(0.45 0.14 265);
+  --sign-text-badge: oklch(0.5 0.15 265);
+  --sign-bg: oklch(0.96 0.02 265);
+  --sign-bg-alt: oklch(0.95 0.03 265);
+  --sign-bg-soft: oklch(0.985 0.008 265);
+  --sign-gate: oklch(0.9 0.05 265); /* idea のゲートの線 */
+
+  --external: oklch(0.45 0.14 300);
+  --external-bg: oklch(0.95 0.035 300);
+
+  --ok: oklch(0.62 0.15 150);
+  --ok-text: oklch(0.45 0.13 150);
+  --ok-bg: oklch(0.96 0.03 150);
+  --ok-bg-alt: oklch(0.94 0.04 150);
+  --ok-bg-chip: oklch(0.95 0.04 150);
+  --ok-text-alt: oklch(0.42 0.12 150);
+
+  --inbound: oklch(0.45 0.12 80);
+  --inbound-bg: oklch(0.95 0.035 80); /* ExitRow の地（hue 80） */
+
+  /* 能力の印（Model ピッカー）: 18px の正方形。地 oklch(0.95 0.04 H) / 線 oklch(0.45 0.13 H) */
+  --cap-vision: 250;
+  --cap-vision-bg: oklch(0.95 0.04 var(--cap-vision));
+  --cap-vision-line: oklch(0.45 0.13 var(--cap-vision));
+  --cap-video: 320;
+  --cap-video-bg: oklch(0.95 0.04 var(--cap-video));
+  --cap-video-line: oklch(0.45 0.13 var(--cap-video));
+  --cap-audio: 155;
+  --cap-audio-bg: oklch(0.95 0.04 var(--cap-audio));
+  --cap-audio-line: oklch(0.45 0.13 var(--cap-audio));
+  --cap-tool: 70;
+  --cap-tool-bg: oklch(0.95 0.04 var(--cap-tool));
+  --cap-tool-line: oklch(0.45 0.13 var(--cap-tool));
+
+  /* コード片（Dark の地に構文の色） */
+  --code-bg: #1f1e1c;
+  --code-ink: #e8e6e1;
+  --code-head-ink: #a09d96;
+  --code-keyword: oklch(0.78 0.11 40); /* 濃い地の上 */
+  --code-keyword-alt: oklch(0.5 0.13 40); /* 淡い地の上 */
+  --code-string: oklch(0.8 0.1 150);
+
+  /* 影と覆い */
+  --shadow-pop: 0 10px 30px rgba(28, 27, 25, 0.14); /* ポップオーバー */
+  --shadow-sheet: 0 24px 60px rgba(28, 27, 25, 0.25); /* 設定シート */
+  --shadow-panel: -12px 0 32px rgba(28, 27, 25, 0.12); /* 右パネルの左端 */
+  --shadow-window: 0 12px 40px rgba(28, 27, 25, 0.12);
+  --dial-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  --scrim: rgba(28, 27, 25, 0.22);
+  --window-line: rgba(0, 0, 0, 0.12);
+  --key-line-on-dark: rgba(255, 255, 255, 0.4);
+  --send-hover: #3a3935;
+
+  /* 書体 */
+  --font-sans: 'IBM Plex Sans JP', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* 動き（仮） */
+  --ease-out: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in: cubic-bezier(0.4, 0, 0.9, 0.6);
+  --ease-pop: cubic-bezier(0.2, 0, 0.2, 1); /* card の出入りとシート */
+  --dur-card-out: 170ms;
+  --dur-card-in: 110ms;
+  --dur-sheet-open: 180ms;
+  --dur-sheet-close: 120ms;
+}

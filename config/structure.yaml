@@ -1,0 +1,51 @@
+# コードの構造の宣言。取り込みの検査が、本流の先端の tree のこの file を読み、本流の先端と取り込む側の tree を
+# 同じ規則で数える（本流にまだ無い最初の取り込みだけ、取り込む側の file を読む）。lane が自分の取り込みで許可を足しても、
+# その取り込みの採点には効かない。
+#   command           数えるコマンド。この file を読んだ tree の複製で走る。IDD_STRUCTURE_ROOT（数える tree）と
+#                     IDD_STRUCTURE_DECL（この file）を受け、数の名前 → 数の JSON を最後の行に 1 つ出す
+#   timeout_minutes   コマンド 1 回の上限（分、既定 10）
+#   blocking          本流の先端より増えたら取り込みを止める数の名前。ほかの数は記録するだけで、止めない
+#   window            重複の窓（潰したトークンの数、既定 50）
+#   large_file_lines  これより行が多い file を大きな file と数える（既定 600）
+#   complexity_limit  これより分岐が多い関数を複雑な関数と数える（既定 20）
+#   layers            層の名前 → その層に属するパスの前方一致（一番長く当たったものが勝つ）
+#   allow             層 → import してよい別の層。書かない向きは層の違反。同じ層の中は常に許す
+#   aliases           import の別名 → repo の root からのパス（末尾が / なら前方一致）
+#   exclude           数えないパスの前方一致
+command: [node, --experimental-strip-types, packages/idd-core/src/metrics/structure-scan.ts]
+timeout_minutes: 10
+blocking: [duplicate-tokens, layer-violations]
+window: 50
+large_file_lines: 600
+complexity_limit: 20
+
+layers:
+  core: [packages/idd-core/]
+  fold: [packages/idd-fold/]
+  lane: [packages/idd-lane/]
+  engine: [packages/idd-engine/]
+  cli: [packages/idd-cli/]
+  gui: [packages/idd-gui/]
+  lib: [lib/]
+  scripts: [scripts/]
+
+# 下の向きは今の tree にある。gui → engine（契約の再 export）・
+# engine → cli（pi の拡張が読みの表を使う）・lane → lib（gui-build が stale-paths を読む）は、層の外へ出る向きだが
+# 今ある形として許す。ここに無い向きは違反で、数に入る。今の違反は cli → engine・cli → gui・core → lane など。
+allow:
+  core: [fold]
+  lane: [core, lib]
+  engine: [core, lane, lib, cli]
+  cli: [core, lane, lib]
+  gui: [core, engine]
+  lib: [core]
+
+aliases:
+  "@/": ""
+  "@idd/core/": packages/idd-core/src/
+  "@idd/core": packages/idd-core/src/index.ts
+  "@idd/lane": packages/idd-lane/src/index.ts
+
+# 記録（_docs/。overlay.manifest の範囲）はコードの形を整える対象ではないので数えない。調査や spike の報告に付けた
+# 使い捨ての script が重複として数えられ、取り込みを止めた（2026-11-02、IDD-262。penne の判断）
+exclude: [_docs/]

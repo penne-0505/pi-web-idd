@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# 拡張 IDD engine の入口。bun で packages/idd-engine/src/main.ts を起こす。
+set -euo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root="$(cd "$here/.." && pwd)"
+# gateway の鍵（AI_GATEWAY_API_KEY など）は penne が置くファイルから読む。環境に既にある値は上書きしない。
+# 値の順は、渡された環境 → install の記録 → この file → 既定（state と pi の指し先は bin/pointers.sh が決める）。
+. "$here/pointers.sh"
+. "$here/gateway-env.sh"
+apply_install_pointers "$root"
+load_gateway_env "${IDD_GATEWAY_ENV:-$HOME/.config/idd/gateway.env}"
+# どこから呼ばれても（チャット / アイデアのモードの cwd など）、この pi-web の state を使う
+# 設定（repos.yaml・roles.yaml・modes.yaml）は checkout の config/ を先に、無ければ ~/.config/idd を読む
+# （解決は @idd/core の configPath に 1 つだけ置く）。
+apply_default_pointers "$root"
+# CLI と agent の報告の宛先は engine。受信箱の URL は engine の /gui で、CLI が IDD_ENGINE_PORT から導く（inboxBaseUrl。ここには置かない）
+# 待ち受ける port を替えたら、この engine の CLI・報告・kick の宛先も同じ port を指す（明示の IDD_AGENT_BASE_URL が優先）
+engine_port="${IDD_ENGINE_PORT:-30144}"
+export IDD_ENGINE_PORT="$engine_port"
+export IDD_AGENT_BASE_URL="${IDD_AGENT_BASE_URL:-http://127.0.0.1:$engine_port}"
+# exec は外さない。shell が主 process に残ると engine が shim の子のさらに子になり、systemd の入れ替えの判定が
+# 「主 process か、その直の子」に当てはまらず保留になる。
+exec bun run "$root/packages/idd-engine/src/main.ts" "$@"

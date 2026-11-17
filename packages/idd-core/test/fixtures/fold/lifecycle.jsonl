@@ -1,0 +1,15 @@
+{"idd_id":"IDD-1","event":"s1_go","at":"2026-10-13T01:00:00.000Z","attrs":{"purposes":[{"id":"P-7","name":"畳み"}]}}
+{"idd_id":"IDD-1","event":"lane_close","at":"2026-10-13T05:00:00.000Z","attrs":{"outcome":"merged"}}
+{"idd_id":"IDD-1","event":"lane_close","at":"2026-10-13T03:00:00.000Z","attrs":{"outcome":"merged"}}
+{"idd_id":"IDD-2","event":"lane_close","at":"2026-10-13T04:00:00.000Z","attrs":{"outcome":"local"}}
+{"idd_id":"IDD-3","event":"lane_close","at":"2026-10-13T04:30:00.000Z","attrs":{"outcome":"aborted"}}
+{"idd_id":"IDD-4","event":"s1_defer","at":"2026-10-13T02:00:00.000Z","attrs":{}}
+{"idd_id":"IDD-5","event":"s3_defer","at":"2026-10-13T02:30:00.000Z","attrs":{}}
+{"idd_id":"IDD-6","event":"s1_go","at":"2026-10-13T01:00:00.000Z","attrs":{"purposes":[{"id":"P-7","name":"別の名"}]}}
+{"idd_id":"IDD-6","event":"s1_go","at":"2026-10-13T01:30:00.000Z","attrs":{"purposes":[{"id":"P-7","name":"三つ目"},{"id":" ","name":"空の id"},{"id":"P-9","name":""}]}}
+{"idd_id":"IDD-6","event":"s1_go","at":"2026-10-13T02:00:00.000Z","attrs":{"purposes":"読めない形"}}
+{"idd_id":"IDD-7","event":"something_else","at":"2026-10-13T12:00:00+09:00","attrs":{}}
+{"idd_id":"IDD-8","event":"lane_close","at":"2026-10-13T09:00:00+09:00","attrs":{"outcome":"merged"}}
+{"idd_id":"IDD-9","event":"lane_close","at":"2026-10-13T04:00:00.000Z","attrs":{"outcome":"dropped"}}
+{"idd_id":"IDD-10","event":"lane_close","at":"b","attrs":{"outcome":"merged"}}
+{"idd_id":"IDD-10","event":"lane_close","at":"aa","attrs":{"outcome":"merged"}}

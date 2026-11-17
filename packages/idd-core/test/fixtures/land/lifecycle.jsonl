@@ -1,0 +1,53 @@
+{"idd_id":"IDD-950","event":"s2_start","at":"2026-10-19T09:00:00+09:00","attrs":{}}
+{"idd_id":"IDD-950","event":"s2_review_started","at":"2026-10-19T09:05:00+09:00","attrs":{"head":"950a1"}}
+{"idd_id":"IDD-950","event":"s3_ready","at":"2026-10-19T09:10:00+09:00","attrs":{"head":"950b2"}}
+{"idd_id":"IDD-950","event":"s4_submit_started","at":"2026-10-19T09:12:00+09:00","attrs":{"head":"950c3"}}
+{"idd_id":"IDD-950","event":"s4_land_approved","at":"2026-10-19T09:20:00+09:00","attrs":{"head":"950c3","merge_commit":"950m"}}
+{"idd_id":"IDD-950","event":"s4_land_hold","at":"2026-10-19T09:21:00+09:00","attrs":{"head":"950c3","reason":"checkout がきれいではありません"}}
+{"idd_id":"IDD-950","event":"s4_land_hold","at":"2026-10-19T09:22:00+09:00","attrs":{"head":"950c3","reason":42}}
+{"idd_id":"IDD-950","event":"s4_land_hold","at":"2026-10-19T09:23:00+09:00"}
+{"idd_id":"IDD-951","event":"s2_start","at":"2026-10-19T10:00:00+09:00","attrs":{}}
+{"idd_id":"IDD-951","event":"s4_land_approved","at":"2026-10-19T10:05:00+09:00","attrs":{"signed":true,"head":"951a1","close":{"repo":"penne-0505/pi-web-idd","issue":209,"comment":"取り込みました","url":"https://example.test/1"}}}
+{"idd_id":"IDD-951","event":"s4_land_approved","at":"2026-10-19T10:06:00+09:00","attrs":{"signed":"true","head":"951a1"}}
+{"idd_id":"IDD-951","event":"s4_land_approved","at":"2026-10-19T10:07:00+09:00","attrs":{"signed":true,"head":"951a2","close":{"repo":"penne-0505/pi-web-idd","issue":"209","comment":"取り込みました"}}}
+{"idd_id":"IDD-951","event":"s4_land_approval_dropped","at":"2026-10-19T10:08:00+09:00","attrs":{"reason":"lane の head が変わりました"}}
+{"idd_id":"IDD-951","event":"s4_land_approved","at":"2026-10-19T10:09:00+09:00","attrs":{"signed":true,"head":"951a3","close":[]}}
+{"idd_id":"IDD-951","event":"s4_verify_user_judgment_answered","at":"2026-10-19T10:10:00+09:00","attrs":{}}
+{"idd_id":"IDD-951","event":"s4_land_approved","at":"2026-10-19T10:11:00+09:00","attrs":{"signed":true,"head":"951a4","close":{"repo":"","issue":4,"comment":"取り込みました"}}}
+{"idd_id":"IDD-951","event":"s2_result","at":"2026-10-19T10:12:00+09:00","attrs":{"outcome":"revise"}}
+{"idd_id":"IDD-951","event":"s4_land_approved","at":"2026-10-19T10:13:00+09:00","attrs":{"signed":true,"head":"951a5","close":{"repo":"penne-0505/pi-web-idd","issue":0,"comment":"取り込みました"}}}
+{"idd_id":"IDD-951","event":"s2_fix_sent","at":"2026-10-19T10:14:00+09:00","attrs":{"round":2}}
+{"idd_id":"IDD-951","event":"s4_land_approved","at":"2026-10-19T10:15:00+09:00","attrs":{"signed":true,"head":"951a6","close":{"repo":"penne-0505/pi-web-idd","issue":2.5,"comment":"取り込みました"}}}
+{"idd_id":"IDD-951","event":"s3_ready","at":"2026-10-19T10:16:00+09:00","attrs":{"head":"951b7"}}
+{"idd_id":"IDD-951","event":"s4_land_approved","at":"2026-10-19T10:17:00+09:00","attrs":{"signed":true,"head":"951a8","close":{"repo":"penne-0505/pi-web-idd","issue":7,"comment":"","url":"https://example.test/2"}}}
+{"idd_id":"IDD-951","event":"s4_submit_started","at":"2026-10-19T10:18:00+09:00","attrs":{"head":"951c9"}}
+{"idd_id":"IDD-952","event":"s3_ready","at":"2026-10-19T11:00:00+09:00","attrs":{"head":"952a1"}}
+{"idd_id":"IDD-952","event":"s3_r2_started","at":"2026-10-19T11:01:00+09:00","attrs":{"head":"952b2"}}
+{"idd_id":"IDD-952","event":"s3_r2_done","at":"2026-10-19T11:02:00+09:00","attrs":{"failed":true,"must":0,"should":0}}
+{"idd_id":"IDD-952","event":"s3_r2_recorded","at":"2026-10-19T11:03:00+09:00","attrs":{"files":["qa.md"],"commit":"952c3"}}
+{"idd_id":"IDD-952","event":"s3_ready","at":"2026-10-19T11:04:00+09:00","attrs":{"head":"952d4"}}
+{"idd_id":"IDD-952","event":"s3_r2_started","at":"2026-10-19T11:05:00+09:00","attrs":{}}
+{"idd_id":"IDD-952","event":"s3_r2_done","at":"2026-10-19T11:06:00+09:00","attrs":{"must":0,"should":1}}
+{"idd_id":"IDD-952","event":"s3_r2_not_recorded","at":"2026-10-19T11:07:00+09:00","attrs":{"reason":"記録の検査に落ちた"}}
+{"idd_id":"IDD-952","event":"s3_plan_archive_failed","at":"2026-10-19T11:08:00+09:00","attrs":{"reason":"plan.md が移す前の path を指しています"}}
+{"idd_id":"IDD-952","event":"s3_plan_refs_fixed","at":"2026-10-19T11:09:00+09:00","attrs":{}}
+{"idd_id":"IDD-952","event":"s3_r2_not_recorded","at":"2026-10-19T11:10:00+09:00","attrs":{"reason":"R2 の結果から 30 分たっても記録を commit できないので、記録せずに進めます"}}
+{"idd_id":"IDD-952","event":"s3_r2_not_recorded","at":"2026-10-19T11:11:00+09:00","attrs":{"gave_up":true,"reason":"commit できなかった"}}
+{"idd_id":"IDD-952","event":"s3_r2_not_recorded","at":"2026-10-19T11:12:00+09:00","attrs":{"reason":"R2: PENDING"}}
+{"idd_id":"IDD-952","event":"s3_r2_not_recorded","at":"2026-10-19T11:13:00+09:00","attrs":{"reason":"lock が取れませんでした"}}
+{"idd_id":"IDD-952","event":"s3_r2_done","at":"2026-10-19T11:14:00+09:00","attrs":{"failed":true}}
+{"idd_id":"IDD-953","event":"s2_start","at":"2026-10-19T12:00:00+09:00","attrs":{}}
+{"idd_id":"IDD-953","event":"s2_review_started","at":"2026-10-19T12:01:00+09:00","attrs":{"head":"953a1"}}
+{"idd_id":"IDD-953","event":"s4_submit_started","at":"2026-10-19T12:02:00+09:00","attrs":{}}
+{"idd_id":"IDD-953","event":"s3_ready","at":"2026-10-19T12:03:00+09:00","attrs":{"head":"953b2"}}
+{"idd_id":"IDD-953","event":"s3_r2_started","at":"2026-10-19T12:04:00+09:00","attrs":{}}
+{"idd_id":"IDD-953","event":"s3_ready","at":"2026-10-19T12:05:00+09:00","attrs":{"head":"953c3"}}
+{"idd_id":"IDD-953","event":"s3_r2_started","at":"2026-10-19T12:06:00+09:00","attrs":{"head":"953d4"}}
+{"idd_id":"IDD-954","event":"s2_start","at":"2026-10-19T13:00:00+09:00","attrs":"broken"}
+{"idd_id":"IDD-954","event":"something_new","at":"2026-10-19T13:01:00+09:00","attrs":{"head":"954a1"}}
+{"idd_id":"IDD-954","event":"s4_land_approved","at":"2026-10-19T13:02:00+09:00","attrs":{"signed":true,"head":"","close":{"repo":"penne-0505/pi-web-idd","issue":1,"comment":"取り込みました"}}}
+{"idd_id":"IDD-954","event":"s4_land_approved","at":"2026-10-19T13:03:00+09:00","attrs":{"signed":true,"head":42}}
+{"idd_id":"IDD-954","event":"s4_land_approved","at":"2026-10-19T13:04:00+09:00","attrs":{"signed":1,"head":"954b2"}}
+{"idd_id":"IDD-954","event":"s4_land_approved","at":"2026-10-19T13:05:00+09:00","attrs":{"signed":true,"head":"954c3","close":{"repo":"penne-0505/pi-web-idd","issue":3,"comment":"取り込みました","url":7}}}
+{"idd_id":"IDD-955","event":"s2_review_started","at":"2026-10-19T14:00:00+09:00","attrs":{}}
+{"idd_id":"IDD-955","event":"s4_submit_started","at":"2026-10-19T14:01:00+09:00","attrs":{"head":"955a1"}}

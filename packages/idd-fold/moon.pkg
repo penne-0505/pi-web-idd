@@ -1,0 +1,21 @@
+import {
+  "moonbitlang/core/json",
+  "moonbitlang/core/double",
+}
+
+options(
+  link: {
+    "js": {
+      "exports": [
+        "put_lifecycle",
+        "put_intent",
+        "lane_states",
+        "fold_records",
+        "lane_answer",
+        "review_events_json",
+        "depth_table_json",
+      ],
+      "format": "esm",
+    },
+  },
+)

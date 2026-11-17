@@ -1,0 +1,112 @@
+/* propter GUI — page-level styles (ported from the <helmet> block of
+ * `propter 収束版.dc.html`, minus the canvas chrome). */
+@import './tokens.css';
+@import './hover.css';
+
+body {
+  margin: 0;
+  background: var(--bg-canvas);
+  font-family: var(--font-sans);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* the app frame fills the window; the screens inside keep the template's fixed column widths */
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+a {
+  color: var(--sign-text);
+}
+a:hover {
+  color: var(--sign-text);
+}
+
+/* keyframes (仮の動き) */
+@keyframes pfadeout {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes psheetout {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+@keyframes pdrop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes plift {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pline {
+  from {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pfade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes psheet {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* the design canvas centred the window on a grey page; the app now is the window, so nothing centres it */
+
+/* Appearance (C-171-6): Reduce motion holds the template's transforms and transitions still. The attribute is
+ * written on the frame by `src/settings/appearance.ts`; the type size is a zoom written on the same element, so
+ * it needs no rule here. A row that is off writes nothing, so nothing is left over from a value that was on. */
+[data-reduce-motion='1'] *,
+[data-reduce-motion='1'] *::before,
+[data-reduce-motion='1'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0ms !important;
+}
